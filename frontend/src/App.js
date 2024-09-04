@@ -1,25 +1,54 @@
-import logo from './logo.svg';
-import './App.css';
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import HomePage from './pages/HomePage';
+import ContactPage from './pages/ContactPage';
+import SignInPage from './pages/SignInPage';
+import FormListPage from './pages/FormListPage';
+import InductionFormPage from './pages/InductionFormPage';
+import Dashboard from './pages/admin/Dashboard';
+import ViewUsers from './pages/admin/ViewUsers';
+import UserForm from './pages/admin/AddUser';
+import InductionList from './pages/admin/InductionList';
+import InductionEdit from './pages/admin/InductionEdit';
+import InductionResults from './pages/admin/InductionResults';
+import useAuth from './hooks/useAuth';
+import './style/Global.css';
 
-function App() {
+// PrivateRoute for protecting routes based on roles and authentication
+const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
+  const { user, loading } = useAuth();
+
+  if (loading) return <div>Loading...</div>;
+
+  return user && (!roleRequired || user.role === roleRequired) ? (
+    <Component {...rest} />
+  ) : (
+    <Navigate to="/signin" />
+  );
+};
+
+const App = () => {
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <Router>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/contact" element={<ContactPage />} />
+          <Route path="/signin" element={<SignInPage />} />
+          {/* Restricted to logged-in users */}
+          <Route path="/formlist" element={<PrivateRoute component={FormListPage} />} />
+          <Route path="/inductionform" element={<PrivateRoute component={InductionFormPage} />} />
+          {/* Admin-specific routes restricted to "admin" */}
+          <Route path="/admin/dashboard" element={<PrivateRoute component={Dashboard} roleRequired="admin" />} />
+          <Route path="/admin/view-users" element={<PrivateRoute component={ViewUsers} roleRequired="admin" />} />
+          <Route path="/admin/add-user" element={<PrivateRoute component={UserForm} roleRequired="admin" />} />
+          <Route path="/admin/inductions" element={<PrivateRoute component={InductionList} roleRequired="admin" />} />
+          <Route path="/admin/edit-induction" element={<PrivateRoute component={InductionEdit} roleRequired="admin" />} />
+          <Route path="/admin/induction-results" element={<PrivateRoute component={InductionResults} roleRequired="admin" />} />
+        </Routes>
+      </Router>
     </div>
   );
-}
+};
 
 export default App;
