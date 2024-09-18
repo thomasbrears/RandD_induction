@@ -14,6 +14,7 @@ import InductionResults from './pages/admin/InductionResults';
 import useAuth from './hooks/useAuth';
 import './style/Global.css';
 import Footer from './components/Footer';
+import Navbar from './components/Navbar';
 
 // PrivateRoute for protecting routes based on roles and authentication
 const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
@@ -32,6 +33,7 @@ const App = () => {
   return (
     <div className="App flex flex-col min-h-screen">
       <Router>
+        <Navbar />
         <div className="flex-grow">
           <Routes>
             <Route path="/" element={<HomePage />} />
