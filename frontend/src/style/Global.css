@@ -13,4 +13,13 @@ body {
     font-family: 'Fjalla One', sans-serif;
     margin: 0;
   }
-  
+
+.App {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.flex-grow {
+  flex-grow: 1;
+}
