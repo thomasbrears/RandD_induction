@@ -41,3 +41,20 @@ body {
 .px-2 { padding-left: 0.5rem; padding-right: 0.5rem; }
 .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
 .rounded { border-radius: 0.25rem; }
+
+.assigned-inductions table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.assigned-inductions th, .assigned-inductions td {
+  border: 1px solid #ddd;
+  padding: 8px;
+  text-align: left;
+}
+
+.assigned-inductions th {
+  background-color: #f2f2f2;
+  font-weight: bold;
+}
