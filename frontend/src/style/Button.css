@@ -1,0 +1,25 @@
+/* General button styling */
+.custom-button {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: black;
+    color: white;
+    text-decoration: none;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1em;
+    text-align: center;
+    transition: background-color 0.3s, transform 0.2s;
+    margin: 10px 0;
+}
+
+/* Hover and active states */
+.custom-button:hover {
+    background-color: #0c027d;
+    text-decoration: none;
+}
+
+.custom-button:active {
+    transform: scale(0.98);
+}

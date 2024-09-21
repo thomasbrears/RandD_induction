@@ -3,6 +3,9 @@ import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-d
 import HomePage from './pages/HomePage';
 import ContactPage from './pages/ContactPage';
 import SignInPage from './pages/SignInPage';
+import CompleteSignInPage from './pages/CompleteSignInPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import NotFoundPage from './pages/NotFoundPage';
 import FormListPage from './pages/FormListPage';
 import InductionFormPage from './pages/InductionFormPage';
 import Dashboard from './pages/admin/Dashboard';
@@ -15,6 +18,7 @@ import useAuth from './hooks/useAuth';
 import './style/Global.css';
 import Footer from './components/Footer';
 import Navbar from './components/Navbar';
+
 
 // PrivateRoute for protecting routes based on roles and authentication
 const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
@@ -39,8 +43,12 @@ const App = () => {
             <Route path="/" element={<HomePage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/signin" element={<SignInPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/complete-signin" element={<CompleteSignInPage />} />
+            <Route path="*" element={<NotFoundPage />} />
+
             {/* Restricted to logged-in users */}
-            <Route path="/formlist" element={<PrivateRoute component={FormListPage} />} />
+            <Route path="/inductions" element={<PrivateRoute component={FormListPage} />} />
             <Route path="/inductionform" element={<PrivateRoute component={InductionFormPage} />} />
             {/* Admin-specific routes restricted to "admin" */}
             <Route path="/admin/dashboard" element={<PrivateRoute component={Dashboard} roleRequired="admin" />} />
