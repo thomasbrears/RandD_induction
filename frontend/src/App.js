@@ -19,7 +19,6 @@ import './style/Global.css';
 import Footer from './components/Footer';
 import Navbar from './components/Navbar';
 
-
 // PrivateRoute for protecting routes based on roles and authentication
 const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
   const { user, loading } = useAuth();
