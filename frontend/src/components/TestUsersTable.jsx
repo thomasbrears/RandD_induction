@@ -22,6 +22,7 @@ const UsersTable = () => {
   }, [user, loading]);
 
   return (
+    <>
     <table>
       <thead>
         <tr>
@@ -38,6 +39,7 @@ const UsersTable = () => {
         ))}
       </tbody>
     </table>
+    </>
   );
 };
 

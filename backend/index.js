@@ -1,6 +1,7 @@
 const admin = require("firebase-admin");
 const express = require("express");
 const cors = require("cors");
+//const Permissions = require("./models/Permissions");
 var serviceAccount = require("./r-and-d-induction-firebase-adminsdk-pf2gf-d8e0622e57.json");
 
 admin.initializeApp({
@@ -9,7 +10,9 @@ admin.initializeApp({
 
 const app = express();
 app.use(cors());
+app.use(express.json());
 
+//Middleware makes sure that anyone accessing endpoints is logged in TODO: role-based
 app.use(async (req, res, next) => {
     const { authtoken } = req.headers;
   
@@ -27,7 +30,7 @@ app.use(async (req, res, next) => {
     next();
   });
 
-app.get("/users", async (req, res) => {
+app.get("/api/users", async (req, res) => {
     try {
       const users = [];
       const listUsersResult = await admin.auth().listUsers();
@@ -42,6 +45,35 @@ app.get("/users", async (req, res) => {
     } catch (error) {
       console.error("Error fetching users:", error);
       res.status(500).send(error);
+    }
+});
+
+app.post("/api/users/create-new-user", async(req,res)=>{
+    try{
+        const { firstName, lastName, email, permission } = req.body;
+
+        if (!email || !permission) {
+            return res.status(400).send("Email and permission are required");
+          }
+
+        const userRecord = await admin.auth().createUser({
+            email: email,
+            displayName: `${firstName} ${lastName}`,
+            emailVerified: false,
+            disabled: false,
+        });
+
+        admin.auth().setCustomUserClaims(userRecord.uid, {role: permission});
+        
+        res.status(201).json({
+            uid: userRecord.uid,
+            email: userRecord.email,
+            role: permission,
+            message: "User created and role set successfully"
+          });
+    } catch (error){
+        console.error("Error creating user", error);
+        res.status(500).send(error);
     }
 });
 
