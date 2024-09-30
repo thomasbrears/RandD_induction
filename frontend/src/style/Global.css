@@ -67,3 +67,4 @@ body {
 .transform { transform: translateY(-50%); }
 .-translate-y-1\/2 { transform: translateY(-50%); }
 .hover\:text-gray-200:hover { color: #edf2f7; }
+

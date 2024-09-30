@@ -48,6 +48,17 @@ app.get("/api/users", async (req, res) => {
     }
 });
 
+app.get("/api/get-user", async (req, res) => {
+    try {
+        const uid = req.query.uid;
+        const userResult = await admin.auth().getUser(uid);
+        res.json(userResult);     
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        res.status(500).send(error);
+    }
+});
+
 app.post("/api/users/create-new-user", async(req,res)=>{
     try{
         const { firstName, lastName, email, permission } = req.body;

@@ -17,9 +17,7 @@ export const createNewUser = async (user, userData) => {
     }
   };
 
-  //only working one
 export const getAllUsers = async (user,loading) => {
-
     try {
         const token = user?.token;
         const headers = token ? {authtoken: token}: {};
@@ -32,6 +30,21 @@ export const getAllUsers = async (user,loading) => {
       throw error;  // Handle this appropriately in the calling component
     }
   };
+
+export const getUser = async (user, uid) =>{
+  try{
+    const token = user?.token;
+    const headers = token ? {authtoken: token}: {};
+    const response = await axios.get(`${API_URL}/api/get-user`,{
+        headers,
+        params: { uid },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    throw error;  // Handle this appropriately in the calling component
+  }
+};
 
   /*
 export const updateUser = async (userId, userData) => {

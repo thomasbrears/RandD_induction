@@ -7,12 +7,10 @@ import { DefaultNewUser } from "../models/User";
 export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
     const [user, setUser] = useState(userData);
   
-    // Sync the form state with the incoming userData
     useEffect(() => {
       setUser(userData);
     }, [userData]);
     
-    // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setUser((prevUser) => ({

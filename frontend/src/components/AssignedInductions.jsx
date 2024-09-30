@@ -9,7 +9,7 @@ const AssignedInductions = () => {
 
   useEffect(() => {
     const fetchInductions = async () => {
-      if (user) {
+      /*if (user) {
         const q = query(collection(db, 'inductions'), where('assignedTo', '==', user.uid));
         const querySnapshot = await getDocs(q);
         const inductionList = querySnapshot.docs.map(doc => ({
@@ -18,7 +18,7 @@ const AssignedInductions = () => {
           status: getStatus(doc.data())
         }));
         setInductions(inductionList);
-      }
+      }*/
     };
 
     fetchInductions();

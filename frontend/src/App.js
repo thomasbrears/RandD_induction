@@ -54,9 +54,9 @@ const App = () => {
             <Route path="/admin/dashboard" element={<PrivateRoute component={Dashboard} roleRequired = {Permissions.ADMIN} />} />
             <Route path="/admin/view-users" element={<PrivateRoute component={ViewUsers} roleRequired={Permissions.ADMIN} />} />
             <Route path="/admin/add-user" element={<PrivateRoute component={UserForm} roleRequired={Permissions.ADMIN} />} />
-            <Route path="/admin/inductions" element={<PrivateRoute component={InductionList} roleRequired="admin" />} />
-            <Route path="/admin/edit-induction" element={<PrivateRoute component={InductionEdit} roleRequired="admin" />} />
-            <Route path="/admin/induction-results" element={<PrivateRoute component={InductionResults} roleRequired="admin" />} />
+            <Route path="/admin/inductions" element={<PrivateRoute component={InductionList} roleRequired={Permissions.ADMIN} />} />
+            <Route path="/admin/edit-induction" element={<PrivateRoute component={InductionEdit} roleRequired={Permissions.ADMIN} />} />
+            <Route path="/admin/induction-results" element={<PrivateRoute component={InductionResults} roleRequired={Permissions.ADMIN} />} />
           </Routes>
         </div>
         <Footer />
