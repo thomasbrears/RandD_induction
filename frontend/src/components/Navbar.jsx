@@ -21,7 +21,13 @@ const Navbar = () => {
       )}
       <nav className="bg-gray-800 text-white p-4">
         <div className="container mx-auto flex justify-between items-center">
-          <Link to="/" className="text-xl font-bold text-white">AUT Events</Link>
+          <Link to="/">
+            <img
+              src={`${process.env.PUBLIC_URL}/images/AUTEventsAndVenuesBlackLogo.jpg`}
+              alt="AUT Events"
+              style={{ height: '50px' }}
+            />
+          </Link>
           <div>
             <Link to="/" className="mr-4 text-white">Home</Link>
             <Link to="/contact" className="mr-4 text-white">Contact</Link>
