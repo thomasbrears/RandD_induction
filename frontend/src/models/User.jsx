@@ -4,7 +4,7 @@ import Positions from './Positions';
 
 /**
  * @typedef {Object} User
- * @property {string} [_id]
+ * @property {string} [uid]
  * @property {string} [firstName]
  * @property {string} [lastName]
  * @property {string} [email]
@@ -15,7 +15,7 @@ import Positions from './Positions';
 
 /** @type {User} */
 export const DefaultNewUser = {
-    _id: undefined,
+    uid: undefined,
     firstName: "",
     lastName: "",
     email: "",

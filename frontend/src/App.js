@@ -19,6 +19,7 @@ import './style/Global.css';
 import Footer from './components/Footer';
 import Navbar from './components/Navbar';
 import Permissions from './models/Permissions';
+import EditUser from './pages/admin/EditUser';
 
 // PrivateRoute for protecting routes based on roles and authentication
 const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
@@ -57,6 +58,7 @@ const App = () => {
             <Route path="/admin/inductions" element={<PrivateRoute component={InductionList} roleRequired={Permissions.ADMIN} />} />
             <Route path="/admin/edit-induction" element={<PrivateRoute component={InductionEdit} roleRequired={Permissions.ADMIN} />} />
             <Route path="/admin/induction-results" element={<PrivateRoute component={InductionResults} roleRequired={Permissions.ADMIN} />} />
+            <Route path="/admin/edit-user" element={<PrivateRoute component={EditUser} roleRequired={Permissions.ADMIN} />} />
           </Routes>
         </div>
         <Footer />

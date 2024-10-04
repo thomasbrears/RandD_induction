@@ -1,16 +1,25 @@
 import { useState, useEffect } from "react";
+import Select from "react-select";
 import Permissions from "../models/Permissions";
-//import Locations from "../models/Locations";
-//import Positions from "../models/Positions";
 import { DefaultNewUser } from "../models/User";
+import Positions from "../models/Positions";
+import Locations from "../models/Locations";
 
 export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
-    const [user, setUser] = useState(userData);
-  
-    useEffect(() => {
-      setUser(userData);
-    }, [userData]);
-    
+  const [user, setUser] = useState(DefaultNewUser);
+  //note: input validation to make sure that the first and last name are not empty
+  useEffect(() => {
+    setUser({
+      uid: userData.uid,
+      firstName: userData.firstName || "",
+      lastName: userData.lastName || "",
+      email: userData.email || "",
+      permission: userData.permission || "",
+      position: userData.position || "",
+      locations: userData.locations || [],
+    });
+  }, [userData]);
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     setUser((prevUser) => ({
@@ -26,14 +35,22 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
     }));
   };
 
-  const handleLocationsChange = (newLocations) => {
+  const handlePositionsChange = (e) => {
     setUser((prevUser) => ({
       ...prevUser,
-      locations: newLocations,
+      position: e.target.value,
     }));
   };
 
-  // Handle form submission
+  const handleLocationsChange = (selectedOptions) => {
+    const selectedValues = selectedOptions ? selectedOptions.map(option => option.value) : [];
+    
+    setUser((prevUser) => ({
+      ...prevUser,
+      locations: selectedValues,
+    }));
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
     onSubmit(user);
@@ -73,7 +90,33 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
           </option>
         ))}
       </select>
-      {/* Render other fields such as Positions, Locations, etc. */}
+
+      <select
+        name="position"
+        value={user.position}
+        onChange={handlePositionsChange}
+      >
+        {Object.values(Positions).map((perm) => (
+          <option key={perm} value={perm}>
+            {perm.charAt(0).toUpperCase() + perm.slice(1)}
+          </option>
+        ))}
+      </select>
+
+      <Select
+        isMulti
+        name="locations"
+        options={Object.values(Locations).map((loc) => ({
+          value: loc,
+          label: loc.charAt(0).toUpperCase() + loc.slice(1),
+        }))}
+        value={user.locations.map((loc) => ({
+          value: loc,
+          label: loc.charAt(0).toUpperCase() + loc.slice(1),
+        }))}
+        onChange={handleLocationsChange}
+      />
+
       <button type="submit">
         {userData._id ? "Save Changes" : "Create User"}
       </button>
