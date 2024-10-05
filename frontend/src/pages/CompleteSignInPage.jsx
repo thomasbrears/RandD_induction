@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import '../style/Auth.css';
 import { toast } from 'react-toastify'; // Toastify success/error/info messages
 import { getAuth, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import Loading from '../components/Loading';
+import '../style/Auth.css';
 
 function CompleteSignInPage() {
-    const [messageInfo, setMessageInfo] = useState({ message: '', type: '' });
     const [email, setEmail] = useState('');
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState('');
     const [emailPrompt, setEmailPrompt] = useState(false);
     const navigate = useNavigate();
     const auth = getAuth();
@@ -30,6 +31,7 @@ function CompleteSignInPage() {
     // Function to handle sign-in with email link
     const handleSignIn = (email) => {
         setLoading(true);
+        setLoadingMessage(`Signing in with ${email}...`); 
         signInWithEmailLink(auth, email, window.location.href)
             .then((result) => {
                 window.localStorage.removeItem('emailForSignIn');
@@ -61,7 +63,6 @@ function CompleteSignInPage() {
                         toast.error('Error signing in. Please try again.');
                         break;
                 }
-                toast.error(`Error signing in: ${error.message}`);
                 setLoading(false);
             });
     };
@@ -74,12 +75,12 @@ function CompleteSignInPage() {
 
     return (
         <div className="center" style={{ backgroundImage: 'url(/images/WG_OUTSIDE_AUT.webp)', backgroundSize: 'cover', backgroundPosition: 'center', height: '100%', width: 'auto'}}>
+            {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
+
             <div className="loginDetails">
                 <h1>Complete your Sign-In</h1>
 
-                {loading ? (
-                    <p>Loading...</p>
-                ) : (
+                {!loading && ( /* Ensure form is not shown while loading */
                     <>
                         {emailPrompt ? (
                             <div>
@@ -96,16 +97,13 @@ function CompleteSignInPage() {
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
                                     />
-                                    <button type="submit" className="login-btn">
-                                        Complete Sign-in
-                                    </button>
+                                    <button type="submit" className="login-btn"> Complete Sign-in </button>
                                 </form>
                             </div>
                         ) : (
                             <>
-                                <button className="login-btn" onClick={() => navigate('/')}>
-                                    Go to Home
-                                </button>
+                                <br />
+                                <button className="login-btn" onClick={() => navigate('/')}> Home </button>
                             </>
                         )}
                     </>

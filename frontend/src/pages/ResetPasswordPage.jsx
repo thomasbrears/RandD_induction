@@ -2,18 +2,23 @@ import React, { useState } from 'react';
 import { auth } from '../firebaseConfig.js';
 import { useNavigate, Link } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import '../style/Auth.css';
 import { toast } from 'react-toastify'; // Toastify success/error/info messages
+import Loading from '../components/Loading'; // Loading animation
+import '../style/Auth.css';
 
 function ResetPasswordPage() {
     const [email, setEmail] = useState('');
-    const [messageInfo, setMessageInfo] = useState({ message: '', type: '' });
+    const [loading, setLoading] = useState(false);
+    const [loadingMessage, setLoadingMessage] = useState('');
     const navigate = useNavigate();
 
     // Function to handle password reset email sending
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
+            setLoading(true);
+            setLoadingMessage(`Sending password reset email to ${email}...`);	
+
             await sendPasswordResetEmail(auth, email);
             toast.success('If an account exists with that email, we have sent a password reset email.', { position: 'top-center', autoClose: 7000 });
             // Delay navigation to login page for 4 seconds to display success message
@@ -34,11 +39,14 @@ function ResetPasswordPage() {
                     break;
             }
             console.error("Error sending reset email:", error);
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
         <div className="center" style={{ backgroundImage: 'url(/images/WG_OUTSIDE_AUT.webp)', backgroundSize: 'cover', backgroundPosition: 'center', height: '100%', width: 'auto'}}>
+            {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
             <div className="loginDetails">
                 <h1>Reset Password</h1>
                 <br />
@@ -46,7 +54,7 @@ function ResetPasswordPage() {
                 <p>Please enter your email and we will email you a link to reset your password</p>
 
                 <div className="separator">
-                        <span className="separator-text">Reset or set your password</span>
+                    <span className="separator-text">Reset or set your password</span>
                 </div>
                 <form onSubmit={handleSubmit} className="loginForm">
                     <input
@@ -60,9 +68,7 @@ function ResetPasswordPage() {
                     <button type="submit" className="login-btn">Reset Password</button>
                 </form>
 
-                <p className="signup-text">
-                    Remembered your password? <Link to="/signin" className="link">Sign in</Link>
-                </p>
+                <p className="signup-text"> Remembered your password? <Link to="/signin" className="link">Sign in</Link> </p>
             </div>
         </div>
     );
