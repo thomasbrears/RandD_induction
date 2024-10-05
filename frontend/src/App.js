@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useContext }  from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
+import { ToastContainer, toast } from 'react-toastify'; // Toastify message container
+import 'react-toastify/dist/ReactToastify.css'; // Toastify message css
 import HomePage from './pages/HomePage';
 import ContactPage from './pages/ContactPage';
 import SignInPage from './pages/SignInPage';
@@ -36,6 +38,17 @@ const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
 const App = () => {
   return (
     <div className="App flex flex-col min-h-screen">
+      {/* Toastify message container with default actions*/}
+      <ToastContainer
+        theme="light" // Set light theme
+        position="top-center" // Set default position
+        draggable={true} // Allow toasts to be draggable
+        closeOnClick={true} // Close toast on click
+        autoClose={5000} // Auto close after 5 seconds
+        hideProgressBar={false} // Show progress bar
+        pauseOnHover={true} // Pause on hover
+        pauseOnFocusLoss={false} // Keep toast running even when focus is lost
+      />
       <Router>
         <Navbar />
         <div className="flex-grow">

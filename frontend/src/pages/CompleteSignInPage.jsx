@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import '../style/Auth.css';
-import Message from '../components/Message';
+import { toast } from 'react-toastify'; // Toastify success/error/info messages
 import { getAuth, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 
@@ -35,13 +35,33 @@ function CompleteSignInPage() {
                 window.localStorage.removeItem('emailForSignIn');
                 localStorage.setItem('token', result.user.accessToken);
                 localStorage.setItem('user', JSON.stringify(result.user));
-                setMessageInfo({ message: 'Successfully signed in!', type: 'success' });
+                toast.success('Successfully signed in! Welcome!');
                 setLoading(false);
                 navigate('/');
             })
             .catch((error) => {
-                console.error('Error during sign-in: ', error);
-                setMessageInfo({ message: `Error signing in: ${error.message}`, type: 'error' });
+                // Handle Firebase Auth specific error messages
+                switch (error.code) {
+                    case 'auth/invalid-email':
+                        toast.error('Invalid email. Please check and try again.');
+                        break;
+                    case 'auth/expired-action-code':
+                        toast.error('The sign-in link has expired. Please request a new one.');
+                        break;
+                    case 'auth/invalid-action-code':
+                        toast.error('The sign-in link is invalid. Please check your email for a valid link.');
+                        break;
+                    case 'auth/user-disabled':
+                        toast.error('This account has been disabled. Please contact support for assistance.');
+                        break;
+                    case 'auth/network-request-failed':
+                        toast.error('Network error. Please check your internet connection and try again.');
+                        break;
+                    default:
+                        toast.error('Error signing in. Please try again.');
+                        break;
+                }
+                toast.error(`Error signing in: ${error.message}`);
                 setLoading(false);
             });
     };
@@ -83,9 +103,6 @@ function CompleteSignInPage() {
                             </div>
                         ) : (
                             <>
-                                {messageInfo.message && (
-                                    <Message key={Date.now()} message={messageInfo.message} type={messageInfo.type} />
-                                )}
                                 <button className="login-btn" onClick={() => navigate('/')}>
                                     Go to Home
                                 </button>

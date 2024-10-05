@@ -1,6 +1,7 @@
 import React from 'react';
 import useAuth from '../hooks/useAuth';
 import AssignedInductions from '../components/AssignedInductions';
+import { toast } from 'react-toastify'; // Toastify success/error/info messages
 
 const FormListPage = () => {
   const { user } = useAuth();

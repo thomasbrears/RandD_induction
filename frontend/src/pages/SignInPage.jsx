@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import '../style/Auth.css';
-import Message from '../components/Message';
 import { getAuth, signInWithEmailAndPassword, sendSignInLinkToEmail } from 'firebase/auth';
 import { auth } from '../firebaseConfig.js';
 import { Link, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify'; // Toastify success/error/info messages
 
 function LoginPage() {
     const [email, setEmail] = useState('');
@@ -20,20 +20,24 @@ function LoginPage() {
             localStorage.setItem('token', user.accessToken);
             localStorage.setItem('user', JSON.stringify(user));
             navigate("/inductions");
+            toast.success('Signed in successfully!', { position: 'top-right', autoClose: 3000 });
         } catch (error) {
             console.error("Error during sign-in:", error);
             switch (error.code) {
                 case 'auth/user-not-found':
-                    setMessageInfo({ message: 'No user found with this email.', type: 'error' });
+                    toast.error('No user found with this email.');
                     break;
-                case 'auth/wrong-password':
-                    setMessageInfo({ message: 'Incorrect password. Please try again.', type: 'error' });
+                case 'auth/invalid-password':
+                    toast.error('Incorrect password. Please try again.');
                     break;
                 case 'auth/invalid-email':
-                    setMessageInfo({ message: 'Invalid email format. Please enter a valid email address.', type: 'error' });
+                    toast.error('Invalid email format, Please enter a valid email address.');
+                    break;
+                case 'auth/invalid-credential':
+                    toast.error('Invalid credentials. Please try again.');
                     break;
                 default:
-                    setMessageInfo({ message: 'Login failed. Please try again.', type: 'error' });
+                    toast.error('Login failed. Please try again.');
                     break;
             }
         }
@@ -50,9 +54,31 @@ function LoginPage() {
         try {
             await sendSignInLinkToEmail(auth, email, actionCodeSettings);
             window.localStorage.setItem('emailForSignIn', email);
-            setMessageInfo({ message: 'Sign-in link sent! Check your email.', type: 'success' });
+            toast.success('Sign-in link sent! Please check your email and click the link included.', { position: 'top-center', autoClose: 7000 });
         } catch (error) {
-            setMessageInfo({ message: `Error sending sign-in link: ${error.message}`, type: 'error' });
+            // Handle Firebase Auth specific error messages
+            console.error("Error sending sign-in link:", error);
+
+            switch (error.code) {
+                case 'auth/invalid-email':
+                    toast.error('Invalid email format. Please enter a valid email.');
+                    break;
+                case 'auth/missing-email':
+                    toast.error('Please provide an email address.');
+                    break;
+                case 'auth/user-not-found':
+                    toast.error('No account found with this email. Please sign up or use a different email.');
+                    break;
+                case 'auth/network-request-failed':
+                    toast.error('Network error. Please check your connection and try again.');
+                    break;
+                case 'auth/too-many-requests':
+                    toast.error('Too many requests. Please wait a moment and try again.');
+                    break;
+                default:
+                    toast.error('Error sending sign-in link. Please try again.');
+                    break;
+            }
         }
     };
 
@@ -96,10 +122,6 @@ function LoginPage() {
                     <button type="button" className="login-btn" onClick={handlePasswordlessSignIn}>Email me a Sign-in Link (Recommended)</button> 
                 
                 </form>
-
-                {messageInfo.message && (
-                    <Message key={Date.now()} message={messageInfo.message} type={messageInfo.type} />
-                )}
             </div>
         </div>
     );

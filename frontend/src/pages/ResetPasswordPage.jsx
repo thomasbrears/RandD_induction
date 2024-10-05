@@ -3,7 +3,7 @@ import { auth } from '../firebaseConfig.js';
 import { useNavigate, Link } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import '../style/Auth.css';
-import Message from '../components/Message';
+import { toast } from 'react-toastify'; // Toastify success/error/info messages
 
 function ResetPasswordPage() {
     const [email, setEmail] = useState('');
@@ -15,13 +15,25 @@ function ResetPasswordPage() {
         e.preventDefault();
         try {
             await sendPasswordResetEmail(auth, email);
-            setMessageInfo({ message: 'If an account exists with that email, we have sent a password reset email.', type: 'success' });
-            // Delay navigation to login page for 3 seconds to display success message
+            toast.success('If an account exists with that email, we have sent a password reset email.', { position: 'top-center', autoClose: 7000 });
+            // Delay navigation to login page for 4 seconds to display success message
             setTimeout(() => {
                 navigate("/signin");
-            }, 3000); // 3 seconds
+            }, 4000); // 4 seconds
         } catch (error) {
-            setMessageInfo({ message: 'Error sending reset email. Please try again.', type: 'error' });
+           // Handle Firebase Auth specific error messages
+            switch (error.code) {
+                case 'auth/invalid-email':
+                    toast.error('Invalid email format. Please check and try again.');
+                    break;
+                case 'auth/network-request-failed':
+                    toast.error('Network error. Please check your connection and try again.');
+                    break;
+                default:
+                    toast.error('Error sending reset email. Please try again.');
+                    break;
+            }
+            console.error("Error sending reset email:", error);
         }
     };
 
@@ -51,10 +63,6 @@ function ResetPasswordPage() {
                 <p className="signup-text">
                     Remembered your password? <Link to="/signin" className="link">Sign in</Link>
                 </p>
-
-                {messageInfo.message && (
-                    <Message key={Date.now()} message={messageInfo.message} type={messageInfo.type} />
-                )}
             </div>
         </div>
     );
