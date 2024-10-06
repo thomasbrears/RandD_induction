@@ -7,7 +7,7 @@
       },
       {
         "src": "frontend/package.json",
-        "use": "@vercel/static-build"
+        "use": "@vercel/react"
       }
     ],
     "routes": [
