@@ -19,6 +19,6 @@
       {
         "src": "/(.*)",
         "dest": "/frontend/build/index.html"
-      },
+      }
     ]
 }  
