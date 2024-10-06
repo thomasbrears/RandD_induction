@@ -23,7 +23,7 @@ const useAuth = () => {
   const signOut = () => {
     auth.signOut().then(() => {
       setUser(null);
-      navigate('/signin');
+      navigate('/home');
     });
   };
 

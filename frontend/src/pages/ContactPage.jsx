@@ -1,4 +1,5 @@
 import React from 'react';
+import { toast } from 'react-toastify'; // Toastify success/error/info messages
 
 const ContactPage = () => {
   return (
