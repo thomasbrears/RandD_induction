@@ -14,7 +14,7 @@ function CompleteSignInPage() {
     const auth = getAuth();
 
     useEffect(() => {
-        if (isSignInWithEmailLink(auth, window.location.href)) {
+        if (isSignInWithEmailLink(handleSignIn, window.location.href)) {
             // Check if the email is already in localStorage
             const storedEmail = window.localStorage.getItem('emailForSignIn');
             if (storedEmail) {
@@ -26,7 +26,7 @@ function CompleteSignInPage() {
                 setLoading(false);
             }
         }
-    }, [auth]);
+    }, [handleSignIn]);
 
     // Function to handle sign-in with email link
     const handleSignIn = (email) => {
