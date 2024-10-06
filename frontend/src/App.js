@@ -53,7 +53,7 @@ const App = () => {
         <Navbar />
         <div className="flex-grow">
           <Routes>
-            <Route path="/" element={<HomePage />} />
+            <Route path="/home" element={<HomePage />} />
             <Route path="/contact" element={<ContactPage />} />
             <Route path="/signin" element={<SignInPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
