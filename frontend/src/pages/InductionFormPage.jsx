@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import useAuth from '../hooks/useAuth';
-import { toast } from 'react-toastify'; // Toastify success/error/info messages
 
 const InductionFormPage = () => {
   const { user } = useAuth();

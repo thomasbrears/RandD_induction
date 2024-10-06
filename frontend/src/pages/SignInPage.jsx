@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import '../style/Auth.css';
-import { getAuth, signInWithEmailAndPassword, sendSignInLinkToEmail } from 'firebase/auth';
+import { signInWithEmailAndPassword, sendSignInLinkToEmail } from 'firebase/auth';
 import { auth } from '../firebaseConfig.js';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify'; // Toastify success/error/info messages
