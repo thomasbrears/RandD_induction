@@ -41,8 +41,6 @@ app.get("/api/users", async (req, res) => {
         });
       });
 
-      
-      
       res.json(users);     
     } catch (error) {
       console.error("Error fetching users:", error);
@@ -79,9 +77,9 @@ app.get("/api/get-user", async (req, res) => {
 app.post("/api/users/create-new-user", async(req,res)=>{
     try{
         const { firstName, lastName, email, permission, position, locations } = req.body;
-        console.log(`${position} ${locations}`);
+        
         if (!email || !permission) {
-          return res.status(400).send("Email and permission are required");
+          return res.status(400).json({ message: "Email and permission are required." });
         }
 
         const userRecord = await admin.auth().createUser({
@@ -103,18 +101,21 @@ app.post("/api/users/create-new-user", async(req,res)=>{
           });
         } catch (firestoreError) {
           console.error("Firestore error: ", firestoreError);
-          throw new Error("Error writing to Firestore");
+          return res.status(500).json({ message: "Error writing to Firestore." });
         }
+
+        const passwordResetLink = await admin.auth().generatePasswordResetLink(email);
 
         res.status(201).json({
             uid: userRecord.uid,
             email: userRecord.email,
             role: permission,
-            message: "User created and role set successfully"
+            message: `User created successfully, invitation sent to ${email}`,
+            passwordResetLink
           });
     } catch (error){
         console.error("Error creating user", error);
-        res.status(500).send(error);
+        res.status(500).json({ message: "Error creating user: " + error.message });
     }
 });
 
@@ -165,3 +166,13 @@ app.listen(PORT, () => {
 });
 
 //Data endpoints
+
+/*
+const q = query(collection(db, 'inductions'), where('assignedTo', '==', user.uid));
+          const querySnapshot = await getDocs(q);
+          const inductionList = querySnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+            status: getStatus(doc.data())
+          }));
+*/

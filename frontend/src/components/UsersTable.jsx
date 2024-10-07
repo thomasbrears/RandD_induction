@@ -20,7 +20,6 @@ import {
   ChevronRight,
   ChevronsRight,
 } from "lucide-react";
-import "../style/Global.css";
 import "../style/Table.css";
 import { Link, useNavigate } from "react-router-dom";
 
@@ -162,7 +161,7 @@ const UsersTable = () => {
         </div>
 
         <div className="overflow-x-auto bg-white shadow-md rounded-lg">
-          <table className="min-w-full divide-y-gray-200">
+          <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id}>
@@ -190,7 +189,7 @@ const UsersTable = () => {
                 </tr>
               ))}
             </thead>
-            <tbody className="bg-white divide-y-gray-200">
+            <tbody className="bg-white divide-y divide-gray-200">
               {table.getRowModel().rows.map((row) => (
                 <tr key={row.id} className=" hover:bg-gray-50">
                   {row.getVisibleCells().map((cell) => (

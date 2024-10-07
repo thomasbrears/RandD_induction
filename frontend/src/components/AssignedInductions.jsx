@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { db } from '../firebaseConfig';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { getAssignedInductions } from '../api/InductionApi';
 import useAuth from '../hooks/useAuth';
 
 const AssignedInductions = () => {
@@ -8,20 +7,18 @@ const AssignedInductions = () => {
   const { user } = useAuth();
 
   useEffect(() => {
-    const fetchInductions = async () => {
-      /*if (user) {
-        const q = query(collection(db, 'inductions'), where('assignedTo', '==', user.uid));
-        const querySnapshot = await getDocs(q);
-        const inductionList = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          status: getStatus(doc.data())
-        }));
-        setInductions(inductionList);
-      }*/
-    };
+    if (user) {
+      const fetchInductions = async () => {
+        try {
+          const inductionList = await getAssignedInductions(user, user.uid);
+          setInductions(inductionList);
+        }catch (error) {
+          console.error("Error fetching assigned induction list:", error);
+        }
+      };
 
-    fetchInductions();
+      fetchInductions();
+    }
   }, [user]);
 
   const getStatus = (induction) => {
