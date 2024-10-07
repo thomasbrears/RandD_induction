@@ -1,7 +1,11 @@
 import React, { useContext }  from 'react';
-import { BrowserRouter as Router, Route, Routes, Navigate } from 'react-router-dom';
-import { ToastContainer, toast } from 'react-toastify'; // Toastify message container
-import 'react-toastify/dist/ReactToastify.css'; // Toastify message css
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
+
+// Toastify message container and style
+import { ToastContainer, toast } from 'react-toastify'; 
+import 'react-toastify/dist/ReactToastify.css';
+
+// Pages
 import HomePage from './pages/HomePage';
 import ContactPage from './pages/ContactPage';
 import SignInPage from './pages/SignInPage';
@@ -16,23 +20,39 @@ import UserForm from './pages/admin/AddUser';
 import InductionList from './pages/admin/InductionList';
 import InductionEdit from './pages/admin/InductionEdit';
 import InductionResults from './pages/admin/InductionResults';
+
+// Auth hook and components
 import useAuth from './hooks/useAuth';
-import './style/Global.css';
 import Footer from './components/Footer';
 import Navbar from './components/Navbar';
+import Loading from './components/Loading';
+
+// Global style sheet
+import './style/Global.css'; 
 
 
 // PrivateRoute for protecting routes based on roles and authentication
 const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
   const { user, loading } = useAuth();
+  const location = useLocation();
 
-  if (loading) return <div>Loading...</div>;
+  if (loading) {
+    return <Loading />;
+  }
 
-  return user && (!roleRequired || user.role === roleRequired) ? (
-    <Component {...rest} />
-  ) : (
-    <Navigate to="/signin" />
-  );
+  if (!user) {
+    // If the user is not logged in store the current URL and redirect to login
+    sessionStorage.setItem('previousUrl', location.pathname);
+    return <Navigate to="/signin" />;
+  }
+
+  // Check role if required
+  if (roleRequired && user.role !== roleRequired) {
+    return <Navigate to="/" />; // Redirect to homepage if user does not have the required role
+  }
+
+  // If authenticated and role matches, render the component
+  return <Component {...rest} />;
 };
 
 const App = () => {

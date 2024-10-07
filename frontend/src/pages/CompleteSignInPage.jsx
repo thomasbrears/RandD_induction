@@ -28,43 +28,71 @@ function CompleteSignInPage() {
         }
     }, [handleSignIn]);
 
+    // Function to get user role from Firebase custom claims
+    const getUserRole = async (user) => {
+        const tokenResult = await user.getIdTokenResult();
+        return tokenResult.claims.role;  // Fetch the role from the claims
+    };
+
     // Function to handle sign-in with email link
-    const handleSignIn = (email) => {
+    const handleSignIn = async (email) => {
         setLoading(true);
         setLoadingMessage(`Signing in with ${email}...`); 
-        signInWithEmailLink(auth, email, window.location.href)
-            .then((result) => {
-                window.localStorage.removeItem('emailForSignIn');
-                localStorage.setItem('token', result.user.accessToken);
-                localStorage.setItem('user', JSON.stringify(result.user));
-                toast.success('Successfully signed in! Welcome!');
-                setLoading(false);
-                navigate('/');
-            })
-            .catch((error) => {
-                // Handle Firebase Auth specific error messages
-                switch (error.code) {
-                    case 'auth/invalid-email':
-                        toast.error('Invalid email. Please check and try again.');
-                        break;
-                    case 'auth/expired-action-code':
-                        toast.error('The sign-in link has expired. Please request a new one.');
-                        break;
-                    case 'auth/invalid-action-code':
-                        toast.error('The sign-in link is invalid. Please check your email for a valid link.');
-                        break;
-                    case 'auth/user-disabled':
-                        toast.error('This account has been disabled. Please contact support for assistance.');
-                        break;
-                    case 'auth/network-request-failed':
-                        toast.error('Network error. Please check your internet connection and try again.');
-                        break;
-                    default:
-                        toast.error('Error signing in. Please try again.');
-                        break;
+        try {
+            const result = await signInWithEmailLink(auth, email, window.location.href);
+            const user = result.user;
+
+            window.localStorage.removeItem('emailForSignIn');
+            localStorage.setItem('token', result.user.accessToken);
+            localStorage.setItem('user', JSON.stringify(result.user));
+
+            toast.success('Successfully signed in! Welcome!');
+            setLoading(false);
+
+            // Get user role from Firebase custom claims
+            const userRole = await getUserRole(user);
+
+            if (!userRole) {
+                console.warn('User role is undefined or null.');  // Log warning if role is missing
+            }
+            
+            // Redirect to the previous URL page, otherwise redirect based on role
+            const previousUrl = sessionStorage.getItem('previousUrl');
+            if (previousUrl) {
+                navigate(previousUrl); // Redirect to the previous URL
+                sessionStorage.removeItem('previousUrl'); // Clear after redirect
+            } else {
+                // Fallback based on role
+                if (userRole === 'admin' || userRole === 'manager') {
+                    navigate('/admin/dashboard');
+                } else {
+                    navigate('/inductions');
                 }
-                setLoading(false);
-            });
+            }
+        } catch (error) {
+            // Handle Firebase Auth specific error messages
+            switch (error.code) {
+                case 'auth/invalid-email':
+                    toast.error('Invalid email. Please check and try again.');
+                    break;
+                case 'auth/expired-action-code':
+                    toast.error('The sign-in link has expired. Please request a new one.');
+                    break;
+                case 'auth/invalid-action-code':
+                    toast.error('The sign-in link is invalid. Please check your email for a valid link.');
+                    break;
+                case 'auth/user-disabled':
+                    toast.error('This account has been disabled. Please contact support for assistance.');
+                    break;
+                case 'auth/network-request-failed':
+                    toast.error('Network error. Please check your internet connection and try again.');
+                    break;
+                default:
+                    toast.error('Error signing in. Please try again.');
+                    break;
+            }
+            setLoading(false);
+        }
     };
 
     // Function to handle form submission for email input
