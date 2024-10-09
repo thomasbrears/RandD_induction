@@ -158,6 +158,11 @@ const UsersTable = () => {
               Add New User
             </button>
           </Link>
+          <Link to={"/admin/induction-results"}>
+          <button className="text-white bg-gray-800 px-3 py-2 rounded-md">
+            View Results
+          </button>
+          </Link>
         </div>
 
         <div className="overflow-x-auto bg-white shadow-md rounded-lg">

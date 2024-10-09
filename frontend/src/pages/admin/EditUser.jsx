@@ -74,7 +74,20 @@ const EditUser = () => {
   const handleDelete = () =>{
     deleteUser(user, viewedUser.uid)
     .then(() => {
+      toast.success('User deleted sucessfully!', {
+        position: 'bottom-left',
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: 'light',
+      });
 
+      setTimeout(() => {
+        navigate("/admin/view-users");
+      }, 3000); 
     })
     .catch((err) => {
       const errorMessage = err.response?.data?.message || "An error occurred";

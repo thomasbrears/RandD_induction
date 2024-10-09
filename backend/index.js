@@ -3,11 +3,12 @@ import express from 'express';
 import cors from 'cors';
 import { db } from './firebase.js';
 import Positions from './models/Positions.js';
+import { DefaultNewInduction } from './models/Inductions.js';
+import Departments from './models/Departments.js';
 
 const app = express();
 app.use(cors());
 app.use(express.json());
-
 
 //Middleware makes sure that anyone accessing endpoints is logged in TODO: role-based
 app.use(async (req, res, next) => {
@@ -65,6 +66,7 @@ app.get("/api/get-user", async (req, res) => {
             permission: userResult.customClaims ? userResult.customClaims.role : Permissions.USER, 
             position: userDoc.exists ? userDoc.data().position : Positions.TEAM,
             locations: userDoc.exists ? userDoc.data().locations : [],
+            assignedInductions: userDoc.exists ? userDoc.data().assignedInductions : [],
         };
 
         res.json(userData);     
@@ -76,7 +78,8 @@ app.get("/api/get-user", async (req, res) => {
 
 app.post("/api/users/create-new-user", async(req,res)=>{
     try{
-        const { firstName, lastName, email, permission, position, locations } = req.body;
+      const { authtoken } = req.headers;
+        const { firstName, lastName, email, permission, position, locations, assignedInductions } = req.body;
         
         if (!email || !permission) {
           return res.status(400).json({ message: "Email and permission are required." });
@@ -98,20 +101,18 @@ app.post("/api/users/create-new-user", async(req,res)=>{
           await userRef.set({
             position: position,
             locations: Array.isArray(locations) ? locations : [],
+            assignedInductions: Array.isArray(assignedInductions) ? assignedInductions : []
           });
         } catch (firestoreError) {
           console.error("Firestore error: ", firestoreError);
           return res.status(500).json({ message: "Error writing to Firestore." });
         }
 
-        const passwordResetLink = await admin.auth().generatePasswordResetLink(email);
-
         res.status(201).json({
             uid: userRecord.uid,
             email: userRecord.email,
             role: permission,
-            message: `User created successfully, invitation sent to ${email}`,
-            passwordResetLink
+            message: `User created successfully`,
           });
     } catch (error){
         console.error("Error creating user", error);
@@ -121,7 +122,7 @@ app.post("/api/users/create-new-user", async(req,res)=>{
 
 app.put("/api/update-user", async (req, res) => {
   try {
-      const { uid, firstName, lastName, email, permission, position, locations } = req.body;
+      const { uid, firstName, lastName, email, permission, position, locations, assignedInductions } = req.body;
 
       const userResult = await admin.auth().updateUser(uid,{
         email: email,
@@ -135,6 +136,7 @@ app.put("/api/update-user", async (req, res) => {
       await userRef.update({
         position: position,
         locations: Array.isArray(locations) ? locations : [],
+        assignedInductions: Array.isArray(assignedInductions) ? assignedInductions : [],
       });
 
       res.json({
@@ -160,19 +162,78 @@ app.delete("/api/delete-user", async (req, res) => {
   }
 });
 
+app.get("/api/get-assigned-inductions", async (req, res) => {
+  try {
+    const uid = req.query.uid;
+    
+    //Firestore
+    const userRef = db.collection('users').doc(uid);
+    const userDoc = await userRef.get();
+
+    const userData = {
+        assignedInductions: userDoc.exists ? userDoc.data().assignedInductions : [],
+    };
+
+    res.json(userData);     
+} catch (error) {
+    console.error("Error fetching user:", error);
+    res.status(500).send(error);
+}
+});
+
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
 });
 
-//Data endpoints
+//Induction endpoints
+app.get("/api/inductions", async (req, res) => {
+  try {
+    const snapshot = await db.collection('inductions').get();
+    const inductions = snapshot.docs.map(doc => ({
+      id: doc.id,
+      ...doc.data(),
+    }));
 
-/*
-const q = query(collection(db, 'inductions'), where('assignedTo', '==', user.uid));
-          const querySnapshot = await getDocs(q);
-          const inductionList = querySnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data(),
-            status: getStatus(doc.data())
-          }));
-*/
+    res.json(inductions);
+  } catch (error) {
+    console.error("Error fetching inductions:", error);
+    res.status(500).send(error);
+  }
+});
+
+app.post('/api/create-induction', async (req, res) => {
+  const newInduction = req.body;
+
+  try {
+    const addedInduction = await db.collection('inductions').add(newInduction);
+    res.status(201).json({ id: addedInduction.id, ...newInduction });
+  } catch (error) {
+    console.error("Error creating induction:", error);
+    res.status(500).send(error);
+  }
+});
+
+//Don't know if this works
+app.get('/api/get-induction', async (req, res) => {
+  try {
+    const id = req.query.id;
+    const inductionRef = db.collection('inductions').doc(id);
+    const inductionDoc = await inductionRef.get();
+
+    const inductionData = {
+      id: id,
+      name: inductionDoc.exists ? inductionDoc.data().name : " ",
+      department: inductionDoc.exists ? inductionDoc.data().department : Departments.RETAIL,
+      description: inductionDoc.exists ? inductionDoc.data().description : " ",
+      questions: inductionDoc.exists ? inductionDoc.data().questions : [],
+    };
+
+    res.json(inductionData);     
+  } catch (error) {
+      console.error("Error fetching induction:", error);
+      res.status(500).send(error);
+  }
+});
+
+//Add an update induction endpoint

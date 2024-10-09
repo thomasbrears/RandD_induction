@@ -1,4 +1,3 @@
-import Locations from './Locations';
 import Permissions from './Permissions';
 import Positions from './Positions';
 
@@ -11,6 +10,7 @@ import Positions from './Positions';
  * @property {Permissions} [permission]
  * @property {Positions} [position]
  * @property {Array<Locations>} [locations]
+ * @property {Array<AssignedInduction>} [assignedInductions]
  */
 
 /** @type {User} */
@@ -22,4 +22,5 @@ export const DefaultNewUser = {
     permission: Permissions.USER,
     position: Positions.TEAM,
     locations: [],
+    assignedInductions: [],
 };
