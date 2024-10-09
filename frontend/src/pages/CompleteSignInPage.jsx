@@ -13,21 +13,6 @@ function CompleteSignInPage() {
     const navigate = useNavigate();
     const auth = getAuth();
 
-    useEffect(() => {
-        if (isSignInWithEmailLink(handleSignIn, window.location.href)) {
-            // Check if the email is already in localStorage
-            const storedEmail = window.localStorage.getItem('emailForSignIn');
-            if (storedEmail) {
-                // If email exists in local storage, proceed to sign-in
-                handleSignIn(storedEmail);
-            } else {
-                // If email is not in local storage, ask the user for the email
-                setEmailPrompt(true);
-                setLoading(false);
-            }
-        }
-    }, [handleSignIn]);
-
     // Function to get user role from Firebase custom claims
     const getUserRole = async (user) => {
         const tokenResult = await user.getIdTokenResult();
@@ -94,6 +79,21 @@ function CompleteSignInPage() {
             setLoading(false);
         }
     };
+
+    useEffect(() => {
+        if (isSignInWithEmailLink(handleSignIn, window.location.href)) {
+            // Check if the email is already in localStorage
+            const storedEmail = window.localStorage.getItem('emailForSignIn');
+            if (storedEmail) {
+                // If email exists in local storage, proceed to sign-in
+                handleSignIn(storedEmail);
+            } else {
+                // If email is not in local storage, ask the user for the email
+                setEmailPrompt(true);
+                setLoading(false);
+            }
+        }
+    }, [handleSignIn]);
 
     // Function to handle form submission for email input
     const handleSubmitEmail = (e) => {
