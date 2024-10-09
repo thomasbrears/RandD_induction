@@ -25,6 +25,7 @@ body {
 }
 
 /* Tailwind CSS-like utility classes */
+.bg-black { background-color: #000000; }
 .bg-gray-800 { background-color: #2d3748; }
 .text-white { color: #ffffff; }
 .p-4 { padding: 1rem; }
