@@ -1,7 +1,5 @@
-import Locations from './Locations';
 import Permissions from './Permissions';
 import Positions from './Positions';
-import AssignedInduction from './AssignedInduction';
 
 /**
  * @typedef {Object} User

@@ -1,4 +1,4 @@
-import QuestionTypes from './QuestionTypes.js';
+import QuestionTypes from './QuestionTypes';
 
 /**
  * @typedef {Object} Answer
@@ -16,12 +16,10 @@ import QuestionTypes from './QuestionTypes.js';
  */
 
 /** @type {Question} */
-const DefaultNewQuestion = {
+export const DefaultNewQuestion = {
     id: undefined,
     question: "",
     description: "",
     type: QuestionTypes.MULTICHOICE,
     answers: [],
 };
-
-export default DefaultNewQuestion;

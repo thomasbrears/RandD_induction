@@ -1,4 +1,3 @@
-import Question from './Question';
 import Departments from './Departments';
 
 /**

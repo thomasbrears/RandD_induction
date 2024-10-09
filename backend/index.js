@@ -3,7 +3,6 @@ import express from 'express';
 import cors from 'cors';
 import { db } from './firebase.js';
 import Positions from './models/Positions.js';
-import { DefaultNewInduction } from './models/Inductions.js';
 import Departments from './models/Departments.js';
 
 const app = express();
@@ -152,9 +151,11 @@ app.put("/api/update-user", async (req, res) => {
 app.delete("/api/delete-user", async (req, res) => {
   try {
       const uid = req.query.uid;
-      const result = await admin.auth().updateUser(uid);
-      res.status(201).json({
-        message: "User deleted and successfully"
+      await admin.auth().deleteUser(uid);
+      await db.collection('users').doc(uid).delete();
+
+      res.status(200).json({
+        message: "User deleted successfully"
       });
   } catch (error) {
       console.error("Error deleting user:", error);

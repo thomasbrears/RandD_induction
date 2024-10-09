@@ -1,5 +1,4 @@
-import Question from './Question.js';
-import Departments from './Departments.js';
+import Departments from './Departments';
 
 /**
  * @typedef {Object} Induction

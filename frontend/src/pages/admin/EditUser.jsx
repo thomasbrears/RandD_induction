@@ -5,7 +5,7 @@ import useAuth from '../../hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getUser, updateUser } from "../../api/UserApi";
 import { toast } from 'react-toastify';
-import { deleteUser } from 'firebase/auth';
+import { deleteUser } from '../../api/UserApi';
 
 const EditUser = () => {
   const [viewedUser, setViewedUser] = useState(DefaultNewUser);
@@ -72,37 +72,39 @@ const EditUser = () => {
   }; 
 
   const handleDelete = () =>{
-    deleteUser(user, viewedUser.uid)
-    .then(() => {
-      toast.success('User deleted sucessfully!', {
-        position: 'bottom-left',
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: 'light',
-      });
-
-      setTimeout(() => {
-        navigate("/admin/view-users");
-      }, 3000); 
-    })
-    .catch((err) => {
-      const errorMessage = err.response?.data?.message || "An error occurred";
-        toast.error(errorMessage, {
-          position: "bottom-left",
+    if(user && viewedUser){
+      deleteUser(user, viewedUser.uid)
+      .then(() => {
+        toast.success('User deleted sucessfully!', {
+          position: 'bottom-left',
           autoClose: 3000,
           hideProgressBar: false,
           closeOnClick: true,
           pauseOnHover: true,
           draggable: true,
           progress: undefined,
-          theme: "light",
+          theme: 'light',
         });
-      console.error(err);
-    });
+  
+        setTimeout(() => {
+          navigate("/admin/view-users");
+        }, 3000); 
+      })
+      .catch((err) => {
+        const errorMessage = err.response?.data?.message || "An error occurred";
+          toast.error(errorMessage, {
+            position: "bottom-left",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            theme: "light",
+          });
+        console.error(err);
+      });
+    }
   };
 
   return (
@@ -112,12 +114,12 @@ const EditUser = () => {
 
       <h1>{"Edit User"}</h1>
       <button
-        className='inline-block px-5 py-2.5 bg-black text-white no-underline border-none rounded cursor-pointer text-base text-center transition-colors duration-300 transform hover:bg-[#0c027d] active:scale-95 my-2.5'
+        className="text-white bg-gray-800 px-3 py-2 rounded-md"
         onClick={handleDelete}
         >
-        
         Delete User
-      </button>
+      </button >
+
       <UserForm userData={viewedUser} onSubmit={handleSubmit} />
     </div>
   );
