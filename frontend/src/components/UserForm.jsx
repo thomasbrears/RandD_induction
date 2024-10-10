@@ -12,7 +12,6 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { getAllInductions } from "../api/InductionApi";
 import { DefaultNewAssignedInduction } from "../models/AssignedInduction";
-import AssignedInductions from "./AssignedInductions";
 import Status from "../models/Status";
 
 export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
@@ -496,7 +495,46 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
         </div>
       </div>
 
-      {user.uid && <AssignedInductions uid={user.uid} />}
+      {user.uid && 
+        <div className="flex items-start justify-center pt-8">
+          <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-4xl mx-4 md:mx-8">
+            {user.assignedInductions && Array.isArray(user.assignedInductions) && user.assignedInductions.length > 0 ? (
+              <div className="overflow-x-auto"> 
+                <table className="min-w-full border-collapse border border-gray-200 w-full"> 
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="border border-gray-300 px-4 py-2 text-left">Induction Name</th>
+                      <th className="border border-gray-300 px-4 py-2 text-left">Available From</th>
+                      <th className="border border-gray-300 px-4 py-2 text-left">Due Date</th>
+                      <th className="border border-gray-300 px-4 py-2 text-left">Completion Date</th>
+                      <th className="border border-gray-300 px-4 py-2 text-left">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {user.assignedInductions.map((induction, index) => (
+                      <tr key={index}>
+                        <td className="border border-gray-300 px-4 py-2">{induction.name}</td>
+                        <td className="border border-gray-300 px-4 py-2">
+                          {induction.availableFrom ? new Date(induction.availableFrom).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2">
+                          {induction.dueDate ? new Date(induction.dueDate).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2">
+                          {induction.completionDate ? new Date(induction.completionDate).toLocaleDateString() : 'N/A'}
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2">{induction.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <p className="text-gray-600">No assigned inductions for this user.</p>
+            )}
+          </div>
+        </div>
+      }
     </>
   );
 };

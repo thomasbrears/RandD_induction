@@ -1,5 +1,7 @@
 import admin from 'firebase-admin';
-import serviceAccount from "./r-and-d-induction-firebase-adminsdk-pf2gf-d8e0622e57.json" assert { type: 'json' };
+import { readFileSync } from 'fs';
+
+const serviceAccount = JSON.parse(readFileSync('./r-and-d-induction-firebase-adminsdk-pf2gf-d8e0622e57.json'));
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount), 
