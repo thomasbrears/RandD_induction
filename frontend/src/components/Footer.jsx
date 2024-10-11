@@ -23,7 +23,7 @@ const Footer = () => {
           <a href="http://localhost:3000/contact">Contact</a>
           
           {isAuthenticated && (
-            <a href="/my-inductions">My Inductions</a>
+            <a href="http://localhost:3000/formlist">My Inductions</a>
           )}
 
           <a href="http://localhost:3000/signin">Login/Logout</a>
