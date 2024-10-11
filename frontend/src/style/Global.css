@@ -43,6 +43,7 @@ body {
 .py-1 { padding-top: 0.25rem; padding-bottom: 0.25rem; }
 .rounded { border-radius: 0.25rem; }
 .p-2 { padding: 0.5rem; }
+.p-10 {padding-left: 10rem;}
 
 .assigned-inductions table {
   width: 100%;
@@ -68,3 +69,4 @@ body {
 .transform { transform: translateY(-50%); }
 .-translate-y-1\/2 { transform: translateY(-50%); }
 .hover\:text-gray-200:hover { color: #edf2f7; }
+

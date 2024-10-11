@@ -20,16 +20,17 @@ import UserForm from './pages/admin/AddUser';
 import InductionList from './pages/admin/InductionList';
 import InductionEdit from './pages/admin/InductionEdit';
 import InductionResults from './pages/admin/InductionResults';
+import EditUser from './pages/admin/EditUser';
 
 // Auth hook and components
 import useAuth from './hooks/useAuth';
 import Footer from './components/Footer';
 import Navbar from './components/Navbar';
 import Loading from './components/Loading';
+import Permissions from './models/Permissions';
 
 // Global style sheet
 import './style/Global.css'; 
-
 
 // PrivateRoute for protecting routes based on roles and authentication
 const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
@@ -40,14 +41,21 @@ const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
     return <Loading />;
   }
 
+
   if (!user) {
     // If the user is not logged in store the current URL and redirect to login
     sessionStorage.setItem('previousUrl', location.pathname);
     return <Navigate to="/signin" />;
   }
-
+  
   // Check role if required
-  if (roleRequired && user.role !== roleRequired) {
+  const hasPermission = roleRequired
+    ? Array.isArray(roleRequired)
+      ? roleRequired.includes(user.role)
+      : user.role === roleRequired
+    : true;
+  
+  if (!hasPermission) {
     return <Navigate to="/" />; // Redirect to homepage if user does not have the required role
   }
 
@@ -71,6 +79,7 @@ const App = () => {
       />
       <Router>
         <Navbar />
+        <ToastContainer/>
         <div className="flex-grow">
           <Routes>
             <Route path="/" element={<HomePage />} />
@@ -84,12 +93,13 @@ const App = () => {
             <Route path="/inductions" element={<PrivateRoute component={FormListPage} />} />
             <Route path="/inductionform" element={<PrivateRoute component={InductionFormPage} />} />
             {/* Admin-specific routes restricted to "admin" */}
-            <Route path="/admin/dashboard" element={<PrivateRoute component={Dashboard} roleRequired="admin" />} />
-            <Route path="/admin/view-users" element={<PrivateRoute component={ViewUsers} roleRequired="admin" />} />
-            <Route path="/admin/add-user" element={<PrivateRoute component={UserForm} roleRequired="admin" />} />
-            <Route path="/admin/inductions" element={<PrivateRoute component={InductionList} roleRequired="admin" />} />
-            <Route path="/admin/edit-induction" element={<PrivateRoute component={InductionEdit} roleRequired="admin" />} />
-            <Route path="/admin/induction-results" element={<PrivateRoute component={InductionResults} roleRequired="admin" />} />
+            <Route path="/admin/dashboard" element={<PrivateRoute component={Dashboard} roleRequired = {[Permissions.ADMIN, Permissions.MANAGER]} />} />
+            <Route path="/admin/view-users" element={<PrivateRoute component={ViewUsers} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+            <Route path="/admin/add-user" element={<PrivateRoute component={UserForm} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+            <Route path="/admin/inductions" element={<PrivateRoute component={InductionList} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+            <Route path="/admin/edit-induction" element={<PrivateRoute component={InductionEdit} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+            <Route path="/admin/induction-results" element={<PrivateRoute component={InductionResults} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+            <Route path="/admin/edit-user" element={<PrivateRoute component={EditUser} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
           </Routes>
         </div>
         <Footer />
