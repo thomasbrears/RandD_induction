@@ -134,7 +134,7 @@ app.post("/api/users/create-new-user", async (req, res) => {
     }
 
     //Email
-    await sendEmail(
+    /*await sendEmail(
       email,
       "Welcome to AUT Events! Your Induction Account Invitation",
       `
@@ -161,7 +161,7 @@ app.post("/api/users/create-new-user", async (req, res) => {
       <p>Best regards,</p>
       <p>AUT Events Team</p>
       `
-    );
+    );*/
 
     res.status(201).json({
       uid: userRecord.uid,

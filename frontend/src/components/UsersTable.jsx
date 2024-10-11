@@ -37,14 +37,6 @@ const UsersTable = () => {
   };
 
   const columns = [
-    columnHelper.accessor("uid", {
-      cell: (info) => info.getValue(),
-      header: () => (
-        <span className="flex items-center">
-          <User className="mr-2" size={16} /> UID
-        </span>
-      ),
-    }),
 
     columnHelper.accessor("firstName", {
       cell: (info) => info.getValue(),
