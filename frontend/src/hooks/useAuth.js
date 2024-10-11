@@ -11,7 +11,9 @@ const useAuth = () => {
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
       if (currentUser) {
         const token = await currentUser.getIdTokenResult();
-        setUser({ ...currentUser, role: token.claims.role });
+        setUser({ ...currentUser,
+           role: token.claims.role,
+          token: token.token, });
       } else {
         setUser(null);
       }

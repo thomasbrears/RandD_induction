@@ -14,6 +14,12 @@ function LoginPage() {
     const [loadingMessage, setLoadingMessage] = useState('');
     const navigate = useNavigate();
 
+    // Function to get user role from Firebase custom claims
+    const getUserRole = async (user) => {
+        const tokenResult = await user.getIdTokenResult();
+        return tokenResult.claims.role;  // Fetch the role from the claims
+    };
+
     // Function for email and password sign-in
     const handleEmailPasswordSignIn = async (e) => {
         e.preventDefault();
@@ -30,21 +36,46 @@ function LoginPage() {
 
         try {
             setLoading(true);
-            setLoadingMessage(`Signing in as ${email}...`);	
+            setLoadingMessage(`Signing in as ${email}...`);
 
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
+
             localStorage.setItem('token', user.accessToken);
             localStorage.setItem('user', JSON.stringify(user));
-            navigate("/inductions");
             toast.success('Signed in successfully!', { position: 'top-right', autoClose: 3000 });
+
+            // Get user role from Firebase custom claims
+            const userRole = await getUserRole(user);
+
+            if (!userRole) {
+                console.warn('User role is undefined or null.');  // Log warning if role is missing
+            }
+
+            // Check if there is a previous URL stored
+            const previousUrl = sessionStorage.getItem('previousUrl');
+
+            if (previousUrl) {
+                // If there's a previous URL, redirect to it
+                navigate(previousUrl); // Redirect to the previous URL
+                sessionStorage.removeItem('previousUrl'); // Clear after redirect
+            } else {
+                // Redirect based on role if no previous URL
+                if (userRole === 'admin' || userRole === 'manager') {
+                    navigate('/admin/dashboard'); // Redirect to for admins or managers
+                } else if (userRole === 'user') {
+                    navigate('/inductions'); // Redirect for users / staff
+                } else {
+                    navigate('/'); // Redirect home for unknown roles
+                }
+            }            
         } catch (error) {
             console.error("Error during sign-in:", error);
             switch (error.code) {
                 case 'auth/user-not-found':
                     toast.error('No user found with this email.');
                     break;
-                case 'auth/invalid-password':
+                case 'auth/wrong-password':
                     toast.error('Incorrect password. Please try again.');
                     break;
                 case 'auth/invalid-email':
