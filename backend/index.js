@@ -55,7 +55,7 @@ app.get("/api/users", async (req, res) => {
   }
 });
 
-app.get("/api/get-user", async (req, res) => {
+app.get("/api/users/get-user", async (req, res) => {
   try {
     const uid = req.query.uid;
     const userResult = await admin.auth().getUser(uid);
@@ -175,7 +175,7 @@ app.post("/api/users/create-new-user", async (req, res) => {
   }
 });
 
-app.put("/api/update-user", async (req, res) => {
+app.put("/api/users/update-user", async (req, res) => {
   try {
     const {
       uid,
@@ -215,7 +215,7 @@ app.put("/api/update-user", async (req, res) => {
   }
 });
 
-app.delete("/api/delete-user", async (req, res) => {
+app.delete("/api/users/delete-user", async (req, res) => {
   try {
     const uid = req.query.uid;
     await admin.auth().deleteUser(uid);

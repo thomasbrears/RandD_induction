@@ -13,12 +13,16 @@ import "react-datepicker/dist/react-datepicker.css";
 import { getAllInductions } from "../api/InductionApi";
 import { DefaultNewAssignedInduction } from "../models/AssignedInduction";
 import Status from "../models/Status";
+import { deleteUser } from "../api/UserApi";
+import { useNavigate } from "react-router-dom";
+import { toast } from "react-toastify";
 
 export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
   const [user, setUser] = useState(DefaultNewUser);
   const [availableInductions, setAvailableInductions] = useState([]);
   const [newAssignedInductions, setNewAssignedInductions] = useState([]);
   const { user: currentUser } = useAuth();
+  const navigate = useNavigate();
 
   const userSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -121,6 +125,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
         })),
       ],
     };
+
     await onSubmit(userToSubmit);
 
     if (!userData.uid) {
@@ -192,13 +197,56 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
       ? Object.values(Permissions)
       : [Permissions.USER];
 
+  const handleDelete = () => {
+    if (currentUser && user) {
+      deleteUser(currentUser, user.uid)
+        .then(() => {
+          toast.success("User deleted sucessfully!", {
+            position: "bottom-left",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            theme: "light",
+          });
+
+          setTimeout(() => {
+            navigate("/admin/view-users");
+          }, 3000);
+        })
+        .catch((err) => {
+          const errorMessage =
+            err.response?.data?.message || "An error occurred";
+          toast.error(errorMessage, {
+            position: "bottom-left",
+            autoClose: 3000,
+            hideProgressBar: false,
+            closeOnClick: true,
+            pauseOnHover: true,
+            draggable: true,
+            progress: undefined,
+            theme: "light",
+          });
+          console.error(err);
+        });
+    }
+  };
+
   return (
     <>
       <div className="flex items-start justify-center pt-8">
         <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-4xl mx-4 md:mx-8">
-          <div>
-            <h1>User Details</h1>
-          </div>
+        <div className="flex justify-between items-center">
+          <h1>User Details</h1>
+          <button
+            className="text-white bg-gray-800 px-3 py-2 rounded-md"
+            onClick={handleDelete}
+          >
+            Delete User
+          </button>
+        </div>
           <FormProvider {...methods}>
             <form
               onSubmit={methods.handleSubmit(handleSubmit)}
@@ -495,46 +543,74 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
         </div>
       </div>
 
-      {user.uid && 
+      {user.uid && (
         <div className="flex items-start justify-center pt-8">
           <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-4xl mx-4 md:mx-8">
-            {user.assignedInductions && Array.isArray(user.assignedInductions) && user.assignedInductions.length > 0 ? (
-              <div className="overflow-x-auto"> 
-                <table className="min-w-full border-collapse border border-gray-200 w-full"> 
+            {user.assignedInductions &&
+            Array.isArray(user.assignedInductions) &&
+            user.assignedInductions.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-collapse border border-gray-200 w-full">
                   <thead>
                     <tr className="bg-gray-100">
-                      <th className="border border-gray-300 px-4 py-2 text-left">Induction Name</th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">Available From</th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">Due Date</th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">Completion Date</th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">Status</th>
+                      <th className="border border-gray-300 px-4 py-2 text-left">
+                        Induction Name
+                      </th>
+                      <th className="border border-gray-300 px-4 py-2 text-left">
+                        Available From
+                      </th>
+                      <th className="border border-gray-300 px-4 py-2 text-left">
+                        Due Date
+                      </th>
+                      <th className="border border-gray-300 px-4 py-2 text-left">
+                        Completion Date
+                      </th>
+                      <th className="border border-gray-300 px-4 py-2 text-left">
+                        Status
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {user.assignedInductions.map((induction, index) => (
                       <tr key={index}>
-                        <td className="border border-gray-300 px-4 py-2">{induction.name}</td>
                         <td className="border border-gray-300 px-4 py-2">
-                          {induction.availableFrom ? new Date(induction.availableFrom).toLocaleDateString() : 'N/A'}
+                          {induction.name}
                         </td>
                         <td className="border border-gray-300 px-4 py-2">
-                          {induction.dueDate ? new Date(induction.dueDate).toLocaleDateString() : 'N/A'}
+                          {induction.availableFrom
+                            ? new Date(
+                                induction.availableFrom
+                              ).toLocaleDateString()
+                            : "N/A"}
                         </td>
                         <td className="border border-gray-300 px-4 py-2">
-                          {induction.completionDate ? new Date(induction.completionDate).toLocaleDateString() : 'N/A'}
+                          {induction.dueDate
+                            ? new Date(induction.dueDate).toLocaleDateString()
+                            : "N/A"}
                         </td>
-                        <td className="border border-gray-300 px-4 py-2">{induction.status}</td>
+                        <td className="border border-gray-300 px-4 py-2">
+                          {induction.completionDate
+                            ? new Date(
+                                induction.completionDate
+                              ).toLocaleDateString()
+                            : "N/A"}
+                        </td>
+                        <td className="border border-gray-300 px-4 py-2">
+                          {induction.status}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p className="text-gray-600">No assigned inductions for this user.</p>
+              <p className="text-gray-600">
+                No assigned inductions for this user.
+              </p>
             )}
           </div>
         </div>
-      }
+      )}
     </>
   );
 };

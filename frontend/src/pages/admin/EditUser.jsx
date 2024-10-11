@@ -5,7 +5,6 @@ import useAuth from '../../hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getUser, updateUser } from "../../api/UserApi";
 import { toast } from 'react-toastify';
-import { deleteUser } from '../../api/UserApi';
 
 const EditUser = () => {
   const [viewedUser, setViewedUser] = useState(DefaultNewUser);
@@ -35,6 +34,22 @@ const EditUser = () => {
         }
       };
       fetchUsers();
+    }else if(!loading){
+      setTimeout(() => {
+        navigate("/admin/view-users");
+      }, 3000);
+
+      const errorMessage = "An error occurred, no user was selected.";
+      toast.error(errorMessage, {
+        position: "bottom-left",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+        progress: undefined,
+        theme: "light",
+      });
     }
     
   }, [uid, navigate, user, loading]);
@@ -71,54 +86,12 @@ const EditUser = () => {
      }
   }; 
 
-  const handleDelete = () =>{
-    if(user && viewedUser){
-      deleteUser(user, viewedUser.uid)
-      .then(() => {
-        toast.success('User deleted sucessfully!', {
-          position: 'bottom-left',
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: 'light',
-        });
-  
-        setTimeout(() => {
-          navigate("/admin/view-users");
-        }, 3000); 
-      })
-      .catch((err) => {
-        const errorMessage = err.response?.data?.message || "An error occurred";
-          toast.error(errorMessage, {
-            position: "bottom-left",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-          });
-        console.error(err);
-      });
-    }
-  };
-
   return (
     <div>
       <h1 className = "underline">Admin Edit User</h1>
       <p>Only admins can access this Edit User.</p>
 
       <h1>{"Edit User"}</h1>
-      <button
-        className="text-white bg-gray-800 px-3 py-2 rounded-md"
-        onClick={handleDelete}
-        >
-        Delete User
-      </button >
 
       <UserForm userData={viewedUser} onSubmit={handleSubmit} />
     </div>

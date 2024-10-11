@@ -47,7 +47,7 @@ export const getUser = async (user, uid) => {
   try {
     const token = user?.token;
     const headers = token ? { authtoken: token } : {};
-    const response = await axios.get(`${API_URL}/api/get-user`, {
+    const response = await axios.get(`${API_URL}/api/users/get-user`, {
       headers,
       params: { uid },
     });
@@ -62,7 +62,7 @@ export const updateUser = async (user, userData) => {
   try {
     const token = user?.token;
     const headers = token ? { authtoken: token } : {};
-    const response = await axios.put(`${API_URL}/api/update-user`, userData, {
+    const response = await axios.put(`${API_URL}/api/users/update-user`, userData, {
       headers,
     });
     return response.data;
@@ -76,7 +76,7 @@ export const deleteUser = async (user, uid) => {
   try {
     const token = user?.token;
     const headers = token ? { authtoken: token } : {};
-    const response = await axios.delete(`${API_URL}/api/delete-user`, {
+    const response = await axios.delete(`${API_URL}/api/users/delete-user`, {
       headers,
       params: { uid },
     });
