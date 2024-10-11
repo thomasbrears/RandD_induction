@@ -1,14 +1,19 @@
 import React from 'react';
 import UsersTable from '../../components/UsersTable';
 import '../../style/Global.css'
+import PageHeader from '../../components/PageHeader';
 
 const ViewUsers = () => {
   return (
-    <div>
-        <h1 >Manage Users</h1>
-        <p>Only admins can access this page.</p>
-        <UsersTable/>
-    </div>
+    <>
+      <PageHeader 
+        title="Manage Users" 
+        subtext="View and manage all users" 
+      />
+      <div className="p-6">
+        <UsersTable />
+      </div>
+    </>
   );
 };
 

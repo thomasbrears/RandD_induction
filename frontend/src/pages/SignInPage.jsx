@@ -114,7 +114,8 @@ function LoginPage() {
 
             await sendSignInLinkToEmail(auth, email, actionCodeSettings);
             window.localStorage.setItem('emailForSignIn', email);
-            toast.success('Sign-in link sent! Please check your email and click the link included.', { position: 'top-center', autoClose: 7000 });
+            toast.success('Sign-in link sent! Please check your email and click the link included.', { autoClose: 7000 });
+            navigate('/complete-signin'); // Redirect to complete sign-in page
         } catch (error) {
             // Handle Firebase Auth specific error messages
             console.error("Error sending sign-in link:", error);

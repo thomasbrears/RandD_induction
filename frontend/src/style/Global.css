@@ -1,18 +1,31 @@
-@import url('https://fonts.googleapis.com/css2?family=Fjalla+One&family=Cantarell:wght@400;700&display=swap');
-
-/* Set Cantarell for body text */
+/* Body text - Helia Core Book */
 body {
-    font-family: 'Cantarell', sans-serif;
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-  }
-  
-  /* Set Fjalla One for headings */
-  h1, h2, h3, h4, h5, h6 {
-    font-family: 'Fjalla One', sans-serif;
-    margin: 0;
-  }
+  font-family: 'HeliaCoreBook', sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* Titles and large text - Helia Core Bold */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'HeliaCoreBold', sans-serif;
+  margin: 0;
+}
+
+/* Bold text within body - Helia Core Medium */
+strong {
+  font-family: 'HeliaCoreMedium', sans-serif;
+  font-weight: 500;
+}
+
+/* Large uppercase text (>36px) - Helia Core Black */
+.uppercase-large {
+  font-family: 'HeliaCoreBlack', sans-serif;
+  font-weight: 900;
+  text-transform: uppercase;
+  font-size: 36px;
+}
+
 
 .App {
   display: flex;

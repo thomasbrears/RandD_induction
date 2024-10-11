@@ -5,6 +5,7 @@ import useAuth from '../../hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getUser, updateUser } from "../../api/UserApi";
 import { toast } from 'react-toastify';
+import PageHeader from '../../components/PageHeader';
 
 const EditUser = () => {
   const [viewedUser, setViewedUser] = useState(DefaultNewUser);
@@ -21,16 +22,7 @@ const EditUser = () => {
           setViewedUser(userData);
         } catch (err) {
           const errorMessage = err.response?.data?.message || "An error occurred";
-          toast.error(errorMessage, {
-            position: "bottom-left",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-          });
+          toast.error(errorMessage);
         }
       };
       fetchUsers();
@@ -40,16 +32,7 @@ const EditUser = () => {
       }, 3000);
 
       const errorMessage = "An error occurred, no user was selected.";
-      toast.error(errorMessage, {
-        position: "bottom-left",
-        autoClose: 3000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-        progress: undefined,
-        theme: "light",
-      });
+      toast.error(errorMessage);
     }
     
   }, [uid, navigate, user, loading]);
@@ -58,43 +41,26 @@ const EditUser = () => {
     if(user){
       updateUser(user, userData)
       .then(() => {
-        toast.success('User updated sucessfully!', {
-          position: 'bottom-left',
-          autoClose: 3000,
-          hideProgressBar: false,
-          closeOnClick: true,
-          pauseOnHover: true,
-          draggable: true,
-          progress: undefined,
-          theme: 'light',
-        });
+        toast.success('User updated sucessfully!', { position: 'top-right', autoClose: 3000, });
       })
       .catch((err) => {
         const errorMessage = err.response?.data?.message || "An error occurred";
-          toast.error(errorMessage, {
-            position: "bottom-left",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-          });
+          toast.error(errorMessage);
         console.error(err);
       });
      }
   }; 
 
   return (
-    <div>
-      <h1 className = "underline">Admin Edit User</h1>
-      <p>Only admins can access this Edit User.</p>
-
-      <h1>{"Edit User"}</h1>
-
-      <UserForm userData={viewedUser} onSubmit={handleSubmit} />
-    </div>
+    <>
+      <PageHeader 
+        title="Edit User" 
+        subtext="Update user details or assign new induction(s)" 
+      /> {/* Add the PageHeader here */}
+      <div className="p-6">
+        <UserForm userData={viewedUser} onSubmit={handleSubmit} />
+      </div>
+    </>
   );
 };
 
