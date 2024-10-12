@@ -18,20 +18,25 @@ const Footer = () => {
         </div>
 
         <div className="footer-nav">
-          <a href="http://localhost:3000/">Home</a>
+          <a href="/">Home</a>
           <a href="/about">About</a>
-          <a href="http://localhost:3000/contact">Contact</a>
+          <a href="/contact">Contact</a>
           
           {isAuthenticated && (
             <a href="/my-inductions">My Inductions</a>
+            // TOADD: Dynamic admin link for admins and managers
           )}
 
-          <a href="http://localhost:3000/signin">Login/Logout</a>
+          {/*TOADD: Dynamic sign out link to users that are signed*/}
+
+          <a href="/signin">Sign-in</a>
           <a href="https://www.autevents.co.nz/" target="_blank" rel="noopener noreferrer">AUT Events Website</a>
         </div>
         
         <p className="footer-text">
-          &copy; {new Date().getFullYear()} AUT Events. All rights reserved. AUT Events is a division of AUT Commercial Services
+          <hr />
+          <br />
+          &copy; {new Date().getFullYear()} AUT Events. All rights reserved. <br /> Events is a division of AUT Commercial Services.
         </p>
         
         <div className="footer-spacer"></div>

@@ -49,7 +49,7 @@ const Dashboard = () => {
                   <Link 
                     key={linkIndex} 
                     to={link.path} 
-                    className="text-white bg-gray-800 hover:bg-gray-700 px-3 py-2 rounded-md text-center"
+                    className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-2 rounded-md text-center"
                   >
                     {link.text}
                   </Link>
