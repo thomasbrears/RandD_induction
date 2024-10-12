@@ -1,11 +1,17 @@
 import React from 'react';
+import PageHeader from '../../components/PageHeader';
 
 const InductionList = () => {
   return (
-    <div>
-        <h1>Manage Inductions</h1>
+    <>
+      <PageHeader 
+        title="Manage Inductions" 
+        subtext="View and manage all induction forms" 
+      />
+      <div className="p-6">
         <p>Only admins can access this page.</p>
-    </div>
+      </div>
+    </>
   );
 };
 
