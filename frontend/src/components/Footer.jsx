@@ -41,9 +41,3 @@ const Footer = () => {
 };
 
 export default Footer;
-
-
-
-// [Overall] - footer links need to be dynamic whether the user is logged in or not - DONE
-// [Users] - should see [my inductions], [log out], [contact us], [AUT Events website]
-// [Manager/Admin] - should see, [users indctions results], [log out], [home], [AUT Events website]

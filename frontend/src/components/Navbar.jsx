@@ -19,7 +19,7 @@ const Navbar = () => {
           </button>
         </div>
       )}
-      <nav className="bg-gray-800 text-white p-4">
+      <nav className="bg-black text-white">
         <div className="container mx-auto flex justify-between items-center">
           <Link to="/">
             <img

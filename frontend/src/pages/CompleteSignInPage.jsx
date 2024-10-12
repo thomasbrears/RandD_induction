@@ -13,36 +13,56 @@ function CompleteSignInPage() {
     const navigate = useNavigate();
     const auth = getAuth();
 
-    useEffect(() => {
-        if (isSignInWithEmailLink(handleSignIn, window.location.href)) {
-            // Check if the email is already in localStorage
-            const storedEmail = window.localStorage.getItem('emailForSignIn');
-            if (storedEmail) {
-                // If email exists in local storage, proceed to sign-in
-                handleSignIn(storedEmail);
-            } else {
-                // If email is not in local storage, ask the user for the email
-                setEmailPrompt(true);
-                setLoading(false);
-            }
-        }
-    }, [handleSignIn]);
+    // State to track if a notification has already been shown to avoid duplicates
+    const [hasNotified, setHasNotified] = useState(false);
+
+    // Function to get user role from Firebase custom claims
+    const getUserRole = async (user) => {
+        const tokenResult = await user.getIdTokenResult();
+        return tokenResult.claims.role;  // Fetch the role from the claims
+    };
 
     // Function to handle sign-in with email link
-    const handleSignIn = (email) => {
+    const handleSignIn = async (email) => {
         setLoading(true);
         setLoadingMessage(`Signing in with ${email}...`); 
-        signInWithEmailLink(auth, email, window.location.href)
-            .then((result) => {
-                window.localStorage.removeItem('emailForSignIn');
-                localStorage.setItem('token', result.user.accessToken);
-                localStorage.setItem('user', JSON.stringify(result.user));
+        try {
+            const result = await signInWithEmailLink(auth, email, window.location.href);
+            const user = result.user;
+
+            window.localStorage.removeItem('emailForSignIn');
+            localStorage.setItem('token', result.user.accessToken);
+            localStorage.setItem('user', JSON.stringify(result.user));
+
+            if (!hasNotified) {
                 toast.success('Successfully signed in! Welcome!');
-                setLoading(false);
-                navigate('/');
-            })
-            .catch((error) => {
-                // Handle Firebase Auth specific error messages
+                setHasNotified(true);
+            }
+            setLoading(false);
+
+            // Get user role from Firebase custom claims and previous URL from session storage
+            const userRole = await getUserRole(user);
+            const previousUrl = sessionStorage.getItem('previousUrl');
+
+            if (!userRole) {
+                console.warn('User role is undefined or null.');  // Log warning if role is missing
+            }
+
+            // Redirect to the previous URL page, otherwise redirect based on role
+            if (previousUrl) {
+                navigate(previousUrl); // Redirect to the previous URL
+                sessionStorage.removeItem('previousUrl'); // Clear after redirect
+            } else {
+                // Fallback based on role
+                if (userRole === 'admin' || userRole === 'manager') {
+                    navigate('/admin/dashboard');
+                } else {
+                    navigate('/inductions');
+                }
+            }
+        } catch (error) {
+            // Handle Firebase Auth specific error messages
+            if (!hasNotified) {
                 switch (error.code) {
                     case 'auth/invalid-email':
                         toast.error('Invalid email. Please check and try again.');
@@ -54,7 +74,7 @@ function CompleteSignInPage() {
                         toast.error('The sign-in link is invalid. Please check your email for a valid link.');
                         break;
                     case 'auth/user-disabled':
-                        toast.error('This account has been disabled. Please contact support for assistance.');
+                        toast.error('This account has been disabled. Please contact support.');
                         break;
                     case 'auth/network-request-failed':
                         toast.error('Network error. Please check your internet connection and try again.');
@@ -63,9 +83,23 @@ function CompleteSignInPage() {
                         toast.error('Error signing in. Please try again.');
                         break;
                 }
-                setLoading(false);
-            });
+                setHasNotified(true);
+            }
+            setLoading(false);
+        }
     };
+
+    useEffect(() => {
+        if (isSignInWithEmailLink(auth, window.location.href)) {
+            const storedEmail = window.localStorage.getItem('emailForSignIn');
+            if (storedEmail) {
+                handleSignIn(storedEmail);
+            } else {
+                setEmailPrompt(true);
+                setLoading(false);
+            }
+        }
+    }, [auth]);
 
     // Function to handle form submission for email input
     const handleSubmitEmail = (e) => {
@@ -102,8 +136,9 @@ function CompleteSignInPage() {
                             </div>
                         ) : (
                             <>
+                                <p>We emailed you a link to sign-in to your account. Please click the link on this device to be signed in. </p>
                                 <br />
-                                <button className="login-btn" onClick={() => navigate('/')}> Home </button>
+                                <button className="login-btn" onClick={() => navigate('/')}> Home</button>
                             </>
                         )}
                     </>

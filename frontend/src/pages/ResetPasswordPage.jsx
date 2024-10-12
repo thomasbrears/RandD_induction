@@ -21,10 +21,10 @@ function ResetPasswordPage() {
 
             await sendPasswordResetEmail(auth, email);
             toast.success('If an account exists with that email, we have sent a password reset email.', { position: 'top-center', autoClose: 7000 });
-            // Delay navigation to login page for 4 seconds to display success message
+            // Delay navigation to login page for 2 seconds to display success message
             setTimeout(() => {
                 navigate("/signin");
-            }, 4000); // 4 seconds
+            }, 2000); // 2 seconds
         } catch (error) {
            // Handle Firebase Auth specific error messages
             switch (error.code) {
