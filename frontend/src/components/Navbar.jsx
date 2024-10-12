@@ -33,7 +33,7 @@ const Navbar = () => {
             <Link to="/contact" className="mr-4 text-white">Contact</Link>
             {user ? (
               <>
-                <Link to="/formlist" className="mr-4 text-white">My Forms</Link>
+                <Link to="/inductions" className="mr-4 text-white">My Inductions</Link>
                 {user.role === 'admin' && (
                   <Link to="/admin/dashboard" className="mr-4 text-white">Admin</Link>
                 )}
