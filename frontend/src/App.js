@@ -1,5 +1,6 @@
 import React, { useContext }  from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
+import { HelmetProvider } from 'react-helmet-async'; // HelmetProvider for dynamicly setting page head including titles
 
 // Toastify message container and style
 import { ToastContainer, toast } from 'react-toastify'; 
@@ -65,49 +66,54 @@ const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
 
 const App = () => {
   return (
-    <div className="App flex flex-col min-h-screen">
-      {/* Toastify message container with default actions*/}
-      <ToastContainer
-        theme="light" // Set light theme
-        position="top-center" // Set default position
-        draggable={true} // Allow toasts to be draggable
-        closeOnClick={true} // Close toast on click
-        autoClose={5000} // Auto close after 5 seconds
-        hideProgressBar={false} // Show progress bar
-        pauseOnHover={true} // Pause on hover
-        pauseOnFocusLoss={false} // Keep toast running even when focus is lost
-      />
-      <Router>
-        <Navbar />
-        <ToastContainer/>
-        <div className="flex-grow">
-          <Routes>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/contact" element={<ContactPage />} />
-            <Route path="/signin" element={<SignInPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/complete-signin" element={<CompleteSignInPage />} />
-            <Route path="*" element={<NotFoundPage />} />
+    <HelmetProvider>
+      <div className="App flex flex-col min-h-screen">
+        {/* Toastify message container with default actions*/}
+        <ToastContainer
+          theme="light" // Set light theme
+          position="top-center" // Set default position
+          draggable={true} // Allow toasts to be draggable
+          closeOnClick={true} // Close toast on click
+          autoClose={5000} // Auto close after 5 seconds
+          hideProgressBar={false} // Show progress bar
+          pauseOnHover={true} // Pause on hover
+          pauseOnFocusLoss={false} // Keep toast running even when focus is lost
+        />
+        <Router>
+          <Navbar />
+          <ToastContainer/>
+          <div className="flex-grow">
+            <Routes>
+              <Route path="/" element={<HomePage />} />
+              <Route path="/contact" element={<ContactPage />} />
+              <Route path="/signin" element={<SignInPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/complete-signin" element={<CompleteSignInPage />} />
+              <Route path="*" element={<NotFoundPage />} />
 
-            {/* Redirect /admin to /admin/dashboard */}
-            <Route path="/admin" element={<Navigate to="/admin/dashboard" />} />
+              {/* Redirect /admin to /admin/dashboard */}
+              <Route path="/admin" element={<Navigate to="/admin/dashboard" />} />
+              {/* Redirect /inductions to /my-inductions */}
+              <Route path="/inductions" element={<Navigate to="/my-inductions" />} />
 
-            {/* Restricted to logged-in users */}
-            <Route path="/inductions" element={<PrivateRoute component={FormListPage} />} />
-            <Route path="/inductionform" element={<PrivateRoute component={InductionFormPage} />} />
-            {/* Admin-specific routes restricted to "admin" */}
-            <Route path="/admin/dashboard" element={<PrivateRoute component={Dashboard} roleRequired = {[Permissions.ADMIN, Permissions.MANAGER]} />} />
-            <Route path="/admin/view-users" element={<PrivateRoute component={ViewUsers} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
-            <Route path="/admin/add-user" element={<PrivateRoute component={UserForm} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
-            <Route path="/admin/inductions" element={<PrivateRoute component={InductionList} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
-            <Route path="/admin/edit-induction" element={<PrivateRoute component={InductionEdit} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
-            <Route path="/admin/induction-results" element={<PrivateRoute component={InductionResults} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
-            <Route path="/admin/edit-user" element={<PrivateRoute component={EditUser} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
-          </Routes>
-        </div>
-        <Footer />
-      </Router>
-    </div>
+              {/* Restricted to logged-in users */}
+              <Route path="/my-inductions" element={<PrivateRoute component={FormListPage} />} />
+              <Route path="/induction" element={<PrivateRoute component={InductionFormPage} />} />
+
+              {/* Admin-specific routes restricted to "admin" */}
+              <Route path="/admin/dashboard" element={<PrivateRoute component={Dashboard} roleRequired = {[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              <Route path="/admin/view-users" element={<PrivateRoute component={ViewUsers} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              <Route path="/admin/add-user" element={<PrivateRoute component={UserForm} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              <Route path="/admin/inductions" element={<PrivateRoute component={InductionList} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              <Route path="/admin/edit-induction" element={<PrivateRoute component={InductionEdit} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              <Route path="/admin/induction-results" element={<PrivateRoute component={InductionResults} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              <Route path="/admin/edit-user" element={<PrivateRoute component={EditUser} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+            </Routes>
+          </div>
+          <Footer />
+        </Router>
+      </div>
+    </HelmetProvider>
   );
 };
 

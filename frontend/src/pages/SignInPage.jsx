@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import '../style/Auth.css';
+import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
+//import '../style/Auth.css';
 import { signInWithEmailAndPassword, sendSignInLinkToEmail } from 'firebase/auth';
 import { auth } from '../firebaseConfig.js';
 import { Link, useNavigate } from 'react-router-dom';
@@ -146,66 +147,93 @@ function LoginPage() {
     };
 
     return (
-        <div className="center" style={{ backgroundImage: 'url(/images/WG_OUTSIDE_AUT.webp)', backgroundSize: 'cover', backgroundPosition: 'center', height: '100%', width: 'auto'}}>
-            {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
-            <div className='loginDetails'>
-                <h1>Sign in</h1>
-                <p className="signup-text">Only approved staff can access the AUT Event induction platform. If you do not have an account and you should or if you face any issues, please <Link to="/contact" className="link">contact us.</Link> </p>
-                <p className="signup-text">If you have not set a password, please enter your email and click the "email me a sign-in link" option below or <Link to="/reset-password" className="link">set your password here.</Link></p>
-
-                {/* Initial email input */}
-                <form className="loginForm">
-                    <label htmlFor="email" className="formLabel">Email Address</label>
-                    <input
-                        className="formInput"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        placeholder="Enter your email"
-                    />
-
-                    {/* Show the password field only when user clicks to sign in with password */}
-                    {showPasswordField && (
-                        <>
-                            <label htmlFor="password" className="formLabel">Password</label>
+        <>
+            <Helmet> <title>Sign-in | AUT Events Induction Portal</title> </Helmet>
+            <div 
+                className="min-h-screen flex items-center justify-center bg-cover bg-center px-4" 
+                style={{ backgroundImage: 'url(/images/WG_OUTSIDE_AUT.webp)' }} // Background image
+            >
+                {loading && <Loading message={loadingMessage} />}
+                <div className="w-full max-w-sm p-8 bg-white shadow-lg rounded-lg">
+                    <h1 className="text-3xl font-bold text-gray-800 text-center mb-6">Sign in</h1>
+                    <p className="text-sm text-gray-600 mb-4 text-center">
+                        Only approved staff can access the AUT Event induction platform. If you do not have an account and you should, or if you face any issues, please{' '}
+                        <Link to="/contact" className="font-bold text-black hover:underline">contact us.</Link>
+                    </p>
+                    <p className="text-sm text-gray-600 mb-4 text-center">
+                        If you have not set a password, please enter your email and click the "email me a sign-in link" option below or{' '}
+                        <Link to="/reset-password" className="font-bold text-black hover:underline">set your password here.</Link>
+                    </p>
+    
+                    <form onSubmit={handleEmailPasswordSignIn} className="space-y-4">
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address</label>
                             <input
-                                className="formInput"
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-sm shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 required
-                                placeholder="Enter your password"
+                                placeholder="Enter your email"
                             />
-
-                            {/* Forgot password link */}
-                            <p className="forgot-password"> <Link to="/reset-password" className="link">Forgot password?</Link></p>
-
-                            <br />
-                            {/* Submit button for password sign-in */}
-                            <button type="submit" className="login-btn" onClick={handleEmailPasswordSignIn}> Sign in with Password </button>
-
-                            {/* Send the passwordless sign-in link */}
-                            <div className="separator"> <span className="separator-text">Or use a sign-in link instead</span></div>
-                            <button type="button" className="login-btn" onClick={handlePasswordlessSignIn}> Send me a Sign-in Link </button>
-                        </>
-                    )}
-
-                    {/* Show options to choose sign-in method when password field is not displayed */}
-                    {!showPasswordField && (
-                        <>
-                            {/* Sigin in with email link button */}
-                            <button type="button" className="login-btn" onClick={handlePasswordlessSignIn}> Email me a Sign-in Link (Recommended) </button>
-
-                            {/* Show password field on button click */}
-                            <div className="separator"> <span className="separator-text">Or signin using a password</span></div>
-                            <button type="button" className="login-btn" onClick={() => setShowPasswordField(true)}> Sign in with Password </button>
-                        </>
-                    )}
-                </form>
+                        </div>
+    
+                        {showPasswordField && (
+                            <>
+                                <div>
+                                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
+                                    <input
+                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-sm shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                        type="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        placeholder="Enter your password"
+                                    />
+                                </div>
+    
+                                <div className="text-left">
+                                    <Link to="/reset-password" className="text-sm font-bold text-black hover:underline">Forgot password?</Link>
+                                </div>
+    
+                                <button type="submit" className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
+                                    Sign in with Password
+                                </button>
+    
+                                <div className="flex items-center justify-between mt-4">
+                                    <hr className="flex-1 border-t border-gray-300" />
+                                    <span className="mx-2 text-sm text-gray-500">or</span>
+                                    <hr className="flex-1 border-t border-gray-300" />
+                                </div>
+    
+                                <button type="button" onClick={handlePasswordlessSignIn} className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
+                                    Send me a Sign-in Link
+                                </button>
+                            </>
+                        )}
+    
+                        {!showPasswordField && (
+                            <>
+                                <button type="button" onClick={handlePasswordlessSignIn} className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
+                                    Email me a Sign-in Link (Recommended)
+                                </button>
+    
+                                <div className="flex items-center justify-between mt-4">
+                                    <hr className="flex-1 border-t border-gray-300" />
+                                    <span className="mx-2 text-sm text-gray-500">or</span>
+                                    <hr className="flex-1 border-t border-gray-300" />
+                                </div>
+    
+                                <button type="button" onClick={() => setShowPasswordField(true)} className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
+                                    Sign in with Password
+                                </button>
+                            </>
+                        )}
+                    </form>
+                </div>
             </div>
-        </div>
-    );
+        </>
+    );       
 }
 
 export default LoginPage;

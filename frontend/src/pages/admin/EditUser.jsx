@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import { UserForm } from '../../components/UserForm';
 import { DefaultNewUser } from '../../models/User';
 import useAuth from '../../hooks/useAuth';
@@ -53,6 +54,7 @@ const EditUser = () => {
 
   return (
     <>
+      <Helmet><title>Edit User | AUT Events Induction Portal</title></Helmet>
       <PageHeader 
         title="Edit User" 
         subtext="Update user details or assign new induction(s)" 

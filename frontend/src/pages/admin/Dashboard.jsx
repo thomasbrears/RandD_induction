@@ -1,4 +1,5 @@
 import React from 'react';
+import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import { Link } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 
@@ -37,6 +38,8 @@ const Dashboard = () => {
 
   return (
     <>
+      <Helmet><title>Admin Dashboard | AUT Events Induction Portal</title></Helmet>
+
       <PageHeader title="Admin Dashboard" subtext="Manage users, settings, and results" /> {/* Add the header here */}
       <div className="p-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">

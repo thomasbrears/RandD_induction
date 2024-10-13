@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import Departments from "../../models/Departments";
 import useAuth from "../../hooks/useAuth";
 import {DefaultNewInduction} from "../../models/Inductions"
@@ -34,9 +35,10 @@ const InductionEdit = () => {
 
   return (
     <>
+      <Helmet><title>Edit/Create Induction | AUT Events Induction Portal</title></Helmet>
       <PageHeader 
-        title="Edit Inductions" 
-        subtext="Modify or create a new induction form" 
+        title="Edit/Create Induction" 
+        subtext="Edit/Create a induction" 
       />
       <div className="p-6">
         <form onSubmit={handleSubmit}>

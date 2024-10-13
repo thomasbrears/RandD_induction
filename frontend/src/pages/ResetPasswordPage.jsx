@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import { auth } from '../firebaseConfig.js';
 import { useNavigate, Link } from 'react-router-dom';
 import { sendPasswordResetEmail } from 'firebase/auth';
@@ -45,32 +46,46 @@ function ResetPasswordPage() {
     };
 
     return (
-        <div className="center" style={{ backgroundImage: 'url(/images/WG_OUTSIDE_AUT.webp)', backgroundSize: 'cover', backgroundPosition: 'center', height: '100%', width: 'auto'}}>
-            {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
-            <div className="loginDetails">
-                <h1>Reset Password</h1>
-                <br />
+        <>
+            <Helmet><title>Reset Password | AUT Events Induction Portal</title></Helmet>
+            <div 
+                className="min-h-screen flex items-center justify-center bg-cover bg-center px-4" 
+                style={{ backgroundImage: 'url(/images/WG_OUTSIDE_AUT.webp)' }} // Background image
+            >
+                {loading && <Loading message={loadingMessage} />}
+                <div className="w-full max-w-sm p-8 bg-white shadow-lg rounded-lg">
+                    <h1 className="text-3xl font-bold text-gray-800 text-center mb-6">Reset Password</h1>
+                    <p className="text-sm text-gray-600 mb-4 text-center">
+                        Please enter your email, and we will send you a link to reset your password.
+                    </p>
 
-                <p>Please enter your email and we will email you a link to reset your password</p>
+                    <form onSubmit={handleSubmit} className="space-y-4">
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address</label>
+                            <input
+                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-sm shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                required
+                                placeholder="Enter your email"
+                            />
+                        </div>
 
-                <div className="separator">
-                    <span className="separator-text">Reset or set your password</span>
+                        <button type="submit" className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
+                            Reset Password
+                        </button>
+                    </form>
+
+                    <div className="text-center mt-4">
+                        <p className="text-sm text-gray-600">
+                            Remembered your password?{' '}
+                            <Link to="/signin" className="font-bold text-black hover:underline">Sign in</Link>
+                        </p>
+                    </div>
                 </div>
-                <form onSubmit={handleSubmit} className="loginForm">
-                    <input
-                        className="formInput"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        required
-                        placeholder="Enter your email"
-                    />
-                    <button type="submit" className="login-btn">Reset Password</button>
-                </form>
-
-                <p className="signup-text"> Remembered your password? <Link to="/signin" className="link">Sign in</Link> </p>
             </div>
-        </div>
+        </>
     );
 }
 

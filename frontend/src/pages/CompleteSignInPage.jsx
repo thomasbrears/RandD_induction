@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { toast } from 'react-toastify'; // Toastify success/error/info messages
 import { getAuth, isSignInWithEmailLink, signInWithEmailLink } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import Loading from '../components/Loading';
 import '../style/Auth.css';
 
@@ -108,44 +109,55 @@ function CompleteSignInPage() {
     };
 
     return (
-        <div className="center" style={{ backgroundImage: 'url(/images/WG_OUTSIDE_AUT.webp)', backgroundSize: 'cover', backgroundPosition: 'center', height: '100%', width: 'auto'}}>
-            {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
-
-            <div className="loginDetails">
-                <h1>Complete your Sign-In</h1>
-
-                {!loading && ( /* Ensure form is not shown while loading */
-                    <>
-                        {emailPrompt ? (
-                            <div>
-                                <p>
-                                    Please confirm your email to complete the sign-in process. 
-                                    This is needed to verify your identity log you in.
-                                </p>
-                                <form onSubmit={handleSubmitEmail} className="loginForm">
-                                    <input
-                                        className="formInput"
-                                        type="email"
-                                        placeholder="Enter your email"
-                                        value={email}
-                                        onChange={(e) => setEmail(e.target.value)}
-                                        required
-                                    />
-                                    <button type="submit" className="login-btn"> Complete Sign-in </button>
-                                </form>
-                            </div>
-                        ) : (
-                            <>
-                                <p>We emailed you a link to sign-in to your account. Please click the link on this device to be signed in. </p>
-                                <br />
-                                <button className="login-btn" onClick={() => navigate('/')}> Home</button>
-                            </>
-                        )}
-                    </>
-                )}
+        <>
+            <Helmet>
+                <title>Complete Your Sign-In | AUT Events Induction Portal</title>
+            </Helmet>
+            <div 
+                className="min-h-screen flex items-center justify-center bg-cover bg-center px-4" 
+                style={{ backgroundImage: 'url(/images/WG_OUTSIDE_AUT.webp)' }} // Background image
+            >
+                {loading && <Loading message={loadingMessage} />}
+                <div className="w-full max-w-sm p-8 bg-white shadow-lg rounded-lg">
+                    <h1 className="text-3xl font-bold text-gray-800 text-center mb-6">Complete your Sign-In</h1>
+    
+                    {!loading && (
+                        <>
+                            {emailPrompt ? (
+                                <div>
+                                    <p className="text-sm text-gray-600 mb-4 text-center">
+                                        Please confirm your email to complete the sign-in process. This is needed to verify your identity and log you in.
+                                    </p>
+                                    <form onSubmit={handleSubmitEmail} className="space-y-4">
+                                        <input
+                                            className="block w-full px-3 py-2 border border-gray-300 rounded-sm shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                            type="email"
+                                            placeholder="Enter your email"
+                                            value={email}
+                                            onChange={(e) => setEmail(e.target.value)}
+                                            required
+                                        />
+                                        <button type="submit" className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
+                                            Complete Sign-in
+                                        </button>
+                                    </form>
+                                </div>
+                            ) : (
+                                <>
+                                    <p className="text-sm text-gray-600 text-center mb-4">
+                                        We emailed you a link to sign in to your account. Please click the link on this device to complete the sign-in.
+                                    </p>
+                                    <button className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center" onClick={() => navigate('/')}>
+                                        Home
+                                    </button>
+                                </>
+                            )}
+                        </>
+                    )}
+                </div>
             </div>
-        </div>
-    );
+        </>
+    );    
 }
 
 export default CompleteSignInPage;

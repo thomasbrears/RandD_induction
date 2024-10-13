@@ -1,4 +1,5 @@
 import React, { useState} from "react";
+import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import { UserForm } from "../../components/UserForm";
 import { createNewUser } from "../../api/UserApi";
 import { DefaultNewUser } from "../../models/User";
@@ -26,6 +27,7 @@ const AddUser = () => {
 
   return (
     <>
+      <Helmet><title>Create a User | AUT Events Induction Portal</title></Helmet>
       <PageHeader 
         title="Create User" 
         subtext="Lets create and welcome a new user!" 

@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import useAuth from '../hooks/useAuth';
 import '../style/HomePage.css';
 
@@ -9,6 +10,8 @@ const HomePage = () => {
 
     return (
         <>
+            <Helmet><title>Home | AUT Events Induction Portal</title></Helmet>
+
             {/* Background Image Section */}
             <div className="background-image-section" style={{ backgroundImage: `url(/images/WG_OUTSIDE_AUT.webp)`,}}>
                 <div className="welcome-message">
