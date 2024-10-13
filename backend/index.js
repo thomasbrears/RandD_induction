@@ -11,9 +11,9 @@ const app = express();
 
 // Cores middleware to allow cross-origin requests
 app.use(cors({
-  origin: 'https://dev-aut-events-induction.vercel.app',
-  methods: 'GET,POST,PUT,DELETE,OPTIONS',
-  credentials: true
+  //origin: 'https://dev-aut-events-induction.vercel.app',
+  //methods: 'GET,POST,PUT,DELETE,OPTIONS',
+  //credentials: true
 }));
 app.use(express.json());
 
