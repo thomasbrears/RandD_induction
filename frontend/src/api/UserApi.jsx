@@ -6,7 +6,6 @@ const API_URL = process.env.NODE_ENV === 'production'
   ? 'https://dev-aut-events-induction.vercel.app/api' // Development website
   : 'http://localhost:5000/api'; // Local development
 
-
 export const createNewUser = async (user, userData) => {
   try {
     const token = user?.token;

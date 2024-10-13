@@ -37,23 +37,18 @@ app.use(async (req, res, next) => {
 
 app.get("/api/users", async (req, res) => {
   try {
-    const users = [];
     const listUsersResult = await admin.auth().listUsers();
-    listUsersResult.users.forEach(async (userRecord) => {
-      users.push({
+    
+    // Use Promise.all to wait for all users to be processed
+    const users = await Promise.all(
+      listUsersResult.users.map(async (userRecord) => ({
         uid: userRecord.uid,
         email: userRecord.email,
-        permission: userRecord.customClaims
-          ? userRecord.customClaims.role
-          : "Unknown",
-        firstName: userRecord.displayName
-          ? userRecord.displayName.split(" ")[0]
-          : "firstName",
-        lastName: userRecord.displayName
-          ? userRecord.displayName.split(" ")[1] || ""
-          : "lastName",
-      });
-    });
+        permission: userRecord.customClaims ? userRecord.customClaims.role : "Unknown",
+        firstName: userRecord.displayName ? userRecord.displayName.split(" ")[0] : "firstName",
+        lastName: userRecord.displayName ? userRecord.displayName.split(" ")[1] || "" : "lastName",
+      }))
+    );
 
     res.json(users);
   } catch (error) {
