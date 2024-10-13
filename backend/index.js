@@ -7,7 +7,14 @@ import Departments from "./models/Departments.js";
 import { sendEmail } from "./utils/mailjet.js";
 
 const app = express();
-app.use(cors());
+//app.use(cors());
+
+// Cores middleware to allow cross-origin requests
+app.use(cors({
+  origin: 'https://dev-aut-events-induction.vercel.app',
+  methods: 'GET,POST,PUT,DELETE,OPTIONS',
+  credentials: true
+}));
 app.use(express.json());
 
 //Middleware makes sure that anyone accessing endpoints is logged in TODO: role-based

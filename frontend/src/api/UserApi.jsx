@@ -3,9 +3,7 @@ import axios from "axios";
 //const API_URL = process.env.REACT_APP_BACKEND_URL;
 // Dynamic API URL for local or deployed environments
 const API_URL = process.env.NODE_ENV === 'production'
-  ? (process.env.PROD_ENV === 'development'
-      ? 'https://dev-aut-events-induction.vercel.app/api' // Development website
-      : 'https://aut-events-induction.vercel.app/api') // Main website
+  ? 'https://dev-aut-events-induction.vercel.app/api' // Development website
   : 'http://localhost:5000/api'; // Local development
 
 
