@@ -2,10 +2,6 @@ import admin from 'firebase-admin';
 import dotenv from 'dotenv';
 dotenv.config();
 
-import admin from 'firebase-admin';
-import dotenv from 'dotenv';
-dotenv.config();
-
 admin.initializeApp({
   credential: admin.credential.cert({
     type: "service_account",
