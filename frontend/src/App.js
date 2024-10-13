@@ -89,6 +89,9 @@ const App = () => {
             <Route path="/complete-signin" element={<CompleteSignInPage />} />
             <Route path="*" element={<NotFoundPage />} />
 
+            {/* Redirect /admin to /admin/dashboard */}
+            <Route path="/admin" element={<Navigate to="/admin/dashboard" />} />
+
             {/* Restricted to logged-in users */}
             <Route path="/inductions" element={<PrivateRoute component={FormListPage} />} />
             <Route path="/inductionform" element={<PrivateRoute component={InductionFormPage} />} />

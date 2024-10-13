@@ -1,12 +1,18 @@
 import axios from 'axios';
 
-const API_URL = process.env.REACT_APP_BACKEND_URL;
+//const API_URL = process.env.REACT_APP_BACKEND_URL;
+// Dynamic API URL for local or deployed environments
+const API_URL = process.env.NODE_ENV === 'production'
+  ? (process.env.PROD_ENV === 'development'
+      ? 'https://dev-aut-events-induction.vercel.app/api' // Development website
+      : 'https://aut-events-induction.vercel.app/api') // Main website
+  : 'http://localhost:5000/api'; // Local development
 
 export const getAllInductions = async (user) => {
   try {
     const token = user?.token;
     const headers = token ? { authtoken: token } : {};
-    const response = await axios.get(`${API_URL}/api/inductions`, {
+    const response = await axios.get(`${API_URL}/inductions`, {
       headers,
     });
     return response.data;
@@ -21,7 +27,7 @@ export const getAssignedInductions = async (user, uid) => {
   try {
       const token = user?.token;
       const headers = token ? {authtoken: token}: {};
-      const response = await axios.get(`${API_URL}/api/get-assigned-inductions`,{
+      const response = await axios.get(`${API_URL}/get-assigned-inductions`,{
           headers,
           params: { uid },
       });
@@ -38,7 +44,7 @@ export const createNewInduction = async (user, inductionData) => {
     const headers = token ? { authtoken: token } : {};
 
     const response = await axios.post(
-      `${API_URL}/api/create-induction`,
+      `${API_URL}/create-induction`,
       inductionData,
       {
         headers,
@@ -55,7 +61,7 @@ export const getInduction = async (user, id) => {
   try {
       const token = user?.token;
       const headers = token ? {authtoken: token}: {};
-      const response = await axios.get(`${API_URL}/api/get-induction`,{
+      const response = await axios.get(`${API_URL}/get-induction`,{
           headers,
           params: { id },
       });
