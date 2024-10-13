@@ -10,11 +10,24 @@ const app = express();
 //app.use(cors());
 
 // Cores middleware to allow cross-origin requests
-app.use(cors({
+//app.use(cors({
   //origin: 'https://dev-aut-events-induction.vercel.app',
   //methods: 'GET,POST,PUT,DELETE,OPTIONS',
   //credentials: true
-}));
+//}));
+
+// dynamic cors options
+const corsOptions = {
+  origin: process.env.NODE_ENV === 'production' 
+    ? 'https://dev-aut-events-induction.vercel.app' 
+    : true,  // Allow all origins in development
+  methods: 'GET,POST,PUT,DELETE,OPTIONS',
+  credentials: true
+};
+
+// CORS middleware to allow cross-origin requests
+app.use(cors(corsOptions));
+
 app.use(express.json());
 
 //Middleware makes sure that anyone accessing endpoints is logged in TODO: role-based
