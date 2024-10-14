@@ -54,7 +54,12 @@ const AssignedInductions = ({ uid }) => {
     [Status.COMPLETED]: 'border-green-500 text-green-500',
     [Status.OVERDUE]: 'border-red-500 text-red-500',
   };
-
+const statusOrder = {
+  [Status.OVERDUE]: 1,
+  [Status.ASSIGNED]: 2,
+  [Status.IN_PROGRESS]: 3,
+  [Status.COMPLETE]: 4,
+};
   const isActionableStatus = (status) => {
     return [Status.ASSIGNED, Status.IN_PROGRESS, Status.OVERDUE].includes(status);
   };
@@ -115,11 +120,12 @@ const AssignedInductions = ({ uid }) => {
     columnHelper.accessor('status', {
       cell: (info) => {
         const status = info.getValue();
+        const displayedStatus = status === Status.ASSIGNED ? 'To Complete' : status;
         const colorClasses = statusColors[status] || 'border-gray-500 text-gray-500';
 
         return (
           <span className={`px-2 py-1 border rounded ${colorClasses}`}>
-            {status}
+            {displayedStatus}
           </span>
         );
       },
@@ -128,6 +134,15 @@ const AssignedInductions = ({ uid }) => {
           Status
         </span>
       ),
+      sortingFn: (rowA, rowB, columnId) => {
+        const statusA = rowA.getValue(columnId);
+        const statusB = rowB.getValue(columnId);
+
+        const orderA = statusOrder[statusA] || 999;
+        const orderB = statusOrder[statusB] || 999;
+
+        return orderA - orderB;
+      },
     }),
     // Action column
     columnHelper.display({
