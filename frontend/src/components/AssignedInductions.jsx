@@ -18,7 +18,9 @@ import {
   ChevronRight,
   ChevronsRight,
 } from 'lucide-react';
-import '../style/Table.css'; // Ensure you import your table styles
+import '../style/Table.css';
+import { Link } from 'react-router-dom';
+import Status from '../models/Status';
 
 const columnHelper = createColumnHelper();
 
@@ -46,9 +48,31 @@ const AssignedInductions = ({ uid }) => {
     }
   }, [user, userId]);
 
+  const statusColors = {
+    [Status.ASSIGNED]: 'border-blue-500 text-blue-500',
+    [Status.TO_DO]: 'border-blue-500 text-blue-500',
+    [Status.IN_PROGRESS]: 'border-yellow-500 text-yellow-500',
+    [Status.COMPLETED]: 'border-green-500 text-green-500',
+  };
+
+  const isActionableStatus = (status) => {
+    return [Status.ASSIGNED, Status.TO_DO, Status.IN_PROGRESS].includes(status);
+  };
+
   const columns = [
     columnHelper.accessor('name', {
-      cell: (info) => info.getValue(),
+      cell: (info) => {
+        const inductionId = info.row.original.id;
+        const status = info.row.original.status;
+
+        return isActionableStatus(status) ? (
+          <Link to={`/induction/${inductionId}`} className="text-blue-600 hover:underline">
+            {info.getValue()}
+          </Link>
+        ) : (
+          <span>{info.getValue()}</span>
+        );
+      },
       header: () => (
         <span className="flex items-center">
           Induction Name
@@ -89,10 +113,52 @@ const AssignedInductions = ({ uid }) => {
       ),
     }),
     columnHelper.accessor('status', {
-      cell: (info) => info.getValue(),
+      cell: (info) => {
+        const status = info.getValue();
+        const colorClasses = statusColors[status] || 'border-gray-500 text-gray-500';
+
+        return (
+          <span className={`px-2 py-1 border rounded ${colorClasses}`}>
+            {status}
+          </span>
+        );
+      },
       header: () => (
         <span className="flex items-center">
           Status
+        </span>
+      ),
+    }),
+    // Action column
+    columnHelper.display({
+      id: 'actions',
+      cell: (info) => {
+        const status = info.row.original.status;
+        const inductionId = info.row.original.id;
+
+        if (isActionableStatus(status)) {
+          return (
+            <Link to={`/induction/${inductionId}`}>
+              <button className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded">
+                {status === Status.IN_PROGRESS ? 'Continue' : 'Start'}
+              </button>
+            </Link>
+          );
+        } else if (status === Status.COMPLETED) {
+          return (
+            <Link to={`/induction-results/${inductionId}`}>
+              <button className="text-white bg-green-500 hover:bg-green-600 px-3 py-1 rounded">
+                View Results
+              </button>
+            </Link>
+          );
+        } else {
+          return null;
+        }
+      },
+      header: () => (
+        <span className="flex items-center">
+          Action
         </span>
       ),
     }),
@@ -127,6 +193,7 @@ const AssignedInductions = ({ uid }) => {
           </div>
         ) : (
           <>
+            {/* Search Input */}
             <div className="mb-4 flex items-center gap-4">
               <div className="relative flex-grow">
                 <input
@@ -141,6 +208,7 @@ const AssignedInductions = ({ uid }) => {
                 />
               </div>
             </div>
+            {/* Table */}
             <div className="overflow-x-auto bg-white shadow-md rounded-lg">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
@@ -163,7 +231,9 @@ const AssignedInductions = ({ uid }) => {
                               header.column.columnDef.header,
                               header.getContext()
                             )}
-                            <ArrowUpDown className="ml-2" size={14} />
+                            {header.column.getCanSort() && (
+                              <ArrowUpDown className="ml-2" size={14} />
+                            )}
                           </div>
                         </th>
                       ))}
