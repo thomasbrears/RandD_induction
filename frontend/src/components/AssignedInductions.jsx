@@ -50,13 +50,13 @@ const AssignedInductions = ({ uid }) => {
 
   const statusColors = {
     [Status.ASSIGNED]: 'border-blue-500 text-blue-500',
-    [Status.TO_DO]: 'border-blue-500 text-blue-500',
     [Status.IN_PROGRESS]: 'border-yellow-500 text-yellow-500',
     [Status.COMPLETED]: 'border-green-500 text-green-500',
+    [Status.OVERDUE]: 'border-red-500 text-red-500',
   };
 
   const isActionableStatus = (status) => {
-    return [Status.ASSIGNED, Status.TO_DO, Status.IN_PROGRESS].includes(status);
+    return [Status.ASSIGNED, Status.IN_PROGRESS, Status.OVERDUE].includes(status);
   };
 
   const columns = [
