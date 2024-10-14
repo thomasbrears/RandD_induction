@@ -201,16 +201,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
     if (currentUser && user) {
       deleteUser(currentUser, user.uid)
         .then(() => {
-          toast.success("User deleted sucessfully!", {
-            position: "bottom-left",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-          });
+          toast.success("User deleted sucessfully!", { position: 'top-right', autoClose: 3000, });
 
           setTimeout(() => {
             navigate("/admin/view-users");
@@ -219,16 +210,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
         .catch((err) => {
           const errorMessage =
             err.response?.data?.message || "An error occurred";
-          toast.error(errorMessage, {
-            position: "bottom-left",
-            autoClose: 3000,
-            hideProgressBar: false,
-            closeOnClick: true,
-            pauseOnHover: true,
-            draggable: true,
-            progress: undefined,
-            theme: "light",
-          });
+          toast.error(errorMessage);
           console.error(err);
         });
     }

@@ -79,7 +79,7 @@ const UsersTable = () => {
 
     {
       id: "actions",
-      header: () => <span>Actions</span>,
+      header: () => <span></span>,
       cell: ({ row }) => (
         <button
           onClick={() => handleViewEdit(row.original.uid)}

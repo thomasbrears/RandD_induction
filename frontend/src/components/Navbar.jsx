@@ -19,15 +19,21 @@ const Navbar = () => {
           </button>
         </div>
       )}
-      <nav className="bg-gray-800 text-white p-4">
+      <nav className="bg-black text-white">
         <div className="container mx-auto flex justify-between items-center">
-          <Link to="/" className="text-xl font-bold text-white">AUT Events</Link>
+          <Link to="/">
+            <img
+              src={`${process.env.PUBLIC_URL}/images/AUTEventsAndVenuesBlackLogo.jpg`}
+              alt="AUT Events"
+              style={{ height: '50px' }}
+            />
+          </Link>
           <div>
             <Link to="/" className="mr-4 text-white">Home</Link>
             <Link to="/contact" className="mr-4 text-white">Contact</Link>
             {user ? (
               <>
-                <Link to="/formlist" className="mr-4 text-white">My Forms</Link>
+                <Link to="/inductions" className="mr-4 text-white">My Inductions</Link>
                 {user.role === 'admin' && (
                   <Link to="/admin/dashboard" className="mr-4 text-white">Admin</Link>
                 )}

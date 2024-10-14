@@ -1,15 +1,23 @@
 import React from 'react';
+import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import useAuth from '../hooks/useAuth';
 import AssignedInductions from '../components/AssignedInductions';
+import PageHeader from '../components/PageHeader';
 
 const FormListPage = () => {
   const { user } = useAuth();
 
   return (
-    <div>
-      <h1>Induction Forms for {user?.email}</h1>
-      <AssignedInductions />
-    </div>
+    <>
+      <Helmet><title>My Inductions | AUT Events Induction Portal</title></Helmet>
+      <PageHeader 
+        title="Your Induction Forms" 
+        subtext={`Induction forms assigned to ${user?.email}`} 
+      />
+      <div className="p-6">
+        <AssignedInductions />
+      </div>
+    </>
   );
 };
 
