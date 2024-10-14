@@ -6,7 +6,7 @@ const Footer = () => {
   const { user } = useAuth(); 
   const isAuthenticated = !!user; 
 
-  return (
+  return ( 
     <footer>
       <div className="footer-container">
         <div className="footer-logo">
