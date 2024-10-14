@@ -51,7 +51,7 @@ const AssignedInductions = ({ uid }) => {
   const statusColors = {
     [Status.ASSIGNED]: 'border-blue-500 text-blue-500',
     [Status.IN_PROGRESS]: 'border-yellow-500 text-yellow-500',
-    [Status.COMPLETED]: 'border-green-500 text-green-500',
+    [Status.COMPLETE]: 'border-green-500 text-green-500',
     [Status.OVERDUE]: 'border-red-500 text-red-500',
   };
 const statusOrder = {
@@ -159,7 +159,7 @@ const statusOrder = {
               </button>
             </Link>
           );
-        } else if (status === Status.COMPLETED) {
+        } else if (status === Status.COMPLETE) {
           return (
             <Link to={`/induction-results/${inductionId}`}>
               <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
@@ -190,6 +190,10 @@ const statusOrder = {
       pagination: {
         pageSize: 10,
       },
+      sorting: [
+        { id: 'status', desc: false },
+        { id: 'dueDate', desc: false },
+      ],
     },
     getCoreRowModel: getCoreRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
