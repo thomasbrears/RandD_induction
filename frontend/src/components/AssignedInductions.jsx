@@ -66,7 +66,7 @@ const AssignedInductions = ({ uid }) => {
         const status = info.row.original.status;
 
         return isActionableStatus(status) ? (
-          <Link to={`/induction/${inductionId}`} className="text-blue-600 hover:underline">
+          <Link to={`/induction/${inductionId}`} className="text-black hover:underline">
             {info.getValue()}
           </Link>
         ) : (
@@ -139,7 +139,7 @@ const AssignedInductions = ({ uid }) => {
         if (isActionableStatus(status)) {
           return (
             <Link to={`/induction/${inductionId}`}>
-              <button className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-1 rounded">
+              <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-2 rounded-md text-center">
                 {status === Status.IN_PROGRESS ? 'Continue' : 'Start'}
               </button>
             </Link>
@@ -147,7 +147,7 @@ const AssignedInductions = ({ uid }) => {
         } else if (status === Status.COMPLETED) {
           return (
             <Link to={`/induction-results/${inductionId}`}>
-              <button className="text-white bg-green-500 hover:bg-green-600 px-3 py-1 rounded">
+              <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-2 rounded-md text-center">
                 View Results
               </button>
             </Link>
