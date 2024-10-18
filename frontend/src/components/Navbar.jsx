@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
+import { FaBars } from 'react-icons/fa'; // Import the hamburger icon
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
@@ -71,8 +72,7 @@ const Navbar = () => {
               onClick={() => setIsOpen(!isOpen)}
               className="text-white focus:outline-none"
             >
-              {/* Replace with a hamburger icon if preferred */}
-              ☰
+              <FaBars size={24} /> {/* Use the FaBars icon here */}
             </button>
           </div>
         </div>
