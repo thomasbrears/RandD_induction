@@ -1,0 +1,28 @@
+/* Import Helia Core fonts */
+@font-face {
+    font-family: 'HeliaCoreBook';
+    src: url('/fonts/HeliaCore-Book.woff') format('woff');
+    font-weight: normal;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'HeliaCoreMedium';
+    src: url('/fonts/HeliaCore-Medium.woff') format('woff');
+    font-weight: 500;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'HeliaCoreBold';
+    src: url('/fonts/HeliaCore-Bold.woff') format('woff');
+    font-weight: bold;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'HeliaCoreBlack';
+    src: url('/fonts/HeliaCore-Black.woff') format('woff');
+    font-weight: 900;
+    font-style: normal;
+  }  

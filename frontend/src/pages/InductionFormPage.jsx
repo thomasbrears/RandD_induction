@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import useAuth from '../hooks/useAuth';
 
 const InductionFormPage = () => {
@@ -16,10 +17,13 @@ const InductionFormPage = () => {
   };
 
   return (
-    <div>
-      <h1>Complete Induction Form</h1>
-      <p>Welcome, {user?.email}! Please complete the induction form below.</p>
-    </div>
+    <>
+      <Helmet><title>Induction | AUT Events Induction Portal</title></Helmet>
+      <div className="p-6">
+        <h1>Main Induction Form Page</h1>
+        <p>Welcome, {user?.email}! Please complete the induction form below.</p>
+      </div>
+    </>
   );
 };
 
