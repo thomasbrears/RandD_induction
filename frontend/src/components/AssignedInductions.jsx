@@ -54,12 +54,14 @@ const AssignedInductions = ({ uid }) => {
     [Status.COMPLETE]: 'border-green-500 text-green-500',
     [Status.OVERDUE]: 'border-red-500 text-red-500',
   };
-const statusOrder = {
-  [Status.OVERDUE]: 1,
-  [Status.ASSIGNED]: 2,
-  [Status.IN_PROGRESS]: 3,
-  [Status.COMPLETE]: 4,
-};
+
+  const statusOrder = {
+    [Status.OVERDUE]: 1,
+    [Status.ASSIGNED]: 2,
+    [Status.IN_PROGRESS]: 3,
+    [Status.COMPLETE]: 4,
+  };
+
   const isActionableStatus = (status) => {
     return [Status.ASSIGNED, Status.IN_PROGRESS, Status.OVERDUE].includes(status);
   };
@@ -203,6 +205,69 @@ const statusOrder = {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
+  // Function to render induction cards for mobile
+  const renderInductionCards = () => (
+    <div className="flex flex-col space-y-4">
+      {table.getRowModel().rows.map((row) => {
+        const induction = row.original;
+        const isActionable = isActionableStatus(induction.status);
+        return (
+          <div key={induction.id} className="bg-white shadow-md rounded-lg p-4">
+            <div className="flex justify-between items-center mb-2">
+              <h3 className="text-lg font-semibold">
+                {isActionable ? (
+                  <Link to={`/induction/${induction.id}`} className="text-black hover:underline">
+                    {induction.name}
+                  </Link>
+                ) : (
+                  <span>{induction.name}</span>
+                )}
+              </h3>
+              {isActionable && (
+                <Link to={`/induction/${induction.id}`}>
+                  <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
+                    {induction.status === Status.IN_PROGRESS ? 'Continue' : 'Start'}
+                  </button>
+                </Link>
+              )}
+              {induction.status === Status.COMPLETE && (
+                <Link to={`/induction-results/${induction.id}`}>
+                  <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
+                    View Results
+                  </button>
+                </Link>
+              )}
+            </div>
+            <div className="text-sm text-gray-600 space-y-1">
+              <div>
+                <strong>Status:</strong>{' '}
+                <span
+                  className={`px-2 py-1 border rounded ${
+                    statusColors[induction.status] || 'border-gray-500 text-gray-500'
+                  }`}
+                >
+                  {induction.status === Status.ASSIGNED ? 'To Complete' : induction.status}
+                </span>
+              </div>
+              <div>
+                <strong>Available From:</strong>{' '}
+                {induction.availableFrom ? new Date(induction.availableFrom).toLocaleDateString() : 'N/A'}
+              </div>
+              <div>
+                <strong>Due Date:</strong>{' '}
+                {induction.dueDate ? new Date(induction.dueDate).toLocaleDateString() : 'N/A'}
+              </div>
+              <div>
+                <strong>Completion Date:</strong>{' '}
+                {induction.completionDate ? new Date(induction.completionDate).toLocaleDateString() : 'N/A'}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+
   return (
     <>
       <div className="tableContainer">
@@ -219,7 +284,7 @@ const statusOrder = {
                   value={globalFilter ?? ''}
                   onChange={(e) => setGlobalFilter(e.target.value)}
                   placeholder="Search..."
-                  className="box-size-border w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
                 />
                 <Search
                   className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
@@ -227,58 +292,69 @@ const statusOrder = {
                 />
               </div>
             </div>
-            {/* Table */}
-            <div className="overflow-x-auto bg-white shadow-md rounded-lg">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  {table.getHeaderGroups().map((headerGroup) => (
-                    <tr key={headerGroup.id}>
-                      {headerGroup.headers.map((header) => (
-                        <th
-                          key={header.id}
-                          className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                        >
-                          <div
-                            {...{
-                              className: header.column.getCanSort()
-                                ? 'cursor-pointer select-none flex items-center'
-                                : '',
-                              onClick: header.column.getToggleSortingHandler(),
-                            }}
+
+            {/* Desktop Table */}
+            <div className="hidden lg:block">
+              <div className="overflow-x-auto bg-white shadow-md rounded-lg">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    {table.getHeaderGroups().map((headerGroup) => (
+                      <tr key={headerGroup.id}>
+                        {headerGroup.headers.map((header) => (
+                          <th
+                            key={header.id}
+                            className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                          >
+                            <div
+                              {...{
+                                className: header.column.getCanSort()
+                                  ? 'cursor-pointer select-none flex items-center'
+                                  : '',
+                                onClick: header.column.getToggleSortingHandler(),
+                              }}
+                            >
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext()
+                              )}
+                              {header.column.getCanSort() && (
+                                <ArrowUpDown className="ml-2" size={14} />
+                              )}
+                            </div>
+                          </th>
+                        ))}
+                      </tr>
+                    ))}
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {table.getRowModel().rows.map((row) => (
+                      <tr key={row.id} className="hover:bg-gray-50">
+                        {row.getVisibleCells().map((cell) => (
+                          <td
+                            key={cell.id}
+                            className="px-6 py-4 text-sm text-gray-500"
                           >
                             {flexRender(
-                              header.column.columnDef.header,
-                              header.getContext()
+                              cell.column.columnDef.cell,
+                              cell.getContext()
                             )}
-                            {header.column.getCanSort() && (
-                              <ArrowUpDown className="ml-2" size={14} />
-                            )}
-                          </div>
-                        </th>
-                      ))}
-                    </tr>
-                  ))}
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {table.getRowModel().rows.map((row) => (
-                    <tr key={row.id} className="hover:bg-gray-50">
-                      {row.getVisibleCells().map((cell) => (
-                        <td
-                          key={cell.id}
-                          className="px-6 py-4 text-sm text-gray-500"
-                        >
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext()
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-            <div className="flex sm:flex-row justify-between items-center mt-4 text-sm text-gray-700">
+
+            {/* Mobile Induction Cards */}
+            <div className="lg:hidden">
+              {renderInductionCards()}
+            </div>
+
+            {/* Pagination Controls */}
+            <div className="flex flex-col sm:flex-row justify-between items-center mt-4 text-sm text-gray-700">
+              {/* Items per page */}
               <div className="flex items-center mb-4 sm:mb-0">
                 <span className="mr-2">Items per page</span>
                 <select
@@ -295,6 +371,7 @@ const statusOrder = {
                   ))}
                 </select>
               </div>
+              {/* Pagination Buttons */}
               <div className="flex items-center space-x-2">
                 <button
                   className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
