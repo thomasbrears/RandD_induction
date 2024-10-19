@@ -13,7 +13,7 @@ footer {
 .footer-logo {
     display: inline-flex; 
     align-items: center; 
-    justify-content: center; 
+    justify-content: center;  
     margin-bottom: 1rem; 
 }
 
@@ -44,6 +44,33 @@ footer {
     margin-top: 20px; 
     line-height: 1.2; 
     font-size: 0.8rem; 
+}
+
+.footer-spacer {
+    height: 9px; 
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    .footer-title {
+        font-size: 1.5rem; /* Reduced font size for mobile */
+        line-height: normal; /* Adjust line height for mobile */
+    }
+
+    .footer-nav {
+        flex-direction: column; /* Stack links vertically */
+        align-items: center; /* Center align links */
+        margin-bottom: 1rem; 
+    }
+
+    .footer-nav a {
+        font-size: 0.9rem; /* Adjust link size for mobile */
+        margin: 3px 0; /* Reduced vertical margin */
+    }
+
+    .footer-text {
+        font-size: 0.7rem; /* Reduce footer text size for mobile */
+    }
 }
 
 .footer-spacer {
