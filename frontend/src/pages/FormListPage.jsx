@@ -11,8 +11,8 @@ const FormListPage = () => {
     <>
       <Helmet><title>My Inductions | AUT Events Induction Portal</title></Helmet>
       <PageHeader 
-        title="Your Induction Forms" 
-        subtext={`Induction forms assigned to ${user?.email}`} 
+        title="My Inductions" 
+        subtext={`Induction forms assigned to ${user?.displayName || user?.email}`} 
       />
       <div className="p-6">
         <AssignedInductions />

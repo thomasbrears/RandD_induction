@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { auth } from '../firebaseConfig';
 import { useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify'; // Toastify success/error/info messages
 
 const useAuth = () => {
   const [user, setUser] = useState(null);
@@ -25,7 +26,8 @@ const useAuth = () => {
   const signOut = () => {
     auth.signOut().then(() => {
       setUser(null);
-      navigate('/home');
+      navigate('/');
+      toast.success('Signed out successfully! Have a great day!');
     });
   };
 
