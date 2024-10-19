@@ -3,8 +3,15 @@ import useAuth from '../hooks/useAuth';
 import '../style/Footer.css'; 
 
 const Footer = () => {
-  const { user } = useAuth(); 
+  const { user, signOut } = useAuth(); 
   const isAuthenticated = !!user; 
+  const isAdmin = user?.role === 'admin';
+
+  const handlesignOut = (event) => {
+    event.preventDefault(); // Prevent the default anchor behavior
+    signOut(); // Call the signOut function to sign out the user
+    window.location.href = '/'; // Redirect to the homepage
+  };
 
   return (
     <footer>
@@ -23,13 +30,23 @@ const Footer = () => {
           <a href="/contact">Contact</a>
           
           {isAuthenticated && (
-            <a href="/my-inductions">My Inductions</a>
-            // TOADD: Dynamic admin link for admins and managers
+            <>
+              {/* Show Users Induction Results link if the user is an admin */}
+              {isAdmin ? (
+                <a href="http://localhost:3000/admin/induction-results">User Induction Results</a>
+              ) : (
+                <a href="/my-inductions">My Inductions</a>
+              )}
+              
+              {/* Dynamic sign-out link */}
+              <a href="#" onClick={handlesignOut}>Sign Out</a> {/* Updated to handlesignOut */}
+            </>
           )}
 
-          {/*TOADD: Dynamic sign out link to users that are signed*/}
-
-          <a href="/signin">Sign-in</a>
+          {!isAuthenticated && (
+            <a href="/signin">Sign-in</a>
+          )}
+          
           <a href="https://www.autevents.co.nz/" target="_blank" rel="noopener noreferrer">AUT Events Website</a>
         </div>
         
