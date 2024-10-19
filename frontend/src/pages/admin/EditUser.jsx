@@ -4,12 +4,14 @@ import { UserForm } from '../../components/UserForm';
 import { DefaultNewUser } from '../../models/User';
 import useAuth from '../../hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getUser, updateUser } from "../../api/UserApi";
+import { getUser, updateUser, sendPasswordResetEmail, setPassword  } from "../../api/UserApi";
 import { toast } from 'react-toastify';
 import PageHeader from '../../components/PageHeader';
 
 const EditUser = () => {
   const [viewedUser, setViewedUser] = useState(DefaultNewUser);
+  const [showSetPassword, setShowSetPassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
   const { user, loading } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -58,7 +60,7 @@ const EditUser = () => {
       <PageHeader 
         title="Edit User" 
         subtext="Update user details or assign new induction(s)" 
-      /> {/* Add the PageHeader here */}
+      />
       <div className="p-6">
         <UserForm userData={viewedUser} onSubmit={handleSubmit} />
       </div>

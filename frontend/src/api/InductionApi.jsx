@@ -25,7 +25,7 @@ export const getAssignedInductions = async (user, uid) => {
   try {
       const token = user?.token;
       const headers = token ? {authtoken: token}: {};
-      const response = await axios.get(`${API_URL}/get-assigned-inductions`,{
+      const response = await axios.get(`${API_URL}/users/get-assigned-inductions`,{
           headers,
           params: { uid },
       });

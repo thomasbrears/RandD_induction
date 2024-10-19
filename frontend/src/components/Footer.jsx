@@ -1,59 +1,55 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth'; 
 import '../style/Footer.css'; 
 
 const Footer = () => {
   const { user, signOut } = useAuth(); 
-  const isAuthenticated = !!user; 
-  const isAdmin = user?.role === 'admin';
-
-  const handlesignOut = (event) => {
-    event.preventDefault(); // Prevent the default anchor behavior
-    signOut(); // Call the signOut function to sign out the user
-    window.location.href = '/'; // Redirect to the homepage
-  };
+  const IS_AUTHENTICATED = !!user; 
+  const IS_ADMIN_OR_MODERATOR = user?.role === 'admin' || user?.role === 'moderator'; // Check for admin or moderator
 
   return (
     <footer>
       <div className="footer-container">
         <div className="footer-logo">
-          <img 
-            src={`${process.env.PUBLIC_URL}/images/AUTEvents_ReverseLogo2019-01.jpg`}  
-            alt="AUT Events Logo" 
-          />
-          <span style={{ lineHeight: '80px', fontSize: '2rem' }}>Inductions</span>
+          <img src={`/images/AUTEventsInductionPortal.jpg`} alt="AUT Events Induction Portal"/>
         </div>
 
         <div className="footer-nav">
-          <a href="/">Home</a>
-          <a href="/about">About</a>
-          <a href="/contact">Contact</a>
+          <Link to="/">Home</Link>
+          <Link to="/contact">Contact us</Link>
+          <a href="https://www.autevents.co.nz/" target="_blank">AUT Events Website</a>
           
-          {isAuthenticated && (
+          {IS_AUTHENTICATED && (
             <>
-              {/* Show Users Induction Results link if the user is an admin */}
-              {isAdmin ? (
-                <a href="http://localhost:3000/admin/induction-results">User Induction Results</a>
+              {IS_ADMIN_OR_MODERATOR ? (
+                // Admin or Moderator links
+                <div>
+                  <Link to="/admin/">Dashboard</Link>
+                  <Link to="/admin/inductions">View Induction</Link>
+                  <Link to="/admin/view-users">View & Manager Users</Link>
+                  <Link to="/admin/add-user">New User</Link>
+
+                </div>
               ) : (
-                <a href="/my-inductions">My Inductions</a>
+                // Standard user link
+                <Link to="/my-inductions">My Inductions</Link>
               )}
               
-              {/* Dynamic sign-out link */}
-              <a href="#" onClick={handlesignOut}>Sign Out</a> {/* Updated to handlesignOut */}
+              <button onClick={signOut}>Sign Out </button>
             </>
           )}
 
-          {!isAuthenticated && (
-            <a href="/signin">Sign-in</a>
+          {!IS_AUTHENTICATED && (
+            <Link to="/signin">Sign-in</Link>
           )}
           
-          <a href="https://www.autevents.co.nz/" target="_blank" rel="noopener noreferrer">AUT Events Website</a>
         </div>
         
         <p className="footer-text">
           <hr />
           <br />
-          &copy; {new Date().getFullYear()} AUT Events. All rights reserved. <br /> Events is a division of AUT Commercial Services.
+          &copy; {new Date().getFullYear()} AUT Events. All rights reserved. <br /> AUT Events is a division of Auckland University of Technology Commercial Services.
         </p>
         
         <div className="footer-spacer"></div>

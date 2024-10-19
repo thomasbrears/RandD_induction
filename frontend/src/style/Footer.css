@@ -26,14 +26,21 @@ footer {
 .footer-nav {
     display: flex; 
     justify-content: center; 
+    flex-wrap: wrap;
     margin-bottom: 1rem; 
-    gap: 2rem; 
+    gap: 2rem; /* Horizontal gap */
+    row-gap: 0.5rem; /* Bettween row gap */
 }
 
-.footer-nav a {
+.footer-nav a, .footer-nav button{
     color: white; 
     text-decoration: none; 
     margin-right: 40px; 
+    transition: color 0.3s ease;
+}
+
+.footer-nav a:hover, .footer-nav button:hover {
+    color: #00bfff;
 }
 
 .footer-nav a:last-child {
@@ -58,18 +65,17 @@ footer {
     }
 
     .footer-nav {
-        flex-direction: column; /* Stack links vertically */
-        align-items: center; /* Center align links */
-        margin-bottom: 1rem; 
+        justify-content: center;
+        margin-bottom: 1rem;  
     }
 
     .footer-nav a {
-        font-size: 0.9rem; /* Adjust link size for mobile */
-        margin: 3px 0; /* Reduced vertical margin */
+        font-size: 0.9rem;
+        margin: 3px 0;
     }
 
     .footer-text {
-        font-size: 0.7rem; /* Reduce footer text size for mobile */
+        font-size: 0.7rem;
     }
 }
 

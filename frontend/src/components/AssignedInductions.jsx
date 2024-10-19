@@ -21,11 +21,15 @@ import {
 import '../style/Table.css';
 import { Link } from 'react-router-dom';
 import Status from '../models/Status';
+import Loading from '../components/Loading';
+import { toast } from 'react-toastify';
 
 const columnHelper = createColumnHelper();
 
 const AssignedInductions = ({ uid }) => {
   const [assignedInductions, setAssignedInductions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const { user } = useAuth();
   const [sorting, setSorting] = useState([]);
   const [globalFilter, setGlobalFilter] = useState('');
@@ -36,11 +40,16 @@ const AssignedInductions = ({ uid }) => {
   useEffect(() => {
     if (user && userId) {
       const fetchInductions = async () => {
+        setLoading(true); // Start loading animation
+        setLoadingMessage(`Loading inductions for to ${user.displayName || user.email}...`);
         try {
           const response = await getAssignedInductions(user, userId);
           setAssignedInductions(response.assignedInductions || []);
         } catch (error) {
+          toast.error('Unable to load assigned inductions. Please try again later.');
           console.error('Error fetching assigned induction list:', error);
+        } finally {
+          setLoading(false); // End loading
         }
       };
 
@@ -271,7 +280,9 @@ const AssignedInductions = ({ uid }) => {
   return (
     <>
       <div className="tableContainer">
-        {assignedInductions.length === 0 ? (
+        {loading ? (
+          loading && <Loading message={loadingMessage} />  // Show loading animation while data is being fetched
+        ) : assignedInductions.length === 0 ? (
           <div className="p-4 text-center text-black text-2xl font-bold">
             No inductions assigned.
           </div>

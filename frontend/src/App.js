@@ -22,6 +22,7 @@ import InductionList from './pages/admin/InductionList';
 import InductionEdit from './pages/admin/InductionEdit';
 import InductionResults from './pages/admin/InductionResults';
 import EditUser from './pages/admin/EditUser';
+import Settings from './pages/admin/Settings';
 
 // Auth hook and components
 import useAuth from './hooks/useAuth';
@@ -101,6 +102,7 @@ const App = () => {
               <Route path="/induction" element={<PrivateRoute component={InductionFormPage} />} />
 
               {/* Admin-specific routes restricted to "admin" */}
+              <Route path="/admin/settings" element={<PrivateRoute component={Settings} roleRequired = {[Permissions.ADMIN]} />} />
               <Route path="/admin/dashboard" element={<PrivateRoute component={Dashboard} roleRequired = {[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/admin/view-users" element={<PrivateRoute component={ViewUsers} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/admin/add-user" element={<PrivateRoute component={UserForm} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
