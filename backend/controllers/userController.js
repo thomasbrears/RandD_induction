@@ -106,35 +106,98 @@ export const createUser = async (req, res) => {
       return res.status(500).json({ message: "Error writing to Firestore." });
     }
 
-    //Email
-    /*await sendEmail(
-      email,
-      "Welcome to AUT Events! Your Induction Account Invitation",
-      `
-      <p>Dear ${firstName} ${lastName},</p>
+    // Send welcome email
+  	const emailSubject = `Welcome to AUT Events, ${firstName}! Your Induction Account Invitation`;
+    const emailContent = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <style>
+        body {
+          font-family: Arial, sans-serif;
+          margin: 0;
+          padding: 0;
+          background-color: #f4f4f4;
+        }
+        .email-container {
+          background-color: #ffffff;
+          max-width: 600px;
+          margin: 0 auto;
+          border: 1px solid #e0e0e0;
+          border-radius: 10px;
+          overflow: hidden;
+        }
+        .email-header {
+          background-color: #000000;
+          padding: 20px;
+          text-align: center;
+        }
+        .email-header img {
+          max-width: 200px;
+        }
+        .email-body {
+          padding: 20px;
+          color: #333333;
+        }
+        h1 {
+          font-size: 24px;
+          color: #333333;
+        }
+        p {
+          font-size: 16px;
+          line-height: 1.5;
+        }
+        a {
+          color: #007bff;
+          text-decoration: none;
+        }
+        .button {
+          display: inline-block;
+          padding: 12px 24px;
+          margin: 20px 0;
+          color: #fff;
+          background-color: #000;
+          border-radius: 5px;
+          text-decoration: none;
+          font-weight: bold;
+        }
+      </style>
+    </head>
+    <body>
+      <div class="email-container">
+        <div class="email-header">
+          <img src="https://dev-aut-events-induction.vercel.app/images/AUTEventsInductionPortal.jpg" alt="AUT Events Induction Portal">
+        </div>
+        <div class="email-body">
+          <h1>Kia ora ${firstName} ${lastName}!</h1>
+          <p>Welcome to AUT Events! We're excited to have you on board and looking forward to working with you.</p>
+          <p>An account has been created for you on the AUT Events Induction platform. This is where you'll complete important onboarding activities and access induction resources.</p>
+          
+          <p><strong>Getting Started:</strong></p>
+          <ol>
+            <li><strong>Visit the Homepage:</strong> Click the button below to visit the AUT Events Induction platform:</li>
+            <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}" class="button">AUT Events Induction Homepage</a>
+            <li><strong>Log In:</strong> From the homepage, you can log in using this email address and choose the passwordless login option, or you can set a password <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}/reset-password">here</a>.</li>
+          </ol>
 
-      <p>Welcome to the AUT Events team! We’re excited to have you on board.</p>
+          <p>One of our managers will guide you through the necessary induction process when you start with us.</p>
 
-      <p>An account has been created for you on the AUT Events Induction platform. This is where you'll complete important onboarding activities and access induction resources.</p>
+          <p>If you have any questions or issues accessing your account, feel free to reach out to us at <a href="mailto:events@aut.ac.nz">events@aut.ac.nz</a> or reply to this email.</p>
 
-      <p><strong>Getting Started:</strong></p>
-      <ol>
-        <li><strong>Visit the Homepage:</strong> Click the link below to visit the AUT Events Induction platform:
-          <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}">AUT Events Induction Homepage</a>
-        </li>
-        <li><strong>Log In:</strong> From the homepage, you can log in using your email address and you’ll be prompted to create a password. Or you can use the passwordless login option.</li>
-      </ol>
+          <p>We look forward to working with you!</p>
 
-      <p>One of our managers will guide you through the necessary induction process when you start with us.</p>
+          <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
+        </div>
+      </div>
+    </body>
+    </html>
+    `;
 
-      <p>If you have any questions or issues accessing your account, feel free to reach out.</p>
+    const replyToEmail = 'autevents@brears.xyz'; // reply to aut events
+    const ccEmails = ['manager@brears.xyz']; // Cc Rinus
 
-      <p>We look forward to working with you!</p>
-
-      <p>Best regards,</p>
-      <p>AUT Events Team</p>
-      `
-    );*/
+    // Send welcome email with ReplyTo and CC
+    await sendEmail(email, emailSubject, emailContent, replyToEmail, ccEmails);
 
     res.status(201).json({
       uid: userRecord.uid,
