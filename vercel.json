@@ -17,12 +17,13 @@
         "dest": "/backend/index.js"
       },
       {
-        "src": "/(.*)",
-        "dest": "/frontend/$1"
+        "src": "/[^.]+", 
+        "dest": "/frontend/build/index.html", 
+        "status": 200
       },
       {
-        "src": "/[^.]+",
-        "dest": "/"
+        "src": "/(.*)",
+        "dest": "/frontend/$1"
       }
     ]
 }  
