@@ -1,12 +1,25 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
-import { FaBars } from 'react-icons/fa';
+import { FaBars, FaCaretDown } from 'react-icons/fa';
 
 const Navbar = () => {
   const { user, signOut } = useAuth();
   const [showBar, setShowBar] = useState(true);
-  const [isOpen, setIsOpen] = useState(false); // State for mobile menu toggle
+  const [isOpen, setMobileMenuOpen] = useState(false); // State for mobile menu toggle
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false); // User dropdown toggle
+  const [adminDropdownOpen, setAdminDropdownOpen] = useState(false); // Admin dropdown toggle
+  const [managerDropdownOpen, setManagerDropdownOpen] = useState(false); // Admin dropdown toggle
+
+
+  // Function to handle closing the user and admin dropdown
+  const handleLinkClick = () => {
+    setUserDropdownOpen(false);
+    setAdminDropdownOpen(false);
+    setManagerDropdownOpen(false);
+    setMobileMenuOpen(false);
+  };
+
 
   return (
     <>
@@ -27,38 +40,89 @@ const Navbar = () => {
           <Link to="/">
             <img
               src={`${process.env.PUBLIC_URL}/images/AUTEventsInductionPortal.jpg`}
-              alt="AUT Events Indcution Portal"
+              alt="AUT Events Induction Portal"
               style={{ height: '60px' }}
+              onClick={handleLinkClick}
             />
           </Link>
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-4">
-            <Link to="/" className="text-white hover:text-blue-400" >Home</Link>
-            <Link to="/contact" className="text-white hover:text-blue-400">Contact</Link>
+            <Link to="/" className="text-white hover:text-blue-400" onClick={handleLinkClick}>Home</Link>
+            <Link to="/contact" className="text-white hover:text-blue-400" onClick={handleLinkClick}>Contact</Link>
             {user ? (
               <>
-                <Link to="/inductions" className="text-white  hover:text-blue-400">My Inductions</Link>
+                <Link to="/inductions" className="text-white  hover:text-blue-400" onClick={handleLinkClick}>My Inductions</Link>
+                {/* Admin Dropdown Links */}
                 {user.role === 'admin' && (
-                  <Link to="/admin/dashboard" className="text-white  hover:text-blue-400">Admin</Link>
+                  <div className="relative">
+                  <button
+                    onClick={() => setAdminDropdownOpen(!adminDropdownOpen)}
+                    className="flex items-center text-white hover:text-blue-400 focus:outline-none"
+                  >Administrator <FaCaretDown className="ml-1" />
+                  </button>
+                  
+                  {adminDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 py-2">
+                      <Link to="/admin/dashboard" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Dashboard</Link>
+                      <Link to="/admin/view-users" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Manage Users</Link>
+                      <Link to="/admin/induction-results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
+                    </div>
+                  )}
+                </div>
                 )}
+
+                {/* Manager Dropdown Links */}
+                {user.role === 'manager' && (
+                  <div className="relative">
+                  <button
+                    onClick={() => setManagerDropdownOpen(!managerDropdownOpen)}
+                    className="flex items-center text-white hover:text-blue-400 focus:outline-none"
+                  >Manager <FaCaretDown className="ml-1" />
+                  </button>
+                  
+                  {managerDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 py-2">
+                      <Link to="/admin/dashboard" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Dashboard</Link>
+                      <Link to="/admin/view-users" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Manage Users</Link>
+                      <Link to="/admin/induction-results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
+                    </div>
+                  )}
+                </div>
+              )}
+                
+              {/* User Dropdown */}
+              <div className="relative">
                 <button
-                  onClick={signOut}
-                  className="bg-red-800 text-white hover:bg-red-900 px-2 py-1 rounded"
-                >Sign Out
+                  onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+                  className="flex items-center text-white hover:text-blue-400 focus:outline-none"
+                > Kia ora, {user.displayName ? user.displayName.split(" ")[0] : ""} <FaCaretDown className="ml-1" />
                 </button>
+                
+                {userDropdownOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
+                    <Link to="/manage-account" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}> Manage my Account
+                    </Link>
+                    <button
+                      onClick={() => {
+                        signOut();
+                        handleLinkClick();
+                      }}
+                      className="w-full text-left px-4 py-2 text-black hover:bg-gray-200"
+                    >Sign Out
+                    </button>
+                  </div>
+                )}
+              </div>
               </>
             ) : (
-              <Link
-                to="/signin"
-                className="bg-blue-800 text-white hover:text-blue-400 px-2 py-1 rounded"
-              >Sign In
-              </Link>
+              <Link to="/signin" className="bg-blue-800 text-white hover:text-blue-400 px-2 py-1 rounded" >Sign In</Link>
             )}
           </div>
+
           {/* Mobile Menu Button */}
           <div className="md:hidden">
             <button
-              onClick={() => setIsOpen(!isOpen)}
+              onClick={() => setMobileMenuOpen(!isOpen)}
               className="text-white focus:outline-none"
             ><FaBars size={24} /> {/* Use the FaBars icon here */}
             </button>
@@ -67,27 +131,52 @@ const Navbar = () => {
         {/* Mobile Menu */}
         {isOpen && (
           <div className="md:hidden px-4 pb-3 space-y-1 bg-black">
-            <Link to="/" className="block text-white hover:text-blue-400">Home</Link>
-            <Link to="/contact" className="block text-white hover:text-blue-400">Contact</Link>
+            <Link to="/" className="block text-white hover:text-blue-400" onClick={handleLinkClick}>Home</Link>
+            <Link to="/contact" className="block text-white hover:text-blue-400" onClick={handleLinkClick}>Contact</Link>
             {user ? (
               <>
-                <Link to="/inductions" className="block text-white hover:text-blue-400">My Inductions</Link>
+                <Link to="/inductions" className="block text-white hover:text-blue-400" onClick={handleLinkClick}>My Inductions</Link>
+                
+                {/* Admin Links (expanded in mobile view) */}
                 {user.role === 'admin' && (
-                  <Link to="/admin" className="block text-white hover:text-blue-400">
-                    Admin
-                  </Link>
+                  <div className="mt-2">
+                    <p className="text-blue-400">Administrator</p>
+                    <Link to="/admin/dashboard" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Dashboard</Link>
+                    <Link to="/admin/view-users" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage Users</Link>
+                    <Link to="/admin/induction-results" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Results</Link>
+                  </div>
                 )}
-                <button
-                  onClick={signOut}
-                  className="w-full text-left bg-red-800 text-white hover:bg-red-900 px-2 py-1 rounded"
-                >Sign Out
-                </button>
+                
+                {/* Manager Links (expanded in mobile view) */}
+                {user.role === 'manager' && (
+                  <div className="mt-2">
+                    <p className="text-blue-400">Manager</p>
+                    <Link to="/admin/dashboard" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Dashboard</Link>
+                    <Link to="/admin/view-users" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage Users</Link>
+                    <Link to="/admin/induction-results" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Results</Link>
+                  </div>
+                )}
+
+                {/* User Links */}
+                <div className="mt-2">
+                  <p className="text-blue-400">Kia ora, {user.displayName ? user.displayName.split(" ")[0] : ""}</p>
+                  <Link to="/manage-account" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage my Account</Link>
+                  <button
+                    onClick={() => {
+                      signOut();
+                      handleLinkClick();
+                    }}
+                    className="block text-white hover:text-blue-400 px-4 text-left w-full"
+                  >Sign Out</button>
+                </div>
               </>
             ) : (
-              <Link to="/signin" className="block bg-blue-800 text-white hover:bg-blue-900 px-2 py-1 rounded">Sign In</Link>
+              <Link to="/signin" className="block bg-blue-800 text-white hover:text-blue-400 px-2 py-1 rounded" onClick={handleLinkClick}>
+                Sign In
+              </Link>
             )}
           </div>
-        )}
+        )}   
       </nav>
     </>
   );
