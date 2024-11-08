@@ -7,24 +7,25 @@ const Dashboard = () => {
   const sections = [
     {
       title: "Users",
-      description: "Manage users and roles",
+      description: "Manage User access",
       links: [
-        { text: "View Users", path: "/admin/view-users" },
-        { text: "Create New User", path: "/admin/add-user" }
+        { text: "View & Edit Users", path: "/management/users/view" },
+        { text: "Create New User", path: "/management/users/create" }
       ]
     },
     {
       title: "Inductions",
-      description: "View and manage inductions",
+      description: "Manage Induction Questions",
       links: [
-        { text: "View Inductions", path: "/admin/inductions" }
+        { text: "View & Edit Inductions", path: "/management/inductions/view" },
+        { text: "Create Induction", path: "/management/inductions/create" }
       ]
     },
     {
       title: "Results",
       description: "View induction results",
       links: [
-        { text: "View Results", path: "/admin/induction-results" }
+        { text: "View all Results", path: "/management/inductions/results" }
       ]
     },
     {
@@ -38,9 +39,9 @@ const Dashboard = () => {
 
   return (
     <>
-      <Helmet><title>Admin Dashboard | AUT Events Induction Portal</title></Helmet>
+      <Helmet><title>Management Dashboard | AUT Events Induction Portal</title></Helmet>
 
-      <PageHeader title="Admin Dashboard" subtext="Manage users, settings, and results" /> {/* Add the header here */}
+      <PageHeader title="Management Dashboard" subtext="Manage users, settings, and results" /> {/* Add the header here */}
       <div className="p-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {sections.map((section, index) => (

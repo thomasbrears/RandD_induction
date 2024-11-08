@@ -6,7 +6,7 @@ import '../style/Footer.css';
 const Footer = () => {
   const { user, signOut } = useAuth(); 
   const IS_AUTHENTICATED = !!user; 
-  const IS_ADMIN_OR_MODERATOR = user?.role === 'admin' || user?.role === 'moderator'; // Check for admin or moderator
+  const IS_ADMIN_OR_MODERATOR = user?.role === 'admin' || user?.role === 'manager'; // Check for admin or manager
 
   return (
     <footer>
@@ -25,15 +25,15 @@ const Footer = () => {
               {IS_ADMIN_OR_MODERATOR ? (
                 // Admin or Moderator links
                 <div>
-                  <Link to="/admin/">Dashboard</Link>
-                  <Link to="/admin/inductions">View Induction</Link>
-                  <Link to="/admin/view-users">View & Manager Users</Link>
-                  <Link to="/admin/add-user">New User</Link>
+                  <Link to="/management/dashboard">Dashboard</Link>
+                  <Link to="/management/inductions/view">Manage Inductions</Link>
+                  <Link to="/management/inductions/results">View Induction Results</Link>
+                  <Link to="/management/users/view">Manager Users</Link>
 
                 </div>
               ) : (
                 // Standard user link
-                <Link to="/my-inductions">My Inductions</Link>
+                <Link to="/inductions/my-inductions">My Inductions</Link>
               )}
               
               <button onClick={signOut}>Sign Out </button>
@@ -41,7 +41,7 @@ const Footer = () => {
           )}
 
           {!IS_AUTHENTICATED && (
-            <Link to="/signin">Sign-in</Link>
+            <Link to="/auth/signin">Sign-in</Link>
           )}
           
         </div>

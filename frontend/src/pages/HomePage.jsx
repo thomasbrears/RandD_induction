@@ -28,7 +28,7 @@ const HomePage = () => {
                     <>
                         <h3>Let's get started</h3>
                         <p>Please sign in to view and complete your inductions.</p>
-                        <Link to="/signin" className="sign-in-button">Sign in</Link>
+                        <Link to="/auth/signin" className="sign-in-button">Sign in</Link>
                     </>
                 ) : (
                     <>
@@ -38,15 +38,15 @@ const HomePage = () => {
                                 <h2>Hi {user.displayName ? user.displayName.split(" ")[0] : ""}, Let's get started</h2>
                                 <p>How should we get started today?</p>
                                 <div className="admin-buttons">
-                                    <Link to="http://localhost:3000/admin/induction-results" className="admin-button">User Induction Results</Link>
-                                    <Link to="http://localhost:3000/admin/dashboard" className="dashboard-button">Dashboard</Link>
+                                    <Link to="/management/inductions/results" className="admin-button">Induction Results</Link>
+                                    <Link to="/management/dashboard" className="dashboard-button">Dashboard</Link>
                                 </div>
                             </>
                         ) : (
                             <>
                                 <h2>Hi {user.displayName ? user.displayName.split(" ")[0] : ""}, Let's get started</h2>
                                 <p>You currently have {user.inductionsCount > 0 ? user.inductionsCount : "no"} inductions to complete...</p>
-                                <Link to="/inductions" className="view-inductions-button">View my Inductions</Link>
+                                <Link to="/inductions/my-inductions" className="view-inductions-button">View my Inductions</Link>
                             </>
                         )}
                     </>
