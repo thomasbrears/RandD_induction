@@ -25,7 +25,7 @@ const Navbar = () => {
     <>
       {!user && showBar && (
         <div className="bg-blue-800 text-white p-2 text-center relative">
-          <Link to="/signin" className="font-bold">
+          <Link to="/auth/signin" className="font-bold">
             Welcome to the AUT Events Induction Portal! Please Sign in to complete your inductions. →
           </Link>
           <button
@@ -51,7 +51,7 @@ const Navbar = () => {
             <Link to="/contact" className="text-white hover:text-blue-400" onClick={handleLinkClick}>Contact</Link>
             {user ? (
               <>
-                <Link to="/inductions" className="text-white  hover:text-blue-400" onClick={handleLinkClick}>My Inductions</Link>
+                <Link to="/inductions/my-inductions" className="text-white  hover:text-blue-400" onClick={handleLinkClick}>My Inductions</Link>
                 {/* Admin Dropdown Links */}
                 {user.role === 'admin' && (
                   <div className="relative">
@@ -63,9 +63,11 @@ const Navbar = () => {
                   
                   {adminDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 py-2">
-                      <Link to="/admin/dashboard" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Dashboard</Link>
-                      <Link to="/admin/view-users" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Manage Users</Link>
-                      <Link to="/admin/induction-results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
+                      <Link to="/management/dashboard" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Dashboard</Link>
+                      <Link to="/management/users/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Manage Users</Link>
+                      <Link to="/management/inductions/results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
+                      <Link to="/management/inductions/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Inductions</Link>
+                      <Link to="/admin/settings" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Settings</Link>
                     </div>
                   )}
                 </div>
@@ -82,10 +84,11 @@ const Navbar = () => {
                   
                   {managerDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 py-2">
-                      <Link to="/admin/dashboard" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Dashboard</Link>
-                      <Link to="/admin/view-users" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Manage Users</Link>
-                      <Link to="/admin/induction-results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
-                    </div>
+                      <Link to="/management/dashboard" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Dashboard</Link>
+                      <Link to="/management/users/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Manage Users</Link>
+                      <Link to="/management/inductions/results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
+                      <Link to="/management/inductions/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Inductions</Link>
+                      </div>
                   )}
                 </div>
               )}
@@ -100,7 +103,7 @@ const Navbar = () => {
                 
                 {userDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                    <Link to="/manage-account" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}> Manage my Account
+                    <Link to="/account/manage" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}> Manage my Account
                     </Link>
                     <button
                       onClick={() => {
@@ -115,7 +118,7 @@ const Navbar = () => {
               </div>
               </>
             ) : (
-              <Link to="/signin" className="bg-blue-800 text-white hover:text-blue-400 px-2 py-1 rounded" >Sign In</Link>
+              <Link to="/auth/signin" className="bg-blue-800 text-white hover:text-blue-400 px-2 py-1 rounded" >Sign In</Link>
             )}
           </div>
 
@@ -135,15 +138,17 @@ const Navbar = () => {
             <Link to="/contact" className="block text-white hover:text-blue-400" onClick={handleLinkClick}>Contact</Link>
             {user ? (
               <>
-                <Link to="/inductions" className="block text-white hover:text-blue-400" onClick={handleLinkClick}>My Inductions</Link>
+                <Link to="/inductions/my-induction" className="block text-white hover:text-blue-400" onClick={handleLinkClick}>My Inductions</Link>
                 
                 {/* Admin Links (expanded in mobile view) */}
                 {user.role === 'admin' && (
                   <div className="mt-2">
                     <p className="text-blue-400">Administrator</p>
-                    <Link to="/admin/dashboard" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Dashboard</Link>
-                    <Link to="/admin/view-users" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage Users</Link>
-                    <Link to="/admin/induction-results" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Results</Link>
+                    <Link to="/management/dashboard" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Dashboard</Link>
+                    <Link to="/management/users/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage Users</Link>
+                    <Link to="/management/inductions/results" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Results</Link>
+                    <Link to="/management/inductions/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Inductions</Link>
+                    <Link to="/admin/settings" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Inductions</Link>
                   </div>
                 )}
                 
@@ -151,16 +156,17 @@ const Navbar = () => {
                 {user.role === 'manager' && (
                   <div className="mt-2">
                     <p className="text-blue-400">Manager</p>
-                    <Link to="/admin/dashboard" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Dashboard</Link>
-                    <Link to="/admin/view-users" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage Users</Link>
-                    <Link to="/admin/induction-results" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Results</Link>
-                  </div>
+                      <Link to="/management/dashboard" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Dashboard</Link>
+                      <Link to="/management/users/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage Users</Link>
+                      <Link to="/management/inductions/results" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Results</Link>
+                      <Link to="/management/inductions/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Inductions</Link>
+                    </div>
                 )}
 
                 {/* User Links */}
                 <div className="mt-2">
                   <p className="text-blue-400">Kia ora, {user.displayName ? user.displayName.split(" ")[0] : ""}</p>
-                  <Link to="/manage-account" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage my Account</Link>
+                  <Link to="/account/manage" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage my Account</Link>
                   <button
                     onClick={() => {
                       signOut();
@@ -171,7 +177,7 @@ const Navbar = () => {
                 </div>
               </>
             ) : (
-              <Link to="/signin" className="block bg-blue-800 text-white hover:text-blue-400 px-2 py-1 rounded" onClick={handleLinkClick}>
+              <Link to="/auth/signin" className="block bg-blue-800 text-white hover:text-blue-400 px-2 py-1 rounded" onClick={handleLinkClick}>
                 Sign In
               </Link>
             )}

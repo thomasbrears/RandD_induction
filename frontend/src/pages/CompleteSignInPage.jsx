@@ -56,9 +56,9 @@ function CompleteSignInPage() {
             } else {
                 // Fallback based on role
                 if (userRole === 'admin' || userRole === 'manager') {
-                    navigate('/admin/dashboard');
+                    navigate('/management/dashboard');
                 } else {
-                    navigate('/inductions');
+                    navigate('/inductions/my-inductions');
                 }
             }
         } catch (error) {

@@ -63,9 +63,9 @@ function LoginPage() {
             } else {
                 // Redirect based on role if no previous URL
                 if (userRole === 'admin' || userRole === 'manager') {
-                    navigate('/admin/dashboard'); // Redirect to for admins or managers
+                    navigate('/management/dashboard'); // Redirect to for admins and managers
                 } else if (userRole === 'user') {
-                    navigate('/inductions'); // Redirect for users / staff
+                    navigate('/inductions/my-inductions'); // Redirect for users
                 } else {
                     navigate('/'); // Redirect home for unknown roles
                 }
@@ -116,7 +116,7 @@ function LoginPage() {
             await sendSignInLinkToEmail(auth, email, actionCodeSettings);
             window.localStorage.setItem('emailForSignIn', email);
             toast.success('Sign-in link sent! Please check your email and click the link included.', { autoClose: 7000 });
-            navigate('/complete-signin'); // Redirect to complete sign-in page
+            navigate('/auth/complete-signin'); // Redirect to complete sign-in page
         } catch (error) {
             // Handle Firebase Auth specific error messages
             console.error("Error sending sign-in link:", error);

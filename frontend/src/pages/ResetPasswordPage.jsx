@@ -24,8 +24,8 @@ function ResetPasswordPage() {
             toast.success('If an account exists with that email, we have sent a password reset email.', { position: 'top-center', autoClose: 7000 });
             // Delay navigation to login page for 2 seconds to display success message
             setTimeout(() => {
-                navigate("/signin");
-            }, 2000); // 2 seconds
+                navigate("/auth/signin");
+            }, 1000); // 1 second
         } catch (error) {
            // Handle Firebase Auth specific error messages
             switch (error.code) {
