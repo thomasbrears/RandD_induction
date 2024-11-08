@@ -105,7 +105,7 @@ function LoginPage() {
         }
 
         const actionCodeSettings = {
-            url: 'http://localhost:3000/complete-signin',
+            url: 'http://localhost:3000/auth/complete-signin',
             handleCodeInApp: true,
         };
 

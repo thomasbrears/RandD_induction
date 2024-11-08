@@ -39,9 +39,9 @@ const Dashboard = () => {
 
   return (
     <>
-      <Helmet><title>Admin Dashboard | AUT Events Induction Portal</title></Helmet>
+      <Helmet><title>Management Dashboard | AUT Events Induction Portal</title></Helmet>
 
-      <PageHeader title="Admin Dashboard" subtext="Manage users, settings, and results" /> {/* Add the header here */}
+      <PageHeader title="Management Dashboard" subtext="Manage users, settings, and results" /> {/* Add the header here */}
       <div className="p-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
           {sections.map((section, index) => (

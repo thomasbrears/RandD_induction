@@ -15,14 +15,14 @@ import ResetPasswordPage from './pages/ResetPasswordPage';
 import NotFoundPage from './pages/NotFoundPage';
 import FormListPage from './pages/FormListPage';
 import InductionFormPage from './pages/InductionFormPage';
-import Dashboard from './pages/admin/Dashboard';
-import ViewUsers from './pages/admin/ViewUsers';
-import UserForm from './pages/admin/AddUser';
-import InductionList from './pages/admin/InductionList';
-import InductionEdit from './pages/admin/InductionEdit';
-import InductionResults from './pages/admin/InductionResults';
-import EditUser from './pages/admin/EditUser';
-import Settings from './pages/admin/Settings';
+import Dashboard from './pages/management/Dashboard';
+import ViewUsers from './pages/management/ViewUsers';
+import UserForm from './pages/management/AddUser';
+import InductionList from './pages/management/InductionList';
+import InductionEdit from './pages/management/InductionEdit';
+import InductionResults from './pages/management/InductionResults';
+import EditUser from './pages/management/EditUser';
+import Settings from './pages/management/Settings';
 import ManageAccount from './pages/ManageAccountPage';
 
 // Auth hook and components
