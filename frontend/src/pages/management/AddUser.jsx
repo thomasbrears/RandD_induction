@@ -6,6 +6,7 @@ import { DefaultNewUser } from "../../models/User";
 import useAuth from "../../hooks/useAuth";
 import { toast } from "react-toastify";
 import PageHeader from "../../components/PageHeader";
+import ManagementSidebar from "../../components/ManagementSidebar";
 
 const AddUser = () => {
   const [newUser, setNewUser] = useState(DefaultNewUser);
@@ -28,12 +29,24 @@ const AddUser = () => {
   return (
     <>
       <Helmet><title>Create a User | AUT Events Induction Portal</title></Helmet>
+      
+      {/* Page Header */}
       <PageHeader 
         title="Create User" 
         subtext="Lets create and welcome a new user!" 
       />
-      <div className="p-6">
-        <UserForm userData={newUser} onSubmit={handleSubmit} />
+
+      {/* Main container */}
+      <div className="flex px-4 md:px-0 bg-gray-50">
+        {/* Management Sidebar */}
+        <div className="hidden md:flex">
+          <ManagementSidebar />
+        </div>
+
+        {/* Main content area */}
+        <div className="flex-1 ml-6 md:ml-8 p-6">
+          <UserForm userData={newUser} onSubmit={handleSubmit} />
+        </div>
       </div>
     </>
   );

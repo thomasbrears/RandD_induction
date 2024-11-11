@@ -162,7 +162,7 @@ function LoginPage() {
                     </p>
                     <p className="text-sm text-gray-600 mb-4 text-center">
                         If you have not set a password, please enter your email and click the "email me a sign-in link" option below or{' '}
-                        <Link to="/reset-password" className="font-bold text-black hover:underline">set your password here.</Link>
+                        <Link to="/auth/reset-password" className="font-bold text-black hover:underline">set your password here.</Link>
                     </p>
     
                     <form onSubmit={handleEmailPasswordSignIn} className="space-y-4">
@@ -193,7 +193,7 @@ function LoginPage() {
                                 </div>
     
                                 <div className="text-left">
-                                    <Link to="/reset-password" className="text-sm font-bold text-black hover:underline">Forgot password?</Link>
+                                    <Link to="/auth/reset-password" className="text-sm font-bold text-black hover:underline">Forgot password?</Link>
                                 </div>
     
                                 <button type="submit" className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
