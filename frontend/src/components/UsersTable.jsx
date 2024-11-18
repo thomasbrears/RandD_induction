@@ -33,7 +33,7 @@ const UsersTable = () => {
   const [globalFilter, setGlobalFilter] = useState("");
 
   const handleViewEdit = async (uid) => {
-    navigate("/admin/edit-user", {state: {uid}});
+    navigate("/management/users/edit", {state: {uid}});
   };
 
   const columns = [
@@ -145,12 +145,12 @@ const UsersTable = () => {
             />
           </div>
 
-          <Link to={"/admin/add-user"}>
+          <Link to={"/management/users/create"}>
             <button className="text-white bg-gray-800 px-3 py-2 rounded-md">
               Add New User
             </button>
           </Link>
-          <Link to={"/admin/induction-results"}>
+          <Link to={"/management/inductions/results"}>
           <button className="text-white bg-gray-800 px-3 py-2 rounded-md">
             View Results
           </button>

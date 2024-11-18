@@ -1,17 +1,30 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import PageHeader from '../../components/PageHeader';
+import ManagementSidebar from '../../components/ManagementSidebar';
 
 const InductionList = () => {
   return (
     <>
       <Helmet><title>Manage Inductions | AUT Events Induction Portal</title></Helmet>
+      
+      {/* Page Header */}
       <PageHeader 
         title="Manage Inductions" 
         subtext="View and manage all induction forms" 
       />
-      <div className="p-6">
-        <p>Only admins can access this page.</p>
+
+      {/* Main container */}
+      <div className="flex px-4 md:px-0 bg-gray-50">
+        {/* Management Sidebar */}
+        <div className="hidden md:flex">
+          <ManagementSidebar />
+        </div>
+
+        {/* Main content area */}
+        <div className="flex-1 ml-6 md:ml-8 p-6">
+          <p>List of inductions will be here</p>
+        </div>
       </div>
     </>
   );

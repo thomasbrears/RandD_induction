@@ -4,13 +4,12 @@ import useAuth from '../hooks/useAuth';
 import { FaBars, FaCaretDown } from 'react-icons/fa';
 
 const Navbar = () => {
-  const { user, signOut } = useAuth();
-  const [showBar, setShowBar] = useState(true);
+  const { user, signOut } = useAuth(); // Get the user object and signOut function from the useAuth hook
+  const [showBar, setShowBar] = useState(true); // State for showing the top signin prompt bar
   const [isOpen, setMobileMenuOpen] = useState(false); // State for mobile menu toggle
   const [userDropdownOpen, setUserDropdownOpen] = useState(false); // User dropdown toggle
   const [adminDropdownOpen, setAdminDropdownOpen] = useState(false); // Admin dropdown toggle
   const [managerDropdownOpen, setManagerDropdownOpen] = useState(false); // Admin dropdown toggle
-
 
   // Function to handle closing the user and admin dropdown
   const handleLinkClick = () => {
@@ -148,7 +147,7 @@ const Navbar = () => {
                     <Link to="/management/users/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage Users</Link>
                     <Link to="/management/inductions/results" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Results</Link>
                     <Link to="/management/inductions/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Inductions</Link>
-                    <Link to="/admin/settings" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Inductions</Link>
+                    <Link to="/admin/settings" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Settings</Link>
                   </div>
                 )}
                 

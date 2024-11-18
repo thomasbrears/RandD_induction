@@ -26,6 +26,53 @@ import { toast } from 'react-toastify';
 
 const columnHelper = createColumnHelper();
 
+// Reusable StatusBadge Component
+const StatusBadge = ({ status }) => {
+  const statusMapping = {
+    [Status.ASSIGNED]: { label: 'To Complete', color: 'border-blue-500 text-blue-500' },
+    [Status.IN_PROGRESS]: { label: 'In Progress', color: 'border-yellow-500 text-yellow-500' },
+    [Status.COMPLETE]: { label: 'Completed', color: 'border-green-500 text-green-500' },
+    [Status.OVERDUE]: { label: 'OVERDUE', color: 'border-red-500 text-white bg-red-500' },
+  };
+
+  const { label, color } = statusMapping[status] || { label: 'Status Unknown', color: 'border-gray-500 text-gray-500' };
+
+  return (
+    <span className={`px-2 py-1 border rounded ${color}`}>
+      {label}
+    </span>
+  );
+};
+
+
+// Reusable DateCell Component
+const DateCell = ({ date }) => (
+  <span>{date ? new Date(date).toLocaleDateString() : 'Not Available'}</span>
+);
+
+// Reusable ActionButton Component
+const ActionButton = ({ status, inductionId }) => {
+  if ([Status.ASSIGNED, Status.IN_PROGRESS, Status.OVERDUE].includes(status)) {
+    return (
+      <Link to={`/induction/take/${inductionId}`}>
+        <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
+          {status === Status.IN_PROGRESS ? 'Continue' : 'Start'}
+        </button>
+      </Link>
+    );
+  } else if (status === Status.COMPLETE) {
+    return (
+      <Link to={`/induction/results/${inductionId}`}>
+        <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
+          View Results
+        </button>
+      </Link>
+    );
+  }
+  return null;
+};
+
+// Main AssignedInductions Component
 const AssignedInductions = ({ uid }) => {
   const [assignedInductions, setAssignedInductions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -34,14 +81,13 @@ const AssignedInductions = ({ uid }) => {
   const [sorting, setSorting] = useState([]);
   const [globalFilter, setGlobalFilter] = useState('');
 
-  // Use uid prop if provided, else default to user.uid
   const userId = uid || user?.uid;
 
   useEffect(() => {
     if (user && userId) {
       const fetchInductions = async () => {
-        setLoading(true); // Start loading animation
-        setLoadingMessage(`Loading inductions for to ${user.displayName || user.email}...`);
+        setLoading(true);
+        setLoadingMessage(`Loading inductions for ${user.displayName || user.email}...`);
         try {
           const response = await getAssignedInductions(user, userId);
           setAssignedInductions(response.assignedInductions || []);
@@ -49,7 +95,7 @@ const AssignedInductions = ({ uid }) => {
           toast.error('Unable to load assigned inductions. Please try again later.');
           console.error('Error fetching assigned induction list:', error);
         } finally {
-          setLoading(false); // End loading
+          setLoading(false);
         }
       };
 
@@ -57,136 +103,35 @@ const AssignedInductions = ({ uid }) => {
     }
   }, [user, userId]);
 
-  const statusColors = {
-    [Status.ASSIGNED]: 'border-blue-500 text-blue-500',
-    [Status.IN_PROGRESS]: 'border-yellow-500 text-yellow-500',
-    [Status.COMPLETE]: 'border-green-500 text-green-500',
-    [Status.OVERDUE]: 'border-red-500 text-red-500',
-  };
-
-  const statusOrder = {
-    [Status.OVERDUE]: 1,
-    [Status.ASSIGNED]: 2,
-    [Status.IN_PROGRESS]: 3,
-    [Status.COMPLETE]: 4,
-  };
-
-  const isActionableStatus = (status) => {
-    return [Status.ASSIGNED, Status.IN_PROGRESS, Status.OVERDUE].includes(status);
-  };
-
   const columns = [
     columnHelper.accessor('name', {
-      cell: (info) => {
-        const inductionId = info.row.original.id;
-        const status = info.row.original.status;
-
-        return isActionableStatus(status) ? (
-          <Link to={`/induction/${inductionId}`} className="text-black hover:underline">
-            {info.getValue()}
-          </Link>
-        ) : (
-          <span>{info.getValue()}</span>
-        );
-      },
-      header: () => (
-        <span className="flex items-center">
-          Induction Name
-        </span>
+      cell: (info) => (
+        <Link to={`/induction/take/${info.row.original.id}`} className="text-black hover:underline">
+          {info.getValue()}
+        </Link>
       ),
+      header: 'Induction Name',
     }),
     columnHelper.accessor('availableFrom', {
-      cell: (info) =>
-        info.getValue()
-          ? new Date(info.getValue()).toLocaleDateString()
-          : 'N/A',
-      header: () => (
-        <span className="flex items-center">
-          Available From
-        </span>
-      ),
+      cell: (info) => <DateCell date={info.getValue()} />,
+      header: 'Available From',
     }),
     columnHelper.accessor('dueDate', {
-      cell: (info) =>
-        info.getValue()
-          ? new Date(info.getValue()).toLocaleDateString()
-          : 'N/A',
-      header: () => (
-        <span className="flex items-center">
-          Due Date
-        </span>
-      ),
+      cell: (info) => <DateCell date={info.getValue()} />,
+      header: 'Due Date',
     }),
     columnHelper.accessor('completionDate', {
-      cell: (info) =>
-        info.getValue()
-          ? new Date(info.getValue()).toLocaleDateString()
-          : 'N/A',
-      header: () => (
-        <span className="flex items-center">
-          Completion Date
-        </span>
-      ),
+      cell: (info) => <DateCell date={info.getValue()} />,
+      header: 'Completion Date',
     }),
     columnHelper.accessor('status', {
-      cell: (info) => {
-        const status = info.getValue();
-        const displayedStatus = status === Status.ASSIGNED ? 'To Complete' : status;
-        const colorClasses = statusColors[status] || 'border-gray-500 text-gray-500';
-
-        return (
-          <span className={`px-2 py-1 border rounded ${colorClasses}`}>
-            {displayedStatus}
-          </span>
-        );
-      },
-      header: () => (
-        <span className="flex items-center">
-          Status
-        </span>
-      ),
-      sortingFn: (rowA, rowB, columnId) => {
-        const statusA = rowA.getValue(columnId);
-        const statusB = rowB.getValue(columnId);
-
-        const orderA = statusOrder[statusA] || 999;
-        const orderB = statusOrder[statusB] || 999;
-
-        return orderA - orderB;
-      },
+      cell: (info) => <StatusBadge status={info.getValue()} />,
+      header: 'Status',
     }),
-    // Action column
     columnHelper.display({
       id: 'actions',
-      cell: (info) => {
-        const status = info.row.original.status;
-        const inductionId = info.row.original.id;
-
-        if (isActionableStatus(status)) {
-          return (
-            <Link to={`/induction/${inductionId}`}>
-              <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
-                {status === Status.IN_PROGRESS ? 'Continue' : 'Start'}
-              </button>
-            </Link>
-          );
-        } else if (status === Status.COMPLETE) {
-          return (
-            <Link to={`/induction-results/${inductionId}`}>
-              <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
-                View Results
-              </button>
-            </Link>
-          );
-        } else {
-          return null;
-        }
-      },
-      header: () => (
-        <span className="flex items-center">
-          Action
-        </span>
-      ),
+      cell: (info) => <ActionButton status={info.row.original.status} inductionId={info.row.original.id} />,
+      header: 'Action',
     }),
   ];
 
@@ -198,9 +143,7 @@ const AssignedInductions = ({ uid }) => {
       globalFilter,
     },
     initialState: {
-      pagination: {
-        pageSize: 10,
-      },
+      pagination: { pageSize: 10 },
       sorting: [
         { id: 'status', desc: false },
         { id: 'dueDate', desc: false },
@@ -214,157 +157,94 @@ const AssignedInductions = ({ uid }) => {
     getFilteredRowModel: getFilteredRowModel(),
   });
 
-  // Function to render induction cards for mobile
-  const renderInductionCards = () => (
-    <div className="flex flex-col space-y-4">
-      {table.getRowModel().rows.map((row) => {
-        const induction = row.original;
-        const isActionable = isActionableStatus(induction.status);
-        return (
-          <div key={induction.id} className="bg-white shadow-md rounded-lg p-4">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-lg font-semibold">
-                {isActionable ? (
-                  <Link to={`/induction/${induction.id}`} className="text-black hover:underline">
-                    {induction.name}
-                  </Link>
-                ) : (
-                  <span>{induction.name}</span>
-                )}
-              </h3>
-              {isActionable && (
-                <Link to={`/induction/${induction.id}`}>
-                  <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
-                    {induction.status === Status.IN_PROGRESS ? 'Continue' : 'Start'}
-                  </button>
-                </Link>
-              )}
-              {induction.status === Status.COMPLETE && (
-                <Link to={`/induction-results/${induction.id}`}>
-                  <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
-                    View Results
-                  </button>
-                </Link>
-              )}
-            </div>
-            <div className="text-sm text-gray-600 space-y-1">
-              <div>
-                <strong>Status:</strong>{' '}
-                <span
-                  className={`px-2 py-1 border rounded ${
-                    statusColors[induction.status] || 'border-gray-500 text-gray-500'
-                  }`}
-                >
-                  {induction.status === Status.ASSIGNED ? 'To Complete' : induction.status}
-                </span>
-              </div>
-              <div>
-                <strong>Available From:</strong>{' '}
-                {induction.availableFrom ? new Date(induction.availableFrom).toLocaleDateString() : 'N/A'}
-              </div>
-              <div>
-                <strong>Due Date:</strong>{' '}
-                {induction.dueDate ? new Date(induction.dueDate).toLocaleDateString() : 'N/A'}
-              </div>
-              <div>
-                <strong>Completion Date:</strong>{' '}
-                {induction.completionDate ? new Date(induction.completionDate).toLocaleDateString() : 'N/A'}
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-
   return (
-    <>
-      <div className="tableContainer">
-        {loading ? (
-          loading && <Loading message={loadingMessage} />  // Show loading animation while data is being fetched
-        ) : assignedInductions.length === 0 ? (
-          <div className="p-4 text-center text-black text-2xl font-bold">
-            No inductions assigned.
+    <div className="tableContainer">
+      {loading ? (
+        <Loading message={loadingMessage} />
+      ) : assignedInductions.length === 0 ? (
+        <div className="p-4 text-center text-black text-2xl font-bold">No inductions assigned.</div>
+      ) : (
+        <>
+          <div className="mb-4 flex items-center gap-4">
+            <div className="relative flex-grow">
+              <input
+                value={globalFilter ?? ''}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                placeholder="Search..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
+            </div>
           </div>
-        ) : (
-          <>
-            {/* Search Input */}
-            <div className="mb-4 flex items-center gap-4">
-              <div className="relative flex-grow">
-                <input
-                  value={globalFilter ?? ''}
-                  onChange={(e) => setGlobalFilter(e.target.value)}
-                  placeholder="Search..."
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-                />
-                <Search
-                  className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                  size={20}
-                />
-              </div>
-            </div>
 
-            {/* Desktop Table */}
-            <div className="hidden lg:block">
-              <div className="overflow-x-auto bg-white shadow-md rounded-lg">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    {table.getHeaderGroups().map((headerGroup) => (
-                      <tr key={headerGroup.id}>
-                        {headerGroup.headers.map((header) => (
-                          <th
-                            key={header.id}
-                            className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                          >
-                            <div
-                              {...{
-                                className: header.column.getCanSort()
-                                  ? 'cursor-pointer select-none flex items-center'
-                                  : '',
-                                onClick: header.column.getToggleSortingHandler(),
-                              }}
-                            >
-                              {flexRender(
-                                header.column.columnDef.header,
-                                header.getContext()
-                              )}
-                              {header.column.getCanSort() && (
-                                <ArrowUpDown className="ml-2" size={14} />
-                              )}
-                            </div>
-                          </th>
-                        ))}
-                      </tr>
+          {/* Desktop Table */}
+          <div className="hidden lg:block">
+            <table className="min-w-full divide-y divide-gray-200 bg-white shadow-md rounded-lg">
+              <thead className="bg-gray-50">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <th key={header.id} className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">
+                        <div
+                          {...{
+                            className: header.column.getCanSort() ? 'cursor-pointer select-none' : '',
+                            onClick: header.column.getToggleSortingHandler(),
+                          }}
+                        >
+                          {flexRender(header.column.columnDef.header, header.getContext())}
+                          {header.column.getCanSort() && <ArrowUpDown className="ml-2" size={14} />}
+                        </div>
+                      </th>
                     ))}
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {table.getRowModel().rows.map((row) => (
-                      <tr key={row.id} className="hover:bg-gray-50">
-                        {row.getVisibleCells().map((cell) => (
-                          <td
-                            key={cell.id}
-                            className="px-6 py-4 text-sm text-gray-500"
-                          >
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </td>
-                        ))}
-                      </tr>
+                  </tr>
+                ))}
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {table.getRowModel().rows.map((row) => (
+                  <tr key={row.id} className="hover:bg-gray-50">
+                    {row.getVisibleCells().map((cell) => (
+                      <td key={cell.id} className="px-6 py-4 text-sm text-gray-500">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </td>
                     ))}
-                  </tbody>
-                </table>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile Induction Cards */}
+          <div className="lg:hidden space-y-4">
+            {table.getRowModel().rows.map((row) => (
+              <div key={row.id} className="bg-white shadow-md rounded-lg p-4">
+                <h3 className="text-lg font-semibold">
+                  <Link to={`/induction/take/${row.original.id}`} className="text-black hover:underline">
+                    {row.original.name}
+                  </Link>
+                </h3>
+                <div className="text-sm text-gray-600 mt-2">
+                  <p>
+                    <span className="font-semibold">Available From:</span> <DateCell date={row.original.availableFrom} />
+                  </p>
+                  <p>
+                    <span className="font-semibold">Due Date:</span> <DateCell date={row.original.dueDate} />
+                  </p>
+                  <p>
+                    <span className="font-semibold">Completion Date:</span> <DateCell date={row.original.completionDate} />
+                  </p>
+                  <p>
+                    <span className="font-semibold">Status:</span> <StatusBadge status={row.original.status} />
+                  </p>
+                </div>
+                <div className="mt-4">
+                  <ActionButton status={row.original.status} inductionId={row.original.id} />
+                </div>
               </div>
-            </div>
+            ))}
+          </div>
 
-            {/* Mobile Induction Cards */}
-            <div className="lg:hidden">
-              {renderInductionCards()}
-            </div>
-
-            {/* Pagination Controls */}
-            <div className="flex flex-col sm:flex-row justify-between items-center mt-4 text-sm text-gray-700">
+          {/* Pagination Controls */}
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-4 text-sm text-gray-700">
               {/* Items per page */}
               <div className="flex items-center mb-4 sm:mb-0">
                 <span className="mr-2">Items per page</span>
@@ -431,7 +311,6 @@ const AssignedInductions = ({ uid }) => {
           </>
         )}
       </div>
-    </>
   );
 };
 

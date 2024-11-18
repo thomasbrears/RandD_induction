@@ -7,6 +7,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { getUser, updateUser, sendPasswordResetEmail, setPassword  } from "../../api/UserApi";
 import { toast } from 'react-toastify';
 import PageHeader from '../../components/PageHeader';
+import ManagementSidebar from '../../components/ManagementSidebar';
 
 const EditUser = () => {
   const [viewedUser, setViewedUser] = useState(DefaultNewUser);
@@ -31,10 +32,10 @@ const EditUser = () => {
       fetchUsers();
     }else if(!loading){
       setTimeout(() => {
-        navigate("/admin/view-users");
-      }, 3000);
+        navigate("/management/users/view");
+      }, 1000);
 
-      const errorMessage = "An error occurred, no user was selected.";
+      const errorMessage = "No user was selected. Please select a user to edit.";
       toast.error(errorMessage);
     }
     
@@ -57,12 +58,24 @@ const EditUser = () => {
   return (
     <>
       <Helmet><title>Edit User | AUT Events Induction Portal</title></Helmet>
+      
+      {/* Page Header */}
       <PageHeader 
         title="Edit User" 
         subtext="Update user details or assign new induction(s)" 
       />
-      <div className="p-6">
-        <UserForm userData={viewedUser} onSubmit={handleSubmit} />
+
+      {/* Main container */}
+      <div className="flex px-4 md:px-0 bg-gray-50">
+        {/* Management Sidebar */}
+        <div className="hidden md:flex">
+          <ManagementSidebar />
+        </div>
+
+        {/* Main content area */}
+        <div className="flex-1 ml-6 md:ml-8 p-6">
+          <UserForm userData={viewedUser} onSubmit={handleSubmit} />
+        </div>
       </div>
     </>
   );

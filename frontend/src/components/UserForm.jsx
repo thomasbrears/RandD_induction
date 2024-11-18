@@ -204,8 +204,8 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
           toast.success("User deleted sucessfully!", { position: 'top-right', autoClose: 3000, });
 
           setTimeout(() => {
-            navigate("/admin/view-users");
-          }, 3000);
+            navigate("/management/users/view");
+          }, 1000);
         })
         .catch((err) => {
           const errorMessage =
