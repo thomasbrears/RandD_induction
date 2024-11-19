@@ -90,3 +90,33 @@ export const deleteUser = async (user, uid) => {
     throw error;
   }
 };
+
+export const deactivateUser = async (user, uid) => {
+  try {
+    const token = user?.token;
+    const headers = token ? { authtoken: token } : {};
+    const response = await axios.post(`${API_URL}/users/deactivate-user`, null, {
+      headers,
+      params: { uid },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error deactivating user:", error);
+    throw error;
+  }
+};
+
+export const reactivateUser = async (user, uid) => {
+  try {
+    const token = user?.token;
+    const headers = token ? { authtoken: token } : {};
+    const response = await axios.post(`${API_URL}/users/reactivate-user`, null, {
+      headers,
+      params: { uid },
+    });
+    return response.data;
+  } catch (error) {
+    console.error("Error reactivating user:", error);
+    throw error;
+  }
+};

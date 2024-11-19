@@ -3,10 +3,12 @@ import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set 
 import { Link } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
+import { FaUsers, FaClipboardList, FaChartBar, FaCog } from 'react-icons/fa';
 
 const Dashboard = () => {
   const sections = [
     {
+      icon: <FaUsers className="inline mr-2" />,
       title: "Users",
       description: "Manage User access",
       links: [
@@ -15,6 +17,7 @@ const Dashboard = () => {
       ]
     },
     {
+      icon: <FaClipboardList className="inline mr-2" />,
       title: "Inductions",
       description: "Manage Induction Questions",
       links: [
@@ -23,6 +26,7 @@ const Dashboard = () => {
       ]
     },
     {
+      icon: <FaChartBar className="inline mr-2" />,
       title: "Results",
       description: "View induction results",
       links: [
@@ -30,6 +34,7 @@ const Dashboard = () => {
       ]
     },
     {
+      icon: <FaCog className="inline mr-2" />,
       title: "Settings",
       description: "Manage system settings",
       links: [
@@ -57,7 +62,7 @@ const Dashboard = () => {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
           {sections.map((section, index) => (
             <div key={index} className="p-4 border border-gray-200 rounded-lg shadow bg-white">
-              <h2 className="text-xl font-semibold mb-2">{section.title}</h2>
+              <h2 className="text-xl font-semibold mb-2">{section.icon} {section.title}</h2>
               <p className="text-gray-500 mb-4">{section.description}</p>
               <div className="flex flex-col space-y-2">
                 {section.links.map((link, linkIndex) => (

@@ -116,6 +116,14 @@ const HomePage = () => {
                                 {/* Manager or Admin content */}
                                 <h2 className="text-3xl text-center font-semibold mb-4">Hi {user.displayName ? user.displayName.split(" ")[0] : ""}, Let's get started</h2>
                                 <p className="text-xl text-center mb-6">How should we get started today?</p>
+
+                                {/* Show overdue inductions message if applicable */}
+                                {overdueInductionsCount > 0 && (
+                                    <p className="text-red-500 text-center mb-6">
+                                        <Link to="/inductions/my-inductions" >You have {overdueInductionsCount} overdue induction{overdueInductionsCount > 1 ? 's' : ''}. Please complete {overdueInductionsCount > 1 ? 'them' : 'it'} as soon as possible.</Link>  {/* Message with cases for 1 or muiltiple overdue inductions and a link to the inductions page */}
+                                    </p>
+                                )}
+
                                 <div className="flex justify-center gap-6">
                                     <Link to="/management/dashboard" className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md text-center w-auto mx-auto">Management Dashboard</Link>
                                 </div>

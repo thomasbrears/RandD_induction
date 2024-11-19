@@ -137,7 +137,7 @@ const Navbar = () => {
             <Link to="/contact" className="block text-white hover:text-blue-400" onClick={handleLinkClick}>Contact</Link>
             {user ? (
               <>
-                <Link to="/inductions/my-induction" className="block text-white hover:text-blue-400" onClick={handleLinkClick}>My Inductions</Link>
+                <Link to="/inductions/my-inductions" className="block text-white hover:text-blue-400" onClick={handleLinkClick}>My Inductions</Link>
                 
                 {/* Admin Links (expanded in mobile view) */}
                 {user.role === 'admin' && (

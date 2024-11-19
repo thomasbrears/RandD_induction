@@ -13,24 +13,31 @@ const EditUser = () => {
   const [viewedUser, setViewedUser] = useState(DefaultNewUser);
   const [showSetPassword, setShowSetPassword] = useState(false);
   const [newPassword, setNewPassword] = useState("");
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
   const uid = location.state?.uid; 
 
   useEffect(() => {
-    if (uid && !loading) {
+    if (uid && !authLoading) {
       const fetchUsers = async () => {
         try {
+          setLoading(true);
+          setLoadingMessage(`Loading ${user.displayName || user.email}'s details...`);
+
           const userData = await getUser(user, uid);
           setViewedUser(userData);
         } catch (err) {
           const errorMessage = err.response?.data?.message || "An error occurred";
           toast.error(errorMessage);
+        } finally {
+          setLoading(false);
         }
       };
       fetchUsers();
-    }else if(!loading){
+    }else if(!authLoading){
       setTimeout(() => {
         navigate("/management/users/view");
       }, 1000);
@@ -39,7 +46,7 @@ const EditUser = () => {
       toast.error(errorMessage);
     }
     
-  }, [uid, navigate, user, loading]);
+  }, [uid, navigate, user, authLoading]);
 
   const handleSubmit = (userData) => {
     if(user){
@@ -74,7 +81,11 @@ const EditUser = () => {
 
         {/* Main content area */}
         <div className="flex-1 ml-6 md:ml-8 p-6">
-          <UserForm userData={viewedUser} onSubmit={handleSubmit} />
+          {loading ? (
+            <p className="text-gray-600">{loadingMessage}</p>
+          ) : (
+            <UserForm userData={viewedUser} onSubmit={handleSubmit} />
+          )}
         </div>
       </div>
     </>

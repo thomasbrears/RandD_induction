@@ -5,6 +5,8 @@ import {
   createUser,
   updateUser,
   deleteUser,
+  deactivateUser,
+  reactivateUser,
   getAssignedInductions,
 } from "../controllers/userController.js";
 
@@ -16,6 +18,8 @@ router.get("/get-user", getUser);
 router.post("/create-new-user", createUser);
 router.put("/update-user", updateUser);
 router.delete("/delete-user", deleteUser);
+router.post("/deactivate-user", deactivateUser);
+router.post("/reactivate-user", reactivateUser);
 router.get("/get-assigned-inductions", getAssignedInductions);
 
 export default router;
