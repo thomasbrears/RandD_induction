@@ -50,6 +50,7 @@ export const getUser = async (req, res) => {
         : Permissions.USER,
       position: userDoc.exists ? userDoc.data().position : Positions.TEAM,
       locations: userDoc.exists ? userDoc.data().locations : [],
+      disabled: userResult.disabled,
       assignedInductions: userDoc.exists
         ? userDoc.data().assignedInductions
         : [],
@@ -264,6 +265,40 @@ export const deleteUser = async (req, res) => {
     });
   } catch (error) {
     console.error("Error deleting user:", error);
+    res.status(500).send(error);
+  }
+};
+
+// Deactivate a user
+export const deactivateUser = async (req, res) => {
+  try {
+    const uid = req.query.uid;
+    
+    // Disable the user in Firebase Authentication
+    await admin.auth().updateUser(uid, { disabled: true });
+
+    res.status(200).json({
+      message: "User deactivated successfully",
+    });
+  } catch (error) {
+    console.error("Error deactivating user:", error);
+    res.status(500).send(error);
+  }
+};
+
+// Reactivate a user
+export const reactivateUser = async (req, res) => {
+  try {
+    const uid = req.query.uid;
+
+    // Reactivate the user in Firebase Authentication
+    await admin.auth().updateUser(uid, { disabled: false });
+
+    res.status(200).json({
+      message: "User reactivated successfully",
+    });
+  } catch (error) {
+    console.error("Error reactivating user:", error);
     res.status(500).send(error);
   }
 };

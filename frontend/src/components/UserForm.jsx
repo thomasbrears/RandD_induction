@@ -13,16 +13,28 @@ import "react-datepicker/dist/react-datepicker.css";
 import { getAllInductions } from "../api/InductionApi";
 import { DefaultNewAssignedInduction } from "../models/AssignedInduction";
 import Status from "../models/Status";
-import { deleteUser } from "../api/UserApi";
-import { useNavigate } from "react-router-dom";
+import { deleteUser, deactivateUser, reactivateUser } from "../api/UserApi";
+import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import ConfirmationModal from './ConfirmationModal';
+import { FaUserCheck, FaUserTimes, FaTrashAlt, FaSave, FaUserPlus, FaPlus } from 'react-icons/fa';
+import { IoRemoveCircle } from "react-icons/io5";
 
 export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
   const [user, setUser] = useState(DefaultNewUser);
+  const [actionType, setActionType] = useState(null); // Store whether it's deactivation, reactivation, or deletion
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmDeactivate, setConfirmDeactivate] = useState(false);
+  const [isDeactivated, setIsDeactivated] = useState(false);
   const [availableInductions, setAvailableInductions] = useState([]);
   const [newAssignedInductions, setNewAssignedInductions] = useState([]);
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if the current page is the edit page and if the userData has an ID (existing user)
+  const isEditPage = location.pathname.includes('/edit');
+  const isExistingUser = userData?.uid !== undefined; // Check if it's an existing user
 
   const userSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
@@ -104,6 +116,13 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
     methods.reset(userData);
     if (userData.uid) {
       methods.trigger();
+    }
+
+    // Check if the user is deactivated on page load
+    if (userData.disabled) {
+      setIsDeactivated(true); // User is deactivated
+    } else {
+      setIsDeactivated(false); // User is active
     }
   }, [userData, methods]);
 
@@ -197,37 +216,96 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
       ? Object.values(Permissions)
       : [Permissions.USER];
 
+  // Handle deactivate/reactivate action
+  const handleDeactivateOrReactivate = () => {
+    const action = user.disabled ? 'reactivate' : 'deactivate';
+    setActionType(action);
+    setConfirmDeactivate(true); // Open the modal for confirmation
+  };
+
+  // Handle delete action
   const handleDelete = () => {
+    setActionType('delete');
+    setConfirmDelete(true); // Open the modal for confirmation
+  };
+
+  // Confirm deactivation or reactivation
+  const confirmDeactivationOrReactivation = () => {
+    if (actionType === 'deactivate') {
+      deactivateUser(currentUser, user.uid)
+        .then((data) => {
+          toast.success("User deactivated successfully!");
+          setUser({ ...user, disabled: true }); // Update state immediately
+          setIsDeactivated(true); // Update the deactivated banner status
+        })
+        .catch((err) => {
+          toast.error("Failed to deactivate user");
+        });
+    } else if (actionType === 'reactivate') {
+      reactivateUser(currentUser, user.uid)
+        .then((data) => {
+          toast.success("User reactivated successfully!");
+          setUser({ ...user, disabled: false }); // Update state immediately
+          setIsDeactivated(false); // Update the deactivated banner status
+        })
+        .catch((err) => {
+          toast.error("Failed to reactivate user");
+        });
+    }
+    setConfirmDeactivate(false); // Close the modal
+  };
+
+  // Confirm deletion
+  const confirmDeletion = () => {
     if (currentUser && user) {
       deleteUser(currentUser, user.uid)
         .then(() => {
-          toast.success("User deleted sucessfully!", { position: 'top-right', autoClose: 3000, });
-
-          setTimeout(() => {
-            navigate("/management/users/view");
-          }, 1000);
+          toast.success("User deleted successfully!", { position: 'top-right', autoClose: 3000 });
+          navigate("/management/users/view");
         })
         .catch((err) => {
-          const errorMessage =
-            err.response?.data?.message || "An error occurred";
+          const errorMessage = err.response?.data?.message || "An error occurred";
           toast.error(errorMessage);
           console.error(err);
         });
     }
+    setConfirmDelete(false); // Close the modal
   };
 
   return (
     <>
       <div className="flex items-start justify-center pt-8">
         <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-4xl mx-4 md:mx-8">
+          {/* Render deactivated banner if the user is deactivated */}
+          {isDeactivated && (
+            <div className="bg-red-500 text-white p-2 rounded mb-4">This user is currently deactivated and cannot login or complete inductions.</div>
+          )}
         <div className="flex justify-between items-center">
           <h1>User Details</h1>
-          <button
-            className="text-white bg-gray-800 px-3 py-2 rounded-md"
-            onClick={handleDelete}
-          >
-            Delete User
-          </button>
+          {isEditPage && isExistingUser && (
+              <div className="flex space-x-2">
+                <button
+                  className={`text-white px-3 py-2 rounded-md ${user.disabled ? 'bg-green-600' : 'bg-gray-700'}`}
+                  onClick={handleDeactivateOrReactivate}
+                >
+                  {user.disabled ? (
+                    <>
+                      <FaUserCheck className="inline mr-2" /> Reactivate User
+                    </>
+                  ) : (
+                    <>
+                      <FaUserTimes className="inline mr-2" /> Deactivate User
+                    </>
+                  )}
+                </button>
+                <button
+                  className="text-white bg-red-700 hover:bg-red-900 px-3 py-2 rounded-md"
+                  onClick={handleDelete}
+                >
+                  <FaTrashAlt className="inline mr-2" />Delete User
+                </button>
+              </div>
+            )}
         </div>
           <FormProvider {...methods}>
             <form
@@ -401,9 +479,8 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                 <button
                   type="button"
                   onClick={handleAddInduction}
-                  className="text-white bg-gray-800 px-3 py-2 rounded-md"
-                >
-                  Add Induction
+                  className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-2 rounded-md"
+                ><FaPlus className="inline mr-2" /> Add Induction
                 </button>
               </div>
 
@@ -441,9 +518,8 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                       <button
                         type="button"
                         onClick={() => handleRemoveInduction(index)}
-                        className="text-white bg-gray-800 px-3 py-2 rounded-md"
-                      >
-                        Remove
+                        className="text-white bg-red-700 hover:bg-red-900 px-3 py-2 rounded-md"
+                      ><IoRemoveCircle className="inline mr-2" /> Remove
                       </button>
                     </div>
                     <div className="flex flex-col md:flex-row space-x-0 md:space-x-4 mb-2">
@@ -514,14 +590,52 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
 
               <div className="flex justify-center">
                 <button
-                  className="text-white bg-gray-800 px-3 py-2 rounded-md"
+                  className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-2 rounded-md"
                   type="submit"
                 >
-                  {userData.uid ? "Save Changes" : "Create User"}
+                  {userData.uid ? (
+                    <>
+                      <FaSave className="inline mr-2" /> Save Changes
+                    </>
+                  ) : (
+                    <>
+                      <FaUserPlus className="inline mr-2" /> Create User
+                    </>
+                  )}
                 </button>
               </div>
             </form>
           </FormProvider>
+
+          {/* Deactivation/Deletion Confirmation Modal */}
+          <ConfirmationModal
+            isOpen={confirmDeactivate}
+            message={
+              actionType === 'deactivate'
+                ? "Are you sure you want to deactivate this user?"
+                : "Are you sure you want to reactivate this user?"
+            }
+            subtext={
+              actionType === 'deactivate'
+                ? "This will prevent the user from loging into the site and completing inductions. The users data and inductions will remain and they can be reactivated at any time."
+                : "This will restore the user's access to the platform and they can immediately login and complete inductions."
+            }
+            onCancel={() => setConfirmDeactivate(false)}
+            onConfirm={confirmDeactivationOrReactivation}
+            actionLabel={actionType === 'deactivate' ? "Yes, Deactivate User" : "Yes, Reactivate User"}
+            cancelLabel="Cancel"
+          />
+
+          {/* Deletion Confirmation Modal */}
+          <ConfirmationModal
+            isOpen={confirmDelete}
+            message="Are you sure you want to permanently delete this user?"
+            subtext="This action will permanently remove the user and all their associated data and induction records. THIS CANNOT BE UNDONE."
+            onCancel={() => setConfirmDelete(false)}
+            onConfirm={confirmDeletion}
+            actionLabel="Yes, Permanently Delete User"
+            cancelLabel="Cancel"
+          />
         </div>
       </div>
 
