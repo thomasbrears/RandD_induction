@@ -94,7 +94,7 @@ const HomePage = () => {
 
             {/* Background Image Section */}
             <div className="bg-cover bg-center h-[500px] flex justify-center items-center text-center text-white px-4 mb-12" style={{ backgroundImage: `url(/images/WG_OUTSIDE_AUT.webp)` }}>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold">Welcome to the AUT Events<br />Induction Platform!</h1>
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold">Welcome to the AUT Events<br />Induction Portal!</h1>
             </div>
 
             {/* Let's Get Started Section */}

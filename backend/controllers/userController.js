@@ -172,11 +172,11 @@ export const createUser = async (req, res) => {
         <div class="email-body">
           <h1>Kia ora ${firstName} ${lastName}!</h1>
           <p>Welcome to AUT Events! We're excited to have you on board and looking forward to working with you.</p>
-          <p>An account has been created for you on the AUT Events Induction platform. This is where you'll complete important onboarding activities and access induction resources.</p>
+          <p>An account has been created for you on the AUT Events Induction Portal. This is where you'll complete important onboarding activities and access induction resources.</p>
           
           <p><strong>Getting Started:</strong></p>
           <ol>
-            <li><strong>Visit the Homepage:</strong> Click the button below to visit the AUT Events Induction platform:</li>
+            <li><strong>Visit the Homepage:</strong> Click the button below to visit the AUT Events Induction Portal:</li>
             <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}" class="button">AUT Events Induction Homepage</a>
             <li><strong>Log In:</strong> From the homepage, you can log in using this email address and choose the passwordless login option, or you can set a password <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}/reset-password">here</a>.</li>
           </ol>

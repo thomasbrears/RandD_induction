@@ -42,7 +42,7 @@ export const createNewInduction = async (user, inductionData) => {
     const headers = token ? { authtoken: token } : {};
 
     const response = await axios.post(
-      `${API_URL}/create-induction`,
+      `${API_URL}/inductions/create-induction`,
       inductionData,
       {
         headers,
@@ -59,7 +59,7 @@ export const getInduction = async (user, id) => {
   try {
       const token = user?.token;
       const headers = token ? {authtoken: token}: {};
-      const response = await axios.get(`${API_URL}/get-induction`,{
+      const response = await axios.get(`${API_URL}/inductions/get-induction`,{
           headers,
           params: { id },
       });
