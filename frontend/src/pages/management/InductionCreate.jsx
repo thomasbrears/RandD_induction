@@ -11,7 +11,9 @@ import Departments from "../../models/Departments";
 import { FaEdit, FaSave, FaCheck } from 'react-icons/fa';
 
 const InductionCreate = () => {
-  const { user } = useAuth();
+  const { user } = useAuth(); // Get the user object from the useAuth hook
+
+  // States for managing the induction data and ui states
   const [induction, setInduction] = useState({
     ...DefaultNewInduction,
     department: "",
@@ -23,12 +25,15 @@ const InductionCreate = () => {
   const [isEditingDepartment, setIsEditingDepartment] = useState(false);
   const [heroImage, setHeroImage] = useState(null);
 
-  const toggleEditDepartment = () => setIsEditingDepartment((prev) => !prev);
-  const toggleEditDescription = () => setIsEditingDescription((prev) => !prev);
+  // Functions for toggling edit/view modes for department and description
+  const TOGGLE_EDIT_DEPARTMENT = () => setIsEditingDepartment((prev) => !prev);
+  const TOGGLE_EDIT_DESCRIPTION = () => setIsEditingDescription((prev) => !prev);
 
-  const handleSubmit = async (e) => {
+  // Function to handle form submission, validate inputs and call API
+  const HANDLE_SUBMIT = async (e) => {
     e.preventDefault();
 
+    // Check if any required fields are missing and show warning if so
     const missingFields = [];
     if (!induction.name) missingFields.push("Induction name");
     if (!induction.department) missingFields.push("Department");
@@ -39,6 +44,7 @@ const InductionCreate = () => {
       return;
     }
 
+    // user exists, send api request to create new induction
     if (user) {
       const result = await createNewInduction(user, induction);
       console.log(result);
@@ -46,27 +52,31 @@ const InductionCreate = () => {
     }
   };
 
-  const handleDescriptionChange = (e) => {
+  // Function to update description as the user types
+  const HANDLE_DESCRIPTION_CHANGE = (e) => {
     setInduction({
       ...induction,
       description: e.target.value,
     });
   };
 
-  const handleDepartmentChange = (e) => {
+    // Function to update department as the user types
+  const HANDLE_DEPARTMENT_CHANGE = (e) => {
     setInduction({
       ...induction,
       department: e.target.value,
     });
   };
 
-  const handleFileUpload = (e) => {
+    // Function to handle file upload for hero image
+  const HANDLE_FILE_UPLOAD = (e) => {
     const file = e.target.files[0];
     if (file) {
       setHeroImage(file);
     }
   };
 
+  // check if all fields are filled before enabling submit button
   useEffect(() => {
     if (!induction.name) {
       setShowModal(true);
@@ -76,22 +86,26 @@ const InductionCreate = () => {
     setIsSubmitDisabled(!isFormComplete);
   }, [induction]);
 
-  const handleCloseModal = () => setShowModal(false);
-  const handleNextStep = () => setCurrentStep((prevStep) => prevStep + 1);
-  const handlePreviousStep = () => setCurrentStep((prevStep) => prevStep - 1);
+  // Handle closing modal
+  const HANDLE_CLOSE_MODAL = () => setShowModal(false);
+  // Step navigation functions for modal
+  const HANDLE_NEXT_STEP = () => setCurrentStep((prevStep) => prevStep + 1);
+  const HANDLE_PREVIOUS_STEP = () => setCurrentStep((prevStep) => prevStep - 1);
 
   return (
     <>
-      <Helmet>
-        <title>Create Induction | AUT Events Induction Portal</title>
-      </Helmet>
+      {/* Helmet for setting page metadata */}
+      <Helmet><title>Create Induction | AUT Events Induction Portal</title></Helmet>
 
+      {/* Page Header */}
       <PageHeader title="Create Induction" subtext="Create new induction module" />
 
+      {/* Modal for induction creation steps */}
       {showModal && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white p-6 rounded-lg w-full sm:w-3/4 md:w-1/2 lg:w-1/3">
           <h2 className="text-xl font-semibold mb-2 text-center">
+              {/* Display current step title */}
               {currentStep === 0
                 ? "Welcome to the Induction Creation"
                 : currentStep === 1
@@ -106,6 +120,7 @@ const InductionCreate = () => {
               </p>
             )}
 
+            {/* Step 0: Welcome step */}
             {currentStep === 0 && (
               <div>
                 <p className="mb-4 text-gray-700">
@@ -115,6 +130,7 @@ const InductionCreate = () => {
               </div>
             )}
 
+            {/* Step 1: Induction Name input*/}
             {currentStep === 1 && (
               <div>
                 <p className="mb-2 text-gray-500">Enter the name of the induction:</p>
@@ -130,6 +146,7 @@ const InductionCreate = () => {
               </div>
             )}
 
+            {/* Step 2: Department selection */}
             {currentStep === 2 && (
               <div>
                 <p className="mb-2 text-gray-500">Select the department the induction belongs to:</p>
@@ -150,6 +167,7 @@ const InductionCreate = () => {
               </div>
             )}
 
+            {/* Step 3: Description input */}
             {currentStep === 3 && (
               <div>
                 <p className="mb-2 text-gray-500">Enter a description for this induction:</p>
@@ -157,18 +175,19 @@ const InductionCreate = () => {
                   id="description"
                   name="description"
                   value={induction.description}
-                  onChange={handleDescriptionChange}
+                  onChange={HANDLE_DESCRIPTION_CHANGE}
                   placeholder="e.g. This induction covers the general health and safety accross AUT and covers the following topics..."
                   className="w-full h-40 border border-gray-300 rounded-lg p-2 text-base focus:ring-gray-800 focus:border-gray-800"
                 />
               </div>
             )}
 
+            {/* Modal navigation buttons */}
             <div className="mt-4 flex justify-between">
               {currentStep > 0 && (
                 <button
                   type="button"
-                  onClick={handlePreviousStep}
+                  onClick={HANDLE_PREVIOUS_STEP}
                   className="bg-gray-800 text-white px-4 py-2 rounded-md"
                 >
                   Back
@@ -176,7 +195,7 @@ const InductionCreate = () => {
               )}
               <button
                 type="button"
-                onClick={currentStep === 3 ? handleCloseModal : handleNextStep}
+                onClick={currentStep === 3 ? HANDLE_CLOSE_MODAL : HANDLE_NEXT_STEP}
                 className="bg-gray-800 text-white px-4 py-2 rounded-md"
               >
                 {currentStep === 3 ? "Continue to add questions" : "Next"}
@@ -187,29 +206,34 @@ const InductionCreate = () => {
       )}
 
 
+      {/* Main content area */}
       <div className="flex bg-gray-50">
+        
+        {/* Management Sidebar */}  
         <div className="hidden md:flex">
           <ManagementSidebar />
         </div>
 
         <div className="flex-1">
+          {/* Induction Form Component */}
           <InductionForm
             induction={induction}
             setInduction={setInduction}
-            handleSubmit={handleSubmit}
+            handleSubmit={HANDLE_SUBMIT}
             isSubmitDisabled={isSubmitDisabled}
           />
 
+          {/* Main content for managing induction details */}
           <div className="p-4 mx-auto max-w-5xl space-y-6">
             <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
               {/* Department Section */}
               <div className="space-y-2">
-                <label htmlFor="department" className="block text-sm font-bold text-gray-700 flex items-center">
+                <label htmlFor="department" className="text-sm font-bold text-gray-700 flex items-center">
                   Department:
                   {!isEditingDepartment ? (
                     <button
                       type="button"
-                      onClick={toggleEditDepartment}
+                      onClick={TOGGLE_EDIT_DEPARTMENT}
                       className="ml-2 text-gray-600 hover:text-gray-800"
                       title="Edit department"
                     >
@@ -218,7 +242,7 @@ const InductionCreate = () => {
                   ) : (
                     <button
                       type="button"
-                      onClick={toggleEditDepartment}
+                      onClick={TOGGLE_EDIT_DEPARTMENT}
                       className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
                     >
                       <FaCheck className="inline mr-2" /> Update
@@ -231,7 +255,7 @@ const InductionCreate = () => {
                       id="department"
                       name="department"
                       value={induction.department}
-                      onChange={handleDepartmentChange}
+                      onChange={HANDLE_DEPARTMENT_CHANGE}
                       className="border border-gray-300 rounded-lg p-2 focus:ring-gray-800 focus:border-gray-800"
                     >
                       <option value="">Select a department</option>
@@ -249,12 +273,12 @@ const InductionCreate = () => {
 
               {/* Description Section */}
               <div className="space-y-2">
-                <label htmlFor="description" className="block text-sm font-bold text-gray-700 flex items-center">
+                <label htmlFor="description" className="text-sm font-bold text-gray-700 flex items-center">
                   Description:
                   {!isEditingDescription ? (
                     <button
                       type="button"
-                      onClick={toggleEditDescription}
+                      onClick={TOGGLE_EDIT_DESCRIPTION}
                       className="ml-2 text-gray-600 hover:text-gray-800"
                       title="Edit description"
                     >
@@ -263,7 +287,7 @@ const InductionCreate = () => {
                   ) : (
                     <button
                       type="button"
-                      onClick={toggleEditDescription}
+                      onClick={TOGGLE_EDIT_DESCRIPTION}
                       className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
                     >
                       <FaCheck className="inline mr-2" /> Update
@@ -275,7 +299,7 @@ const InductionCreate = () => {
                     id="description"
                     name="description"
                     value={induction.description}
-                    onChange={handleDescriptionChange}
+                    onChange={HANDLE_DESCRIPTION_CHANGE}
                     placeholder="Enter description"
                     className="w-full h-40 border border-gray-300 rounded-lg p-2 text-base focus:ring-gray-800 focus:border-gray-800"
                   />
@@ -297,7 +321,7 @@ const InductionCreate = () => {
                   id="heroImage"
                   name="heroImage"
                   accept="image/*"
-                  onChange={handleFileUpload}
+                  onChange={HANDLE_FILE_UPLOAD}
                   className="border border-gray-300 rounded-lg p-2 focus:ring-gray-800 focus:border-gray-800"
                 />
                 {heroImage && (
@@ -321,11 +345,10 @@ const InductionCreate = () => {
             <div className="flex justify-center mt-6">
               <button
               type="button"
-              onClick={handleSubmit}
+              onClick={HANDLE_SUBMIT}
               className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
               disabled={isSubmitDisabled}
-            >
-              <FaSave className="inline mr-2" /> Create Induction
+            ><FaSave className="inline mr-2" /> Create Induction
             </button>
             </div>
           </div>

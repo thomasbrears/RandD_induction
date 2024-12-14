@@ -2,6 +2,7 @@ import admin from "firebase-admin";
 import { db } from "../firebase.js";
 import Positions from "../models/Positions.js";
 import { sendEmail } from "../utils/mailjet.js";
+import { format } from "date-fns";
 
 // Get all users
 export const getAllUsers = async (req, res) => {
@@ -107,99 +108,68 @@ export const createUser = async (req, res) => {
       return res.status(500).json({ message: "Error writing to Firestore." });
     }
 
-    // Send welcome email
-  	const emailSubject = `Welcome to AUT Events, ${firstName}! Your Induction Account Invitation`;
-    const emailContent = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <style>
-        body {
-          font-family: Arial, sans-serif;
-          margin: 0;
-          padding: 0;
-          background-color: #f4f4f4;
-        }
-        .email-container {
-          background-color: #ffffff;
-          max-width: 600px;
-          margin: 0 auto;
-          border: 1px solid #e0e0e0;
-          border-radius: 10px;
-          overflow: hidden;
-        }
-        .email-header {
-          background-color: #000000;
-          padding: 20px;
-          text-align: center;
-        }
-        .email-header img {
-          max-width: 200px;
-        }
-        .email-body {
-          padding: 20px;
-          color: #333333;
-        }
-        h1 {
-          font-size: 24px;
-          color: #333333;
-        }
-        p {
-          font-size: 16px;
-          line-height: 1.5;
-        }
-        a {
-          color: #007bff;
-          text-decoration: none;
-        }
-        .button {
-          display: inline-block;
-          padding: 12px 24px;
-          margin: 20px 0;
-          color: #fff;
-          background-color: #000;
-          border-radius: 5px;
-          text-decoration: none;
-          font-weight: bold;
-        }
-      </style>
-    </head>
-    <body>
-      <div class="email-container">
-        <div class="email-header">
-          <img src="https://dev-aut-events-induction.vercel.app/images/AUTEventsInductionPortal.jpg" alt="AUT Events Induction Portal">
-        </div>
-        <div class="email-body">
-          <h1>Kia ora ${firstName} ${lastName}!</h1>
-          <p>Welcome to AUT Events! We're excited to have you on board and looking forward to working with you.</p>
-          <p>An account has been created for you on the AUT Events Induction Portal. This is where you'll complete important onboarding activities and access induction resources.</p>
-          
-          <p><strong>Getting Started:</strong></p>
-          <ol>
-            <li><strong>Visit the Homepage:</strong> Click the button below to visit the AUT Events Induction Portal:</li>
-            <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}" class="button">AUT Events Induction Homepage</a>
-            <li><strong>Log In:</strong> From the homepage, you can log in using this email address and choose the passwordless login option, or you can set a password <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}/reset-password">here</a>.</li>
-          </ol>
+    // Prepare email content
+    const emailSubject = `Welcome to AUT Events, ${firstName}! Your Induction Account Invitation`;
+    const emailBody = `
+      <h1>Kia ora ${firstName} ${lastName}!</h1>
+      <p>Welcome to AUT Events! We're excited to have you on board and looking forward to working with you.</p>
+      <p>An account has been created for you on the AUT Events Induction Portal. This is where you'll complete important onboarding activities and access induction resources.</p>
+      
+      <p><strong>Getting Started:</strong></p>
+      <ol>
+        <li><strong>Visit the Homepage:</strong> Click the button below to visit the AUT Events Induction Portal:</li>
+        <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}" class="button">AUT Events Induction Homepage</a>
+        <li><strong>Log In:</strong> From the homepage, you can log in using this email address and choose the passwordless login option, or you can set a password <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}/reset-password">here</a>.</li>
+      </ol>
 
-          <p>One of our managers will guide you through the necessary induction process when you start with us.</p>
+      <p>One of our managers will guide you through the necessary induction process when you start with us.</p>
 
-          <p>If you have any questions or issues accessing your account, feel free to reach out to us at <a href="mailto:events@aut.ac.nz">events@aut.ac.nz</a> or reply to this email.</p>
+      <p>If you have any questions or issues accessing your account, feel free to reach out to us at <a href="mailto:events@aut.ac.nz">events@aut.ac.nz</a> or reply to this email.</p>
 
-          <p>We look forward to working with you!</p>
+      <p>We look forward to working with you!</p>
 
-          <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
-        </div>
-      </div>
-    </body>
-    </html>
+      <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
     `;
 
     const replyToEmail = 'autevents@brears.xyz'; // reply to aut events
     const ccEmails = ['manager@brears.xyz']; // Cc Rinus
 
-    // Send welcome email with ReplyTo and CC
-    await sendEmail(email, emailSubject, emailContent, replyToEmail, ccEmails);
+    // Send welcome email with ReplyTo and CC, using the default template
+    await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
 
+    // Send emails for assigned inductions
+    for (const induction of assignedInductions) {
+      const formattedAvailableFrom = induction.availableFrom
+        ? format(new Date(induction.availableFrom), "d MMMM yyyy")
+        : "Unavailable";
+      const formattedDueDate = induction.dueDate
+        ? format(new Date(induction.dueDate), "d MMMM yyyy")
+        : "Unavailable";
+
+      const inductionEmailSubject = `You have a new induction to complete: ${induction.name || 'Unnamed Induction'}`;
+      const inductionEmailBody = `
+        <h1>Kia ora ${firstName} ${lastName}!</h1>
+        <p>You have been assigned a new induction module to complete.</p>
+        <br>
+        
+        <h3>Here are the details:</h3>
+        <p><strong>Induction Name:</strong> ${induction.name || "Unnamed Induction"}</p>
+        <p><strong>Available from:</strong> ${formattedAvailableFrom}</p>
+        <p><strong>Due Date:</strong> ${formattedDueDate}</p>
+
+        <br>
+        <h3>How to complete the induction?</h3>
+        <p>Simply head to our induction portal website (${process.env.REACT_APP_VERCEL_DEPLOYMENT}) and log in using this email address. Navigate to the "My Inductions" tab, find this induction, and click "Start".</p>
+        <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}/inductions/my-inductions" class="button">AUT Events Induction Portal</a>
+
+        <p>If you have any questions, please feel free to reach out to your manager or reply to this email.</p>
+
+        <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
+      `;
+
+      await sendEmail(email, inductionEmailSubject, inductionEmailBody, replyToEmail, ccEmails);
+    }
+    
     res.status(201).json({
       uid: userRecord.uid,
       email: userRecord.email,
@@ -223,35 +193,88 @@ export const updateUser = async (req, res) => {
       permission,
       position,
       locations,
-      assignedInductions,
+      assignedInductions = [],
     } = req.body;
 
+    // Fetch existing user data
+    const userRef = db.collection("users").doc(uid);
+    const userDoc = await userRef.get();
+    if (!userDoc.exists) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    const existingData = userDoc.data();
+    const existingInductions = existingData.assignedInductions || [];
+
+    // Find newly added inductions
+    const newInductions = assignedInductions.filter(
+      (induction) =>
+        !existingInductions.some((existing) => existing.id === induction.id)
+    );
+
+    // Update user in Firebase Auth
     const userResult = await admin.auth().updateUser(uid, {
       email: email,
       displayName: `${firstName} ${lastName}`,
     });
 
+    // Set custom user claims
     admin.auth().setCustomUserClaims(uid, { role: permission });
 
-    //Firestore
-    const userRef = db.collection("users").doc(uid);
+    // Update Firestore
     await userRef.update({
       position: position,
       locations: Array.isArray(locations) ? locations : [],
-      assignedInductions: Array.isArray(assignedInductions)
-        ? assignedInductions
-        : [],
+      assignedInductions: assignedInductions,
     });
+
+    // Send emails for new inductions
+    for (const induction of newInductions) {
+      const formattedAvailableFrom = induction.availableFrom
+        ? format(new Date(induction.availableFrom), "d MMMM yyyy")
+        : "Unavailable";
+      const formattedDueDate = induction.dueDate
+        ? format(new Date(induction.dueDate), "d MMMM yyyy")
+        : "Unavailable";
+      const description = induction.description || "No description available.";
+
+      const emailSubject = `You have a new induction to complete: ${induction.name || 'Unnamed Induction'}`;
+      const emailBody = `
+        <h1>Kia ora ${firstName} ${lastName}!</h1>
+        <p>You have been assigned a new induction module to complete.</p>
+        <br>
+        
+        <h3>Here are the details:</h3>
+        <p><strong>Induction Name:</strong> ${induction.name || "Unnamed Induction"}</p>
+        <p><strong>Available from:</strong> ${formattedAvailableFrom}</p>
+        <p><strong>Due Date:</strong> ${formattedDueDate}</p>
+
+        <br>
+        <h3>How to complete the induction?</h3>
+        <p>Simply head to our induction portal website (${process.env.REACT_APP_VERCEL_DEPLOYMENT}) and log in using this email address. Navigate to the "My Inductions" tab, find this induction, and click "Start".</p>
+        <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}/inductions/my-inductions" class="button">AUT Events Induction Portal</a>
+
+        <p>If you have any questions, please feel free to reach out to your manager or reply to this email.</p>
+
+        <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
+      `;
+
+      const replyToEmail = 'autevents@brears.xyz';
+      const ccEmails = ['manager@brears.xyz'];
+
+      await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
+    }
 
     res.json({
       data: userResult,
-      message: "User updated and role set successfully",
+      message: "User updated and role set successfully. Emails sent for new inductions.",
     });
   } catch (error) {
     console.error("Error updating user:", error);
     res.status(500).send(error);
   }
 };
+
 
 // Delete a user
 export const deleteUser = async (req, res) => {

@@ -25,7 +25,7 @@ const EditUser = () => {
       const fetchUsers = async () => {
         try {
           setLoading(true);
-          setLoadingMessage(`Loading ${user.displayName || user.email}'s details...`);
+          setLoadingMessage(`Loading the users details...`);
 
           const userData = await getUser(user, uid);
           setViewedUser(userData);
