@@ -7,7 +7,8 @@ import ManagementSidebar from "../../components/ManagementSidebar";
 import InductionForm from "../../components/InductionForm";
 import { DefaultNewInduction } from "../../models/Inductions";
 import useAuth from "../../hooks/useAuth";
-import Departments from "../../models/Departments";
+//import Departments from "../../models/Departments";
+import { getAllDepartments } from "../../api/DepartmentApi";
 import { FaEdit, FaSave, FaCheck } from 'react-icons/fa';
 
 const InductionCreate = () => {
@@ -24,6 +25,7 @@ const InductionCreate = () => {
   const [isEditingDescription, setIsEditingDescription] = useState(false);
   const [isEditingDepartment, setIsEditingDepartment] = useState(false);
   const [heroImage, setHeroImage] = useState(null);
+  const [Departments, setDepartments] = useState([]);
 
   // Functions for toggling edit/view modes for department and description
   const TOGGLE_EDIT_DEPARTMENT = () => setIsEditingDepartment((prev) => !prev);
@@ -68,14 +70,6 @@ const InductionCreate = () => {
     });
   };
 
-    // Function to handle file upload for hero image
-  const HANDLE_FILE_UPLOAD = (e) => {
-    const file = e.target.files[0];
-    if (file) {
-      setHeroImage(file);
-    }
-  };
-
   // check if all fields are filled before enabling submit button
   useEffect(() => {
     if (!induction.name) {
@@ -87,10 +81,25 @@ const InductionCreate = () => {
   }, [induction]);
 
   // Handle closing modal
-  const HANDLE_CLOSE_MODAL = () => setShowModal(false);
+  const HANDLE_CLOSE_MODAL = () => {
+    if (induction.name && induction.department && induction.description) {
+      setShowModal(false);
+    } else {
+      toast.warn("Please complete all required fields before continuing.");
+    }
+  };
+  
   // Step navigation functions for modal
   const HANDLE_NEXT_STEP = () => setCurrentStep((prevStep) => prevStep + 1);
   const HANDLE_PREVIOUS_STEP = () => setCurrentStep((prevStep) => prevStep - 1);
+
+  useEffect(() => {
+    const getDepartments = async () => {
+      const data = await getAllDepartments();
+      setDepartments(data);
+    };
+    getDepartments();
+  }, []);
 
   return (
     <>
@@ -150,7 +159,7 @@ const InductionCreate = () => {
             {currentStep === 2 && (
               <div>
                 <p className="mb-2 text-gray-500">Select the department the induction belongs to:</p>
-                <select
+                {/* <select
                   id="department"
                   name="department"
                   value={induction.department}
@@ -163,7 +172,22 @@ const InductionCreate = () => {
                       {Departments[key]}
                     </option>
                   ))}
+                </select> */}
+                <select
+                  id="department"
+                  name="department"
+                  value={induction.department}
+                  onChange={(e) => setInduction({ ...induction, department: e.target.value })}
+                  className="w-full border border-gray-300 rounded-lg p-2 text-base focus:ring-gray-800 focus:border-gray-800"
+                >
+                  <option value="">Select a department</option>
+                  {Departments.map((dept) => (
+                    <option key={dept.id} value={dept.name}>
+                      {dept.name}
+                    </option>
+                  ))}
                 </select>
+
               </div>
             )}
 
@@ -196,10 +220,29 @@ const InductionCreate = () => {
               <button
                 type="button"
                 onClick={currentStep === 3 ? HANDLE_CLOSE_MODAL : HANDLE_NEXT_STEP}
-                className="bg-gray-800 text-white px-4 py-2 rounded-md"
+                className={`bg-gray-800 text-white px-4 py-2 rounded-md ${
+                  (currentStep === 1 && !induction.name) ||
+                  (currentStep === 2 && !induction.department) ||
+                  (currentStep === 3 && !induction.description)
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
+                }`}
+                disabled={
+                  (currentStep === 1 && !induction.name) ||
+                  (currentStep === 2 && !induction.department) ||
+                  (currentStep === 3 && !induction.description)
+                }
               >
                 {currentStep === 3 ? "Continue to add questions" : "Next"}
               </button>
+
+              {/* <button
+                type="button"
+                onClick={currentStep === 3 ? HANDLE_CLOSE_MODAL : HANDLE_NEXT_STEP}
+                className="bg-gray-800 text-white px-4 py-2 rounded-md"
+              >
+                {currentStep === 3 ? "Continue to add questions" : "Next"}
+              </button> */}
             </div>
           </div>
         </div>
@@ -259,9 +302,9 @@ const InductionCreate = () => {
                       className="border border-gray-300 rounded-lg p-2 focus:ring-gray-800 focus:border-gray-800"
                     >
                       <option value="">Select a department</option>
-                      {Object.keys(Departments).map((key) => (
-                        <option key={key} value={Departments[key]}>
-                          {Departments[key]}
+                      {Departments.map((dept) => (
+                        <option key={dept.id} value={dept.name}>
+                          {dept.name}
                         </option>
                       ))}
                     </select>
@@ -305,27 +348,6 @@ const InductionCreate = () => {
                   />
                 ) : (
                   <p className="text-base">{induction.description || "No description added"}</p>
-                )}
-              </div>
-
-              {/* File Upload for Hero Image */}
-              <div className="space-y-2">
-                <label htmlFor="heroImage" className="block text-sm font-bold text-gray-700">
-                  Hero/Background Image:
-                </label>
-                {/* Subtext for Hero Image */}
-                <p className="text-sm text-gray-500">This image will be used on the first page of the induction.</p>
-      
-                <input
-                  type="file"
-                  id="heroImage"
-                  name="heroImage"
-                  accept="image/*"
-                  onChange={HANDLE_FILE_UPLOAD}
-                  className="border border-gray-300 rounded-lg p-2 focus:ring-gray-800 focus:border-gray-800"
-                />
-                {heroImage && (
-                  <p className="mt-2 text-sm text-gray-500">Selected file: {heroImage.name}</p>
                 )}
               </div>
             </div>

@@ -11,6 +11,7 @@ import useAuth from "../hooks/useAuth";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { getAllInductions } from "../api/InductionApi";
+import { getAllPositions } from '../api/PositionApi';
 import { DefaultNewAssignedInduction } from "../models/AssignedInduction";
 import Status from "../models/Status";
 import { deleteUser, deactivateUser, reactivateUser } from "../api/UserApi";
@@ -21,13 +22,14 @@ import { FaUserCheck, FaUserTimes, FaTrashAlt, FaSave, FaUserPlus, FaPlus } from
 import { IoRemoveCircle } from "react-icons/io5";
 
 export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
-  const [user, setUser] = useState(DefaultNewUser);
+  const [user, setUser] = useState({ ...DefaultNewUser, position: '' });
   const [actionType, setActionType] = useState(null); // Store whether it's deactivation, reactivation, or deletion
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
   const [isDeactivated, setIsDeactivated] = useState(false);
   const [availableInductions, setAvailableInductions] = useState([]);
   const [newAssignedInductions, setNewAssignedInductions] = useState([]);
+  const [positions, setPositions] = useState([]);
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -125,6 +127,20 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
       setIsDeactivated(false); // User is active
     }
   }, [userData, methods]);
+
+  useEffect(() => {
+    const fetchPositions = async () => {
+      try {
+        const positionsData = await getAllPositions();
+        // console.log("Positions data:", positionsData);
+        setPositions(positionsData);
+      } catch (error) {
+        console.error("Error fetching positions:", error);
+      }
+    };
+
+    fetchPositions();
+  }, []);
 
   const handleSubmit = async (data) => {
     setUser(data);
@@ -231,46 +247,66 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
 
   // Confirm deactivation or reactivation
   const confirmDeactivationOrReactivation = () => {
-    if (actionType === 'deactivate') {
-      deactivateUser(currentUser, user.uid)
-        .then((data) => {
-          toast.success("User deactivated successfully!");
-          setUser({ ...user, disabled: true }); // Update state immediately
-          setIsDeactivated(true); // Update the deactivated banner status
-        })
-        .catch((err) => {
-          toast.error("Failed to deactivate user");
-        });
-    } else if (actionType === 'reactivate') {
-      reactivateUser(currentUser, user.uid)
-        .then((data) => {
-          toast.success("User reactivated successfully!");
-          setUser({ ...user, disabled: false }); // Update state immediately
-          setIsDeactivated(false); // Update the deactivated banner status
-        })
-        .catch((err) => {
-          toast.error("Failed to reactivate user");
-        });
-    }
     setConfirmDeactivate(false); // Close the modal
-  };
+  
+    const actionPromise =
+      actionType === 'deactivate'
+        ? deactivateUser(currentUser, user.uid)
+        : reactivateUser(currentUser, user.uid);
+  
+    toast.promise(actionPromise, {
+      pending: actionType === 'deactivate'
+        ? "Deactivating user..."
+        : "Reactivating user...",
+      success: actionType === 'deactivate'
+        ? "User deactivated successfully!"
+        : "User reactivated successfully!",
+      error: actionType === 'deactivate'
+        ? "Failed to deactivate user."
+        : "Failed to reactivate user.",
+    });
+  
+    actionPromise
+      .then(() => {
+        setUser({
+          ...user,
+          disabled: actionType === 'deactivate',
+        }); // Update state immediately
+        setIsDeactivated(actionType === 'deactivate'); // Update the deactivated banner status
+      })
+      .catch((err) => {
+        console.error(err); // Log the error for debugging
+      });
+  };  
 
   // Confirm deletion
   const confirmDeletion = () => {
+    setConfirmDelete(false); // Close the modal
+  
     if (currentUser && user) {
-      deleteUser(currentUser, user.uid)
+      const deletePromise = deleteUser(currentUser, user.uid);
+  
+      toast.promise(deletePromise, {
+        pending: "Deleting user...",
+        success: "User deleted successfully!",
+        error: {
+          render({ data }) {
+            // Extract error message from the rejected promise
+            const errorMessage = data?.response?.data?.message || "An error occurred";
+            return errorMessage;
+          },
+        },
+      });
+  
+      deletePromise
         .then(() => {
-          toast.success("User deleted successfully!", { position: 'top-right', autoClose: 3000 });
-          navigate("/management/users/view");
+          navigate("/management/users/view"); // Redirect after successful deletion
         })
         .catch((err) => {
-          const errorMessage = err.response?.data?.message || "An error occurred";
-          toast.error(errorMessage);
-          console.error(err);
+          console.error(err); // Log the error for debugging
         });
     }
-    setConfirmDelete(false); // Close the modal
-  };
+  };  
 
   return (
     <>
@@ -396,6 +432,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                 </div>
               </div>
 
+              {/* Position dropdown */}
               <div className="flex flex-wrap -mx-3 mb-6">
                 <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
                   <label
@@ -407,17 +444,25 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                   <select
                     className="block appearance-none w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
                     value={user.position}
-                    onChange={(e) =>
-                      setUser({ ...user, position: e.target.value })
-                    }
+                    onChange={(e) => setUser({ ...user, position: e.target.value })}
                   >
-                    {Object.values(Positions).map((pos) => (
-                      <option className="text-gray-700" key={pos} value={pos}>
-                        {pos.charAt(0).toUpperCase() + pos.slice(1)}
-                      </option>
-                    ))}
+                    <option value="" disabled>Select Position</option> {/* Default "Select Position" option */}
+                    {positions.length === 0 ? (
+                      <option className="text-gray-700">Loading positions...</option>
+                    ) : (
+                      positions.map((pos) => {
+                        const positionName = String(pos.name); // Convert to string if not already
+                        return (
+                          <option key={pos.id} value={positionName}>
+                            {positionName.charAt(0).toUpperCase() + positionName.slice(1)}
+                          </option>
+                        );
+                      })
+                    )}
                   </select>
                 </div>
+
+                {/* Location Multi-Select */}
                 <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
                   <label
                     className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"

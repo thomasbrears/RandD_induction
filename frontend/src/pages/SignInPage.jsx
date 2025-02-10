@@ -85,6 +85,9 @@ function LoginPage() {
                 case 'auth/invalid-credential':
                     toast.error('Invalid credentials. Please try again.');
                     break;
+                case 'auth/user-disabled':
+                    toast.error('Your account is disabled. Please contact your supervisor or manager for assistance.');
+                    break;    
                 default:
                     toast.error('Login failed. Please try again.');
                     break;
@@ -137,6 +140,9 @@ function LoginPage() {
                 case 'auth/too-many-requests':
                     toast.error('Too many requests. Please wait a moment and try again.');
                     break;
+                case 'auth/user-disabled':
+                    toast.error('Your account is disabled. Please contact your supervisor or manager for assistance.');
+                    break; 
                 default:
                     toast.error('Error sending sign-in link. Please try again.');
                     break;

@@ -3,10 +3,11 @@ import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom'; // Import useNavigate for navigation
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
-//import DepartmentManagement from '../../components/DepartmentManagement';
 //import LocationManagement from '../../components/LocationManagement';
 import useAuth from '../../hooks/useAuth'; // Import the useAuth hook
 import { toast } from 'react-toastify';
+import ManageDepartments from '../../components/management/ManageDepartments';
+import ManagePositions from '../../components/management/ManagePositions';
 
 const Settings = () => {
   const { user } = useAuth(); // Get the user object from useAuth hook
@@ -49,22 +50,17 @@ const Settings = () => {
 
         {/* Main content area */}
         <div className="flex-1 ml-6 md:ml-8 p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Departments Section */}
+            <section className="bg-white p-6 rounded-lg shadow-md">
+              <ManageDepartments />
+            </section>
 
-          {/* Departments Section */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Manage Departments</h2>
-            <p className="text-gray-600">
-              Department management features will be implemented here soon.
-            </p>
-          </section>
-
-          {/* Locations Section */}
-          <section>
-            <h2 className="text-xl font-semibold mb-4">Manage Locations</h2>
-            <p className="text-gray-600">
-              Location management features will be implemented here soon.
-            </p>
-          </section>
+            {/* Locations Section */}
+            <section className="bg-white p-6 rounded-lg shadow-md">
+              <ManagePositions />
+            </section>
+          </div>
         </div>
       </div>
     </>

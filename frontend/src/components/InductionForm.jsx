@@ -36,10 +36,10 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isSubmitDisabled
   return (
     <div className="bg-white shadow-md sticky top-0 z-10">
       <div className="flex flex-col sm:flex-row items-start justify-between p-4 mx-auto max-w-6xl">
-        <div className="flex-1 mb-4 sm:mb-0">
+        <div className="flex-1 mb-4 sm:mb-0yy">
           {/* Induction Name Section */}
           <div className="space-y-2">
-            <label htmlFor="name" className="block text-sm font-bold text-gray-700 flex items-center">
+            <label htmlFor="name" className="text-sm font-bold text-gray-700 flex items-center">
               Induction Name:
               {!isEditingName ? (
                 <button

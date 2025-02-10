@@ -1,9 +1,9 @@
-import React, { useContext }  from 'react';
+import React  from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async'; // HelmetProvider for dynamicly setting page head including titles
 
 // Toastify message container and style
-import { ToastContainer, toast } from 'react-toastify'; 
+import { ToastContainer } from 'react-toastify'; 
 import 'react-toastify/dist/ReactToastify.css';
 
 // Pages
@@ -49,7 +49,7 @@ const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
   if (!user) {
     // If the user is not logged in store the current URL and redirect to login
     sessionStorage.setItem('previousUrl', location.pathname);
-    return <Navigate to="/signin" />;
+    return <Navigate to="/auth/signin" />;
   }
   
   // Check role if required
