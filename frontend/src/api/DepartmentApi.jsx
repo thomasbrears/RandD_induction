@@ -13,7 +13,7 @@ const API_URL = process.env.NODE_ENV === 'production'
   
       const token = await user.getIdToken(); // Get Firebase ID token
   
-      const response = await axios.get(`${API_URL}/api/departments/`, {
+      const response = await axios.get(`${API_URL}/departments/`, {
         headers: {
           authtoken: token, // Attach token to headers
         },
