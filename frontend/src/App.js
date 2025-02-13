@@ -18,6 +18,7 @@ import InductionFormPage from './pages/InductionFormPage';
 import Dashboard from './pages/management/Dashboard';
 import ViewUsers from './pages/management/ViewUsers';
 import UserForm from './pages/management/AddUser';
+import ManageUserInductionsPage from './pages/management/ManageUserInductionsPage.jsx';
 import InductionList from './pages/management/InductionList';
 import InductionEdit from './pages/management/InductionEdit';
 import InductionCreate from './pages/management/InductionCreate';
@@ -123,6 +124,7 @@ const App = () => {
               <Route path="/management/users/view" element={<PrivateRoute component={ViewUsers} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/management/users/edit" element={<PrivateRoute component={EditUser} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/management/users/create" element={<PrivateRoute component={UserForm} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              <Route path="/management/users/inductions" element={<PrivateRoute component={ManageUserInductionsPage} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/management/inductions/view" element={<PrivateRoute component={InductionList} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/management/inductions/edit" element={<PrivateRoute component={InductionEdit} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/management/inductions/create" element={<PrivateRoute component={InductionCreate} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
