@@ -3,8 +3,8 @@ import { auth } from "../firebaseConfig";
 
 // Dynamic API URL for local or deployed environments
 const API_URL = process.env.NODE_ENV === 'production'
-  ? 'https://your-production-url.com/api'
-  : 'http://localhost:8000/api';
+  ? 'https://dev-aut-events-induction.vercel.app/api' // Development website
+  : 'http://localhost:8000/api'; // Local development
 
   export const getAllDepartments = async () => {
     try {

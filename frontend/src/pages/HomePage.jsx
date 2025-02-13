@@ -60,7 +60,7 @@ const HomePage = () => {
                             </span>
                         </div>,
                         {
-                            position: 'bottom-left',
+                            position: 'bottom-right',
                             autoClose: false,
                             hideProgressBar: true,
                             closeOnClick: true,
