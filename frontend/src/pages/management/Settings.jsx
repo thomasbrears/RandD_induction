@@ -1,11 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
-import { useNavigate } from 'react-router-dom'; // Import useNavigate for navigation
+import { useNavigate } from 'react-router-dom'; 
+import { Tabs } from 'antd';
+import { toast } from 'react-toastify';
+import { AiOutlineSetting } from 'react-icons/ai';
+import { FaBuilding, FaUserTie } from 'react-icons/fa';
+import { GiSettingsKnobs } from 'react-icons/gi';
+import useAuth from '../../hooks/useAuth';
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
-//import LocationManagement from '../../components/LocationManagement';
-import useAuth from '../../hooks/useAuth'; // Import the useAuth hook
-import { toast } from 'react-toastify';
 import ManageDepartments from '../../components/management/ManageDepartments';
 import ManagePositions from '../../components/management/ManagePositions';
 
@@ -49,18 +52,62 @@ const Settings = () => {
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 ml-6 md:ml-8 p-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Departments Section */}
-            <section className="bg-white p-6 rounded-lg shadow-md">
-              <ManageDepartments />
-            </section>
+        <div className="flex-1 p-6 bg-white rounded-lg shadow-md">
 
-            {/* Locations Section */}
-            <section className="bg-white p-6 rounded-lg shadow-md">
+          <Tabs type="card">
+            {/* Overview Tab */}
+            <items
+              tab={
+                <span>
+                  <AiOutlineSetting className="inline-block mr-2" />
+                  Overview
+                </span>
+              }
+              key="1"
+            >
+              <div className="text-center py-6">
+                <h2 className="text-2xl font-semibold text-gray-800">Welcome to System Settings for the Induction Portal</h2>
+                <p className="text-gray-600 mt-2">
+                  Here administrators can manage key settings and option of the Induction Portal. <br /> <b>Use the tabs above to navigate through different sections.</b>
+                </p>
+
+                <div className="mt-6 bg-gray-100 p-4 rounded-lg shadow-md text-left max-w-lg mx-auto">
+                  <h3 className="text-lg font-semibold text-gray-700">What You Can Do Here:</h3>
+                  <ul className="list-disc list-inside mt-2 text-gray-600">
+                    <li><FaBuilding className="inline-block mr-2" /> View, create, edit & delete available departments.</li>
+                    <li><FaUserTie className="inline-block mr-2" /> View, create, edit & delete available positions.</li>
+                    <li><AiOutlineSetting className="inline-block mr-2" /> More setting options coming soon</li>
+                  </ul>
+                </div>
+              </div>
+            </items>
+
+            {/* Manage Departments Tab */}
+            <items
+              tab={
+                <span>
+                  <FaBuilding className="inline-block mr-2" />
+                  Manage Departments
+                </span>
+              }
+              key="2"
+            >
+              <ManageDepartments />
+            </items>
+
+            {/* Manage Positions Tab */}
+            <items
+              tab={
+                <span>
+                  <FaUserTie className="inline-block mr-2" />
+                  Manage Positions
+                </span>
+              }
+              key="3"
+            >
               <ManagePositions />
-            </section>
-          </div>
+            </items>
+          </Tabs>
         </div>
       </div>
     </>

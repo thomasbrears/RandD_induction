@@ -2,8 +2,9 @@ import React, { useState, useEffect } from "react";
 import { toast } from "react-toastify";
 import { db } from "../../firebaseConfig";
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
-import { FaEdit, FaTrashAlt, FaPlusCircle } from 'react-icons/fa';
-import ConfirmationModal from "../ConfirmationModal";
+import { FaEdit, FaTrashAlt } from 'react-icons/fa';
+import { Button, Popconfirm } from 'antd';
+import { PlusOutlined } from '@ant-design/icons';
 
 const ManageDepartments = () => {
   const [newDepartmentName, setNewDepartmentName] = useState(""); 
@@ -12,8 +13,8 @@ const ManageDepartments = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState("");
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [departmentToDelete, setDepartmentToDelete] = useState(null);
+  const [filteredDepartments, setFilteredDepartments] = useState([]); // New state for filtered departments
+  const [searchQuery, setSearchQuery] = useState("");
   const [isAddingNew, setIsAddingNew] = useState(false); 
 
   // Fetch departments from Firestore
@@ -26,6 +27,7 @@ const ManageDepartments = () => {
           name: doc.data().name,
         }));
         setDepartments(departmentsList);
+        setFilteredDepartments(departmentsList); // Set filtered departments to the full list initially
       } catch (error) {
         console.error("Error fetching departments:", error);
         toast.error("Failed to fetch departments.");
@@ -34,6 +36,13 @@ const ManageDepartments = () => {
 
     fetchDepartments();
   }, []);
+
+  // Update filtered departments immediately after any change
+  useEffect(() => {
+    setFilteredDepartments(departments.filter((dep) =>
+      dep.name.toLowerCase().includes(searchQuery.toLowerCase())
+    ));
+  }, [departments, searchQuery]);
 
   // Handle department name change for adding new department
   const handleNewNameChange = (e) => {
@@ -121,136 +130,132 @@ const ManageDepartments = () => {
     }
   };
 
-  // Delete department from Firestore
-  const handleDelete = (id) => {
-    setDepartmentToDelete(id);
-    setIsModalOpen(true);
-  };
-
-  const confirmDelete = async () => {
+  // Delete department
+  const handleDelete = async (id) => {
     try {
-      const departmentRef = doc(db, "departments", departmentToDelete);
-      await deleteDoc(departmentRef);
+      const departmentRef = doc(db, "departments", id);  // Use the id passed in directly
+      await deleteDoc(departmentRef);  // Delete from Firestore
 
       toast.success("Department deleted successfully!");
 
-      // Remove deleted department from the state
+      // Remove the deleted department from the state
       setDepartments((prevDepartments) =>
-        prevDepartments.filter((department) => department.id !== departmentToDelete)
+        prevDepartments.filter((department) => department.id !== id)
       );
-      setIsModalOpen(false);
     } catch (error) {
       toast.error("Failed to delete department.");
       console.error("Error deleting department:", error);
-      setIsModalOpen(false);
     }
   };
 
-  const cancelDelete = () => {
-    setIsModalOpen(false);
+  // Handle search query change
+  const handleSearchChange = (e) => {
+    setSearchQuery(e.target.value);
+    const filtered = departments.filter((dep) =>
+      dep.name.toLowerCase().includes(e.target.value.toLowerCase())
+    );
+    setFilteredDepartments(filtered); // Update filtered departments based on search
   };
 
   return (
-    <div className="grid grid-cols-1 gap-6 mb-6">        
-      {/* Add New Department Section */}
-      <div className="p-6">
-        <h2 className="text-xl font-semibold mb-2">Manage Departments</h2>
-        <p className="text-gray-600"> Create, Edit and Delete departments here. </p>
-                
-        <h2 className="text-lg font-semibold mt-6 mb-2">Add a New Department</h2>
-        
-          <div className="flex items-center space-x-2">
+    <div className="flex justify-center items-center mt-2">
+      <div className="w-full max-w-2xl p-6 bg-white shadow-lg rounded-lg">
+        <h2 className="text-xl font-semibold mb-4 text-center">Manage Departments</h2>
+
+        {/* Add a New Department Section */}
+        <div className="mb-6 p-4 bg-gray-100 rounded-lg">
+          <h2 className="text-lg font-semibold mb-2">Add a New Department</h2>
+          <div className="flex space-x-2">
             <input
               type="text"
-              value={newDepartmentName} // Use newDepartmentName for adding new department
+              value={newDepartmentName}
               onChange={handleNewNameChange}
-              className="border border-gray-300 rounded-md px-3 py-1"
+              className="border border-gray-300 rounded-md px-3 py-1 flex-1"
               placeholder="Enter department name"
             />
-            <button
-              onClick={handleSubmit}
-              className="bg-blue-600 text-white px-4 py-1 rounded-md text-sm"
-              disabled={isSubmitting}
+            <Button 
+              type="primary" 
+              onClick={handleSubmit} 
+              loading={isSubmitting}
+              icon={<PlusOutlined />}
             >
               {isSubmitting ? "Adding..." : "Add Department"}
-            </button>
-            
+            </Button>
           </div>
-        
-        {/* Faint line under Add New Department */}
-        <div className="border-t border-gray-300 mt-4 pt-4">
-            <h2 className="text-lg font-semibold mb-2">Current Departments</h2>
         </div>
 
-        {/* Display message if no departments */}
-        {departments.length === 0 ? (
-        <p className="text-gray-500">No current departmetns.</p>
-        ) : (
-            // List of existing departments 
-            <ul className="space-y-2 mt-4">
-            {departments.map((department) => (
-                <li key={department.id} className="flex items-center space-x-4 border-b text-bold border-gray-200 py-2">
-                {isEditing && editingId === department.id ? (
+        {/* Departments List */}
+        <div className="p-4 bg-gray-100 rounded-lg">
+          <h2 className="text-lg font-semibold mb-2">Current Departments</h2>
+          {/* Search field */}
+          <div className="mb-4">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearchChange}
+              placeholder="Search departments..."
+              className="border border-gray-300 rounded-md px-3 py-1 w-full"
+            />
+          </div>
+          {filteredDepartments.length === 0 ? (
+            <p className="text-gray-500">No departments found.</p>
+          ) : (
+            <ul className="space-y-3">
+              {filteredDepartments.map((dep) => (
+                <li key={dep.id} className="flex items-center justify-between bg-white p-3 rounded-lg shadow">
+                  {isEditing && editingId === dep.id ? (
                     <>
-                    <input
+                      <input
                         type="text"
-                        value={departmentName} // Use departmentName for editing
-                        onChange={handleEditNameChange}
-                        className="border border-gray-300 rounded-md px-3 py-1"
-                    />
-                    <button
+                        value={departmentName}
+                        onChange={(e) => setDepartmentName(e.target.value)}
+                        className="border border-gray-300 rounded-md px-3 py-1 flex-1"
+                      />
+                      <Button
+                        type="primary"
                         onClick={handleUpdate}
-                        className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm"
-                    >
-                        Save
-                    </button>
-                    <button
-                        onClick={() => {
-                        setIsEditing(false); // Reset editing mode
-                        setDepartmentName(""); // Clear the edit field
-                        }}
-                        className="bg-black text-white px-3 py-1 rounded-md text-sm"
-                    >
+                        loading={isSubmitting}
+                        className="ml-4"
+                      >
+                        {isSubmitting ? "Saving..." : "Save"}
+                      </Button>
+                      <Button
+                        type="default"
+                        onClick={() => setIsEditing(false)}
+                        className="ml-4"
+                      >
                         Cancel
-                    </button>
+                      </Button>
                     </>
-                ) : (
+                  ) : (
                     <>
-                    <span>{department.name}</span>
-                    <div className="flex space-x-2">
-                        <button
-                        onClick={() => handleEdit(department.id, department.name)}
-                        className="bg-blue-600 text-white px-3 py-1 rounded-md text-sm flex items-center space-x-1"
+                      <span>{dep.name}</span>
+                      <div className="flex space-x-2">
+                        <Button
+                          type="primary"
+                          onClick={() => { setEditingId(dep.id); setDepartmentName(dep.name); setIsEditing(true); }}
                         >
-                        <FaEdit className="text-xs" />
-                        <span className="text-xs">Edit</span>
-                        </button>
-                        <button
-                        onClick={() => handleDelete(department.id)}
-                        className="bg-red-600 text-white px-3 py-1 rounded-md text-sm flex items-center space-x-1"
+                          <FaEdit className="inline-block mr-2" /> Edit
+                        </Button>
+                        <Popconfirm
+                          title="Are you sure you want to delete this department?"
+                          onConfirm={() => handleDelete(dep.id)}
+                          okText="Yes, Delete"
+                          cancelText="No, Cancel"
                         >
-                        <FaTrashAlt className="text-xs" />
-                        <span className="text-xs">Delete</span>
-                        </button>
-                    </div>
+                          <button className="bg-red-600 text-white px-3 py-1 rounded-md">
+                            <FaTrashAlt className="inline-block mr-2" /> Delete
+                          </button>
+                        </Popconfirm>
+                      </div>
                     </>
-                )}
+                  )}
                 </li>
-            ))}
+              ))}
             </ul>
-        )}
+          )}
+        </div>
       </div>
-
-      {/* Confirmation Modal */}
-      <ConfirmationModal
-        isOpen={isModalOpen}
-        message="Are you sure you want to delete this department?"
-        subtext="This action cannot be undone."
-        onCancel={cancelDelete}
-        onConfirm={confirmDelete}
-        confirmLabel="Delete"
-        cancelLabel="Cancel"
-      />
     </div>
   );
 };

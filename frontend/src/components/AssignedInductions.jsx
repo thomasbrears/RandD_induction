@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getAssignedInductions } from '../api/InductionApi';
 import useAuth from '../hooks/useAuth';
+import { Skeleton } from 'antd';
 import {
   createColumnHelper,
   flexRender,
@@ -160,7 +161,14 @@ const AssignedInductions = ({ uid }) => {
   return (
     <div className="tableContainer">
       {loading ? (
-        <Loading message={loadingMessage} />
+        <div className="lg:hidden space-y-4">
+        {[...Array(5)].map((_, index) => (
+          <div key={index} className="bg-white shadow-md rounded-lg p-4">
+            <Skeleton active paragraph={{ rows: 1 }} title={false} />
+            <Skeleton active paragraph={{ rows: 3 }} />
+          </div>
+        ))}
+      </div>
       ) : assignedInductions.length === 0 ? (
         <div className="p-4 text-center text-black text-2xl font-bold">No inductions assigned.</div>
       ) : (

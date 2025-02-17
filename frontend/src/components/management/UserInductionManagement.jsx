@@ -2,10 +2,7 @@ import { useState, useEffect } from "react";
 import Select from "react-select";
 import { DefaultNewUser } from "../../models/User";
 import { useForm, FormProvider } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import useAuth from "../../hooks/useAuth";
-//import DatePicker from "react-datepicker";
 import { DatePicker } from 'antd';
 import moment from "moment";
 import "react-datepicker/dist/react-datepicker.css";
@@ -13,36 +10,25 @@ import { getAllInductions } from "../../api/InductionApi";
 import { DefaultNewAssignedInduction } from "../../models/AssignedInduction";
 import Status from "../../models/Status";
 import { useLocation, useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
-import ConfirmationModal from './../ConfirmationModal';
 import ManageInductionModal from './ManageInductionModal';
-import { FaUserCheck, FaUserTimes, FaTrashAlt, FaSave, FaUserPlus, FaPlus } from 'react-icons/fa';
+import { FaSave, FaPlus } from 'react-icons/fa';
 import { IoRemoveCircle } from "react-icons/io5";
 
 
 export const UserInductionManagement = ({ userData = DefaultNewUser, onSubmit }) => {
   const [user, setUser] = useState({ ...DefaultNewUser, position: '' });
-  const [actionType, setActionType] = useState(null); // Store whether it's deactivation, reactivation, or deletion
   const [availableInductions, setAvailableInductions] = useState([]);
   const [newAssignedInductions, setNewAssignedInductions] = useState([]);
-  const [showModal, setShowModal] = useState(false);
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
-  const [dueDate, setDueDate] = useState();
-  const [availableFrom, setAvailableFrom] = useState();
   const [clickedFields, setClickedFields] = useState(new Set());
-
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedInduction, setSelectedInduction] = useState(null);
   
   // Separate inductions by status
   const activeInductions = user.assignedInductions?.filter(induction => induction.status !== Status.COMPLETE) || [];
   const completedInductions = user.assignedInductions?.filter(induction => induction.status === Status.COMPLETE) || [];
-
-  // Check if the current page is the edit page and if the userData has an ID (existing user)
-  const isEditPage = location.pathname.includes('/edit');
-  const isExistingUser = userData?.uid !== undefined; // Check if it's an existing user
 
   const [errors, setErrors] = useState({});
   const methods = useForm({
@@ -125,13 +111,13 @@ export const UserInductionManagement = ({ userData = DefaultNewUser, onSubmit })
     await onSubmit(userToSubmit);
 
     if (!userData.uid) {
-        methods.reset(DefaultNewUser);  // Reset form for new user creation
-        setUser(DefaultNewUser);        // Reset state for new user creation
-        setNewAssignedInductions([]);   // Clear newly added inductions
+        methods.reset(DefaultNewUser); // Reset form for new user creation
+        setUser(DefaultNewUser); // Reset state for new user creation
+        setNewAssignedInductions([]); // Clear newly added inductions
       } else {
-        setUser(userToSubmit);          // Only update the inductions for existing users
-        methods.reset(user);            // Reset form with the existing user data
-        setNewAssignedInductions([]);   // Clear newly added inductions
+        setUser(userToSubmit); // Only update the inductions for existing users
+        methods.reset(user); // Reset form with the existing user data
+        setNewAssignedInductions([]); // Clear newly added inductions
       }
     };
 
@@ -235,14 +221,6 @@ export const UserInductionManagement = ({ userData = DefaultNewUser, onSubmit })
     setIsModalVisible(false);
   };
 
-  /* const handleAvailableDateClick = () => {
-    setAvailableFrom(null); // Clear available date when clicked
-  };
-  
-  const handleDueDateClick = () => {
-    setDueDate(null); // Clear due date when clicked
-  }; */  
-
   const handleDateFieldClick = (fieldId) => {
     const newClickedFields = new Set(clickedFields);
   
@@ -283,141 +261,135 @@ export const UserInductionManagement = ({ userData = DefaultNewUser, onSubmit })
   return (
     <>
 
-       {/* Assign new induction */}
-{/* Assign new induction */}
-<div className="flex items-start justify-center pt-8">
-  <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-4xl mx-4 md:mx-8">
-    <div className="flex justify-between items-center">
-      {isEditPage && isExistingUser && (
-        <div className="flex space-x-2">
-          {/* where delete/deactivate buttons were */}
-        </div>
-      )}
-    </div>
-    <FormProvider {...methods}>
-      <form onSubmit={methods.handleSubmit(handleSubmit)} className="w-full">
-        <div className="w-full md:w-full px-3 flex justify-between items-center mb-4">
-          <h1 className="text-left text-xl font-semibold">Assign a New Induction</h1>
-          <hr className="mb-4"/>
-          <button
-            type="button"
-            onClick={handleAddInduction}
-            className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-2 rounded-md"
-          >
-            <FaPlus className="inline mr-2" /> Add Induction
-          </button>
-        </div>
-
-        {/* Show the induction details only if inductions are present */}
-        {newAssignedInductions.length > 0 && (
-          <div className="space-y-4">
-            {newAssignedInductions.map((induction, index) => (
-              <div
-                key={index}
-                className="p-4 rounded-md border-2 shadow-md mb-4"
-              >
-                <div className="flex items-center space-x-2 mb-2">
-                  <Select
-                    options={availableInductions.map((ind) => ({
-                      value: ind.id,
-                      label: ind.name,
-                    }))}
-                    onChange={(selected) =>
-                      handleInductionChange(index, "id", selected.value, selected.label)
-                    }
-                    value={
-                      availableInductions.find((ind) => ind.id === induction.id)
-                        ? {
-                            value: induction.id,
-                            label: availableInductions.find((ind) => ind.id === induction.id).name,
-                          }
-                        : null
-                    }
-                    className="flex-1 w-3/4"
-                  />
-                  <button
+    {/* Assign new induction */}
+    <div className="flex items-start justify-center pt-8">
+        <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-4xl mx-4 md:mx-8">
+            <FormProvider {...methods}>
+            <form onSubmit={methods.handleSubmit(handleSubmit)} className="w-full">
+                <div className="w-full md:w-full px-3 flex justify-between items-center mb-4">
+                <h1 className="text-left text-xl font-semibold">Assign a New Induction</h1>
+                <hr className="mb-4"/>
+                <button
                     type="button"
-                    onClick={() => handleRemoveInduction(index)}
-                    className="text-white bg-red-700 hover:bg-red-900 px-3 py-2 rounded-md"
-                  >
-                    <IoRemoveCircle className="inline mr-2" /> Remove
-                  </button>
+                    onClick={handleAddInduction}
+                    className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-2 rounded-md"
+                >
+                    <FaPlus className="inline mr-2" /> Add Induction
+                </button>
                 </div>
-                <div className="flex flex-col md:flex-row space-x-0 md:space-x-4 mb-2">
-                  <div className="flex items-center w-full mb-2 md:mb-0">
-                    <label
-                      className="block uppercase tracking-wide text-gray-700 text-xs font-bold mr-2"
-                      htmlFor="available-from"
-                    >
-                      Available From:
-                    </label>
-                    <DatePicker
-                        className="flex-grow h-10 border border-gray-300 bg-white rounded-md"
-                        value={induction.availableFrom ? moment(induction.availableFrom) : null}
-                        format="DD-MM-YYYY"
-                        onClick={() => handleDateFieldClick(`${index}-availableFrom`)}
-                        onChange={(date) => {
-                        handleInductionChange(index, "availableFrom", date ? date.toDate() : null);
-                        }}
-                        placeholder="Available From"
-                    />
-                  </div>
 
-                  <div className="flex items-center w-full mb-2 md:mb-0">
-                    <label
-                      className="block uppercase tracking-wide text-gray-700 text-xs font-bold mr-2"
-                      htmlFor="due-date"
+                {/* Show the induction details only if inductions are present */}
+                {newAssignedInductions.length > 0 && (
+                <div className="space-y-4">
+                    {newAssignedInductions.map((induction, index) => (
+                    <div
+                        key={index}
+                        className="p-4 rounded-md border-2 shadow-md mb-4"
                     >
-                      Due Date:
-                    </label>
-                    <DatePicker
-                        className="flex-grow h-10 border border-gray-300 bg-white rounded-md"
-                        value={induction.dueDate ? moment(induction.dueDate) : null}
-                        format="DD-MM-YYYY"
-                        onClick={() => handleDateFieldClick(`${index}-dueDate`)}
-                        onChange={(date) => {
-                        handleInductionChange(index, "dueDate", date ? date.toDate() : null);
-                        }}
-                        placeholder="Due Date"
-                    />
-                  </div>
+                        <div className="flex items-center space-x-2 mb-2">
+                        <Select
+                            options={availableInductions.map((ind) => ({
+                            value: ind.id,
+                            label: ind.name,
+                            }))}
+                            onChange={(selected) =>
+                            handleInductionChange(index, "id", selected.value, selected.label)
+                            }
+                            value={
+                            availableInductions.find((ind) => ind.id === induction.id)
+                                ? {
+                                    value: induction.id,
+                                    label: availableInductions.find((ind) => ind.id === induction.id).name,
+                                }
+                                : null
+                            }
+                            className="flex-1 w-3/4"
+                        />
+                        <button
+                            type="button"
+                            onClick={() => handleRemoveInduction(index)}
+                            className="text-white bg-red-700 hover:bg-red-900 px-3 py-2 rounded-md"
+                        >
+                            <IoRemoveCircle className="inline mr-2" /> Remove
+                        </button>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row space-x-0 md:space-x-4 mb-2">
+                            <div className="flex items-center w-full mb-2 md:mb-0">
+                                <label
+                                className="block uppercase tracking-wide text-gray-700 text-xs font-bold mr-2"
+                                htmlFor="available-from"
+                                >
+                                Available From:
+                                </label>
+                                <DatePicker
+                                    className="flex-grow h-10 border border-gray-300 bg-white rounded-md"
+                                    value={induction.availableFrom ? moment(induction.availableFrom) : null}
+                                    format="DD-MM-YYYY"
+                                    onClick={() => handleDateFieldClick(`${index}-availableFrom`)}
+                                    onChange={(date) => {
+                                    handleInductionChange(index, "availableFrom", date ? date.toDate() : null);
+                                    }}
+                                    placeholder="Available From"
+                                />
+                            </div>
+
+                            <div className="flex items-center w-full mb-2 md:mb-0">
+                                <label
+                                className="block uppercase tracking-wide text-gray-700 text-xs font-bold mr-2"
+                                htmlFor="due-date"
+                                >
+                                Due Date:
+                                </label>
+                                <DatePicker
+                                    className="flex-grow h-10 border border-gray-300 bg-white rounded-md"
+                                    value={induction.dueDate ? moment(induction.dueDate) : null}
+                                    format="DD-MM-YYYY"
+                                    onClick={() => handleDateFieldClick(`${index}-dueDate`)}
+                                    onChange={(date) => {
+                                    handleInductionChange(index, "dueDate", date ? date.toDate() : null);
+                                    }}
+                                    placeholder="Due Date"
+                                />
+                            </div>
+
+                        </div>
+                        
+                        {/* Error messages displayed here */}
+                        {errors[`induction-${index}`] && (
+                            <p className="text-red-500 text-xs italic mt-2">
+                            {errors[`induction-${index}`]}
+                            </p>
+                        )}
+
+                        {errors[`date-${index}`] && (
+                            <p className="text-red-500 text-xs italic mt-2">
+                            {errors[`date-${index}`]}
+                            </p>
+                        )}
+                    </div>
+                    ))}
                 </div>
-                {/* Where you want to show errors, replace the Zod error messages with: */}
-                {errors[`induction-${index}`] && (
-                    <p className="text-red-500 text-xs italic mt-2">
-                    {errors[`induction-${index}`]}
-                    </p>
                 )}
-                {errors[`date-${index}`] && (
-                    <p className="text-red-500 text-xs italic mt-2">
-                    {errors[`date-${index}`]}
-                    </p>
+
+                {/* Hide the save button if no inductions are added */}
+                {newAssignedInductions.length > 0 && (
+                <div className="flex justify-center mt-4">
+                    <button
+                    className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md"
+                    type="submit"
+                    >
+                    <FaSave className="inline mr-2" /> Add Induction Assignemnts
+                    </button>
+                </div>
                 )}
-              </div>
-            ))}
-          </div>
-        )}
+            </form>
+            </FormProvider>
+        </div>
+    </div>
 
-        {/* Hide the save button if no inductions are added */}
-        {newAssignedInductions.length > 0 && (
-          <div className="flex justify-center mt-4">
-            <button
-              className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md"
-              type="submit"
-            >
-              <FaSave className="inline mr-2" /> Add Induction Assignemnts
-            </button>
-          </div>
-        )}
-      </form>
-    </FormProvider>
-  </div>
-</div>
-
-
-
-      {/* AssignedInduction List */}
-      {user.uid && (
+    {/* AssignedInduction List */}
+    {user.uid && (
         <div className="flex items-start justify-center pt-8">
           <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-4xl mx-4 md:mx-8">
             <h1 className="text-left text-xl font-semibold">Assigned Inductions</h1>
@@ -457,17 +429,17 @@ export const UserInductionManagement = ({ userData = DefaultNewUser, onSubmit })
                     <>
                       <h2 className="font-semibold text-xl mt-4 mb-2"><span className="text-green-500">Completed</span> Inductions</h2> 
                       
-                      <div className="grid grid-cols-6 gap-4 text-left">
+                      <div className="grid grid-cols-5 gap-4 text-left">
                         {["Induction Name", "Available From", "Due Date", "Completion Date", ""].map((header) => (
                           <div key={header} className="font-semibold">{header}</div>
                         ))}
                       </div>
+                      
                       {completedInductions.map((induction, index) => {
                         const formatDate = (date) => (date ? new Date(date).toLocaleDateString() : "N/A");
 
                         return (
-                          <div key={index} className="grid grid-cols-6 gap-4 py-2 border-b border-gray-200 hover:bg-gray-50">
-                            <div>{induction.name}</div>
+                          <div key={index} className="grid grid-cols-5 gap-4 py-2 border-b border-gray-200 hover:bg-gray-50">                            <div>{induction.name}</div>
                             <div>{formatDate(induction.availableFrom)}</div>
                             <div>{formatDate(induction.dueDate)}</div>
                             <div>{formatDate(induction.completionDate)}</div>
