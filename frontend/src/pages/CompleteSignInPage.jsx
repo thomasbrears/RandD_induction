@@ -100,7 +100,7 @@ function CompleteSignInPage() {
                 setLoading(false);
             }
         }
-    }, [auth]);
+    }, [auth, handleSignIn]);
 
     // Function to handle form submission for email input
     const handleSubmitEmail = (e) => {

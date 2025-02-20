@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
-import Departments from "../../models/Departments";
 import useAuth from "../../hooks/useAuth";
 import {DefaultNewInduction} from "../../models/Inductions"
 import { createNewInduction } from "../../api/InductionApi";
@@ -10,29 +9,6 @@ import ManagementSidebar from "../../components/ManagementSidebar";
 const InductionEdit = () => {
   const { user } = useAuth();
   const [induction, setInduction] = useState(DefaultNewInduction);
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setInduction({
-      ...induction,
-      [name]: value,
-    });
-  };
-
-  const handleDepartmentChange = (e) => {
-    setInduction({
-      ...induction,
-      department: e.target.value,
-    });
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (user) {
-      const result = await createNewInduction(user, induction);
-      console.log(result);
-    }
-  };
 
   return (
     <>

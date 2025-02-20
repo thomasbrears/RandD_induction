@@ -15,7 +15,7 @@ const ManagePositions = () => {
   const [editingId, setEditingId] = useState("");
   const [filteredPositions, setFilteredPositions] = useState([]); // New state for filtered positions
   const [searchQuery, setSearchQuery] = useState("");
-  const [isAddingNew, setIsAddingNew] = useState(false); 
+  const [setIsAddingNew] = useState(false); 
 
   // Fetch positions from Firestore
   useEffect(() => {

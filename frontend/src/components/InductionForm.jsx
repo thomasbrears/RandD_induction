@@ -1,15 +1,9 @@
 import React, { useState } from 'react';
 import { FaEdit, FaSave, FaCheck } from 'react-icons/fa';
-import { toast } from 'react-toastify';
 
 const InductionForm = ({ induction, setInduction, handleSubmit, isSubmitDisabled }) => {
   const [isEditingName, setIsEditingName] = useState(false);
-  const [isEditingDepartment, setIsEditingDepartment] = useState(false);
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
-
   const toggleEditName = () => setIsEditingName((prev) => !prev);
-  const toggleEditDepartment = () => setIsEditingDepartment((prev) => !prev);
-  const toggleEditDescription = () => setIsEditingDescription((prev) => !prev);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

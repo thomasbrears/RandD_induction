@@ -15,7 +15,7 @@ const ManageDepartments = () => {
   const [editingId, setEditingId] = useState("");
   const [filteredDepartments, setFilteredDepartments] = useState([]); // New state for filtered departments
   const [searchQuery, setSearchQuery] = useState("");
-  const [isAddingNew, setIsAddingNew] = useState(false); 
+  const [setIsAddingNew] = useState(false); 
 
   // Fetch departments from Firestore
   useEffect(() => {

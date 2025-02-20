@@ -20,8 +20,6 @@ export const UserInductionManagement = ({ userData = DefaultNewUser, onSubmit })
   const [availableInductions, setAvailableInductions] = useState([]);
   const [newAssignedInductions, setNewAssignedInductions] = useState([]);
   const { user: currentUser } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
   const [clickedFields, setClickedFields] = useState(new Set());
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [selectedInduction, setSelectedInduction] = useState(null);

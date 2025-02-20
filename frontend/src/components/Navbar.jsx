@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
-import { FaBars, FaCaretDown } from 'react-icons/fa';
+import { FaCaretDown } from 'react-icons/fa';
 
 const Navbar = () => {
   const { user, signOut, loading } = useAuth(); // Get the user object and signOut function from the useAuth hook

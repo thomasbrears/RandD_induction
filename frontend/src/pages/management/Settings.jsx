@@ -5,7 +5,6 @@ import { Tabs } from 'antd';
 import { toast } from 'react-toastify';
 import { AiOutlineSetting } from 'react-icons/ai';
 import { FaBuilding, FaUserTie } from 'react-icons/fa';
-import { GiSettingsKnobs } from 'react-icons/gi';
 import useAuth from '../../hooks/useAuth';
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';

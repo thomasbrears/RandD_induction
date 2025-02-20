@@ -10,8 +10,8 @@ import useAuth from "../../hooks/useAuth";
 import { getAllDepartments } from "../../api/DepartmentApi";
 import { FaEdit, FaSave, FaCheck } from 'react-icons/fa';
 import { Modal, Result, Button } from 'antd';
-import ReactQuill from 'react-quill';
-import 'react-quill/dist/quill.snow.css'; // import styles
+import ReactQuill from 'react-quill-new';
+import 'react-quill/dist/quill.snow.css';
 
 const InductionCreate = () => {
   const { user } = useAuth(); // Get the user object from the useAuth hook
@@ -147,7 +147,7 @@ const InductionCreate = () => {
           {/* Modal for induction creation steps */}
           {showModal && (
             <Modal
-              visible={showModal}
+              open={showModal}
               title={currentStep === 0
                 ? "Welcome, Let's create your induction module."
                 : currentStep === 1

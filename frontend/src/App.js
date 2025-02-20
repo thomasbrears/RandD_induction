@@ -1,6 +1,7 @@
 import React  from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async'; // HelmetProvider for dynamicly setting page head including titles
+import '@ant-design/v5-patch-for-react-19';
 
 // Toastify message container and style
 import { ToastContainer } from 'react-toastify'; 
@@ -71,7 +72,6 @@ const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
 const App = () => {
   return (
     <HelmetProvider>
-      <div className="App flex flex-col min-h-screen">
         {/* Toastify message container with default actions*/}
         <ToastContainer
           theme="light" // Set light theme
@@ -86,7 +86,6 @@ const App = () => {
         <Router>
           <Navbar />
           <ToastContainer/>
-          <div className="flex-grow">
             <Routes>
               
               {/* Link redirects on main breadcrumb / link to pages */}
@@ -130,10 +129,8 @@ const App = () => {
               <Route path="/management/inductions/create" element={<PrivateRoute component={InductionCreate} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/management/inductions/results" element={<PrivateRoute component={InductionResults} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
             </Routes>
-          </div>
           <Footer />
         </Router>
-      </div>
     </HelmetProvider>
   );
 };

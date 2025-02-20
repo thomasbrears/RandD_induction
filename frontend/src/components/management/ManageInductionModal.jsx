@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Modal, Button, Input, DatePicker, Select, Popconfirm } from "antd";
+import { Modal, Button, DatePicker, Select, Popconfirm } from "antd";
 import moment from "moment";
 
 const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionData }) => {
@@ -65,7 +65,7 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
   return (
     <Modal
       title="Manage Induction"
-      visible={visible}
+      open={visible}
       onCancel={handleCancel}
       footer={[
         <Button key="dueDate" type="default" onClick={handleCancel}>

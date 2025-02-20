@@ -14,7 +14,7 @@ import { deleteUser, deactivateUser, reactivateUser } from "../api/UserApi";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import ConfirmationModal from './ConfirmationModal';
-import { FaUserCheck, FaUserTimes, FaTrashAlt, FaSave, FaUserPlus, FaPlus } from 'react-icons/fa';
+import { FaUserCheck, FaUserTimes, FaTrashAlt, FaSave, FaUserPlus } from 'react-icons/fa';
 
 export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
   const [user, setUser] = useState({ ...DefaultNewUser, position: '' });
@@ -22,8 +22,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
   const [isDeactivated, setIsDeactivated] = useState(false);
-  const [availableInductions, setAvailableInductions] = useState([]);
-  const [newAssignedInductions, setNewAssignedInductions] = useState([]);
+  const [setNewAssignedInductions] = useState([]);
   const [positions, setPositions] = useState([]);
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();

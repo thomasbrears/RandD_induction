@@ -4,7 +4,7 @@ import { UserForm } from '../../components/UserForm';
 import { DefaultNewUser } from '../../models/User';
 import useAuth from '../../hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { getUser, updateUser, sendPasswordResetEmail, setPassword  } from "../../api/UserApi";
+import { getUser, updateUser } from "../../api/UserApi";
 import { toast } from 'react-toastify';
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
@@ -12,8 +12,6 @@ import UserInductionManagement from '../../components/management/UserInductionMa
 
 const ManageUserInductionPage = () => {
   const [viewedUser, setViewedUser] = useState(DefaultNewUser);
-  const [showSetPassword, setShowSetPassword] = useState(false);
-  const [newPassword, setNewPassword] = useState("");
   const { user, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('');
