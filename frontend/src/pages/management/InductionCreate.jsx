@@ -10,6 +10,8 @@ import useAuth from "../../hooks/useAuth";
 import { getAllDepartments } from "../../api/DepartmentApi";
 import { FaEdit, FaSave, FaCheck } from 'react-icons/fa';
 import { Modal, Result, Button } from 'antd';
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css'; // import styles
 
 const InductionCreate = () => {
   const { user } = useAuth(); // Get the user object from the useAuth hook
@@ -30,6 +32,13 @@ const InductionCreate = () => {
   // Functions for toggling edit/view modes for department and description
   const TOGGLE_EDIT_DEPARTMENT = () => setIsEditingDepartment((prev) => !prev);
   const TOGGLE_EDIT_DESCRIPTION = () => setIsEditingDescription((prev) => !prev);
+
+  // Define the toolbar options
+  const MODULES = {
+    toolbar: [["bold", "italic", "underline"]],
+  };
+
+  const FORMATS = ["bold", "italic", "underline"];
 
   // Function to handle form submission, validate inputs and call API
   const HANDLE_SUBMIT = async (e) => {
@@ -137,107 +146,107 @@ const InductionCreate = () => {
         <>
           {/* Modal for induction creation steps */}
           {showModal && (
-  <Modal
-    visible={showModal}
-    title={currentStep === 0
-      ? "Welcome, Let's create your induction module."
-      : currentStep === 1
-      ? "Name"
-      : currentStep === 2
-      ? "Department"
-      : "Description"}
-    onCancel={HANDLE_CLOSE_MODAL}
-    footer={null}
-    width={600}  
-    closable={false} // Disable the close "X" button as all fields are required
-    style={{
-      top: '50%',  
-      transform: 'translateY(-50%)',  
-    }}
-    responsive={{
-      xs: { width: '95%' }, // Full width on mobile
-      sm: { width: '80%' }, // 80% width on small screens
-    }}
-  >
-    <div>
-      {currentStep === 0 && (
-        <div>
-          <p className="mb-4 text-gray-700">
-            Please complete the next questions to proceed to the questions section.
-          </p>
-        </div>
-      )}
+            <Modal
+              visible={showModal}
+              title={currentStep === 0
+                ? "Welcome, Let's create your induction module."
+                : currentStep === 1
+                ? "Name"
+                : currentStep === 2
+                ? "Department"
+                : "Description"}
+              onCancel={HANDLE_CLOSE_MODAL}
+              footer={null}
+              width={600}  
+              closable={false} // Disable the close "X" button as all fields are required
+              style={{
+                top: '50%',  
+                transform: 'translateY(-50%)',  
+              }}
+              responsive={{
+                xs: { width: '95%' }, // Full width on mobile
+                sm: { width: '80%' }, // 80% width on small screens
+              }}
+            >
+              <div>
+                {currentStep === 0 && (
+                  <div>
+                    <p className="mb-4 text-gray-700">
+                      Please complete the next questions to proceed to the questions section.
+                    </p>
+                  </div>
+                )}
 
-      {currentStep === 1 && (
-        <div>
-          <p className="mb-2 text-gray-500">What should we refer to this induction as?</p>
-          <input
-            type="text"
-            id="name"
-            name="name"
-            value={induction.name}
-            onChange={(e) => setInduction({ ...induction, name: e.target.value })}
-            placeholder="e.g. General Health and Safety Induction"
-            className="w-full border border-gray-300 rounded-lg p-2 text-base focus:ring-gray-800 focus:border-gray-800"
-          />
-        </div>
-      )}
+                {currentStep === 1 && (
+                  <div>
+                    <p className="mb-2 text-gray-500">What should we refer to this induction as?</p>
+                    <input
+                      type="text"
+                      id="name"
+                      name="name"
+                      value={induction.name}
+                      onChange={(e) => setInduction({ ...induction, name: e.target.value })}
+                      placeholder="e.g. General Health and Safety Induction"
+                      className="w-full border border-gray-300 rounded-lg p-2 text-base focus:ring-gray-800 focus:border-gray-800"
+                    />
+                  </div>
+                )}
 
-      {currentStep === 2 && (
-        <div>
-          <p className="mb-2 text-gray-500">Which department does this induction best fit to?</p>
-          <select
-            id="department"
-            name="department"
-            value={induction.department}
-            onChange={(e) => setInduction({ ...induction, department: e.target.value })}
-            className="w-full border border-gray-300 rounded-lg p-2 text-base focus:ring-gray-800 focus:border-gray-800"
-          >
-            <option value="">Select a department</option>
-            {Departments.map((dept) => (
-              <option key={dept.id} value={dept.name}>
-                {dept.name}
-              </option>
-            ))}
-          </select>
-        </div>
-      )}
+                {currentStep === 2 && (
+                  <div>
+                    <p className="mb-2 text-gray-500">Which department does this induction best fit to?</p>
+                    <select
+                      id="department"
+                      name="department"
+                      value={induction.department}
+                      onChange={(e) => setInduction({ ...induction, department: e.target.value })}
+                      className="w-full border border-gray-300 rounded-lg p-2 text-base focus:ring-gray-800 focus:border-gray-800"
+                    >
+                      <option value="">Select a department</option>
+                      {Departments.map((dept) => (
+                        <option key={dept.id} value={dept.name}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
-      {currentStep === 3 && (
-        <div>
-          <p className="mb-2 text-gray-500">How should we describe what this induction covers? (Please be detailed)</p>
-          <textarea
-            id="description"
-            name="description"
-            value={induction.description}
-            onChange={HANDLE_DESCRIPTION_CHANGE}
-            placeholder="e.g. This induction covers the general health and safety across AUT and covers the following topics..."
-            className="w-full h-40 border border-gray-300 rounded-lg p-2 text-base focus:ring-gray-800 focus:border-gray-800"
-          />
-        </div>
-      )}
-    </div>
+                {currentStep === 3 && (
+                  <div>
+                    <p className="mb-2 text-gray-500">How should we describe what this induction covers? (Please be detailed)</p>
+                    <ReactQuill
+                      value={induction.description}
+                      onChange={(value) => setInduction({ ...induction, description: value })}
+                      placeholder="e.g. This induction covers the general health and safety across AUT and covers the following topics..."
+                      className="w-full h-40 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
+                      modules={MODULES}
+                      formats={FORMATS}
+                    />
+                  </div>
+                )}
+              </div>
 
-    <div className="flex justify-between mt-4">
-      {currentStep > 0 && (
-        <Button onClick={HANDLE_PREVIOUS_STEP} type="default">
-          Back
-        </Button>
-      )}
-      <Button
-        onClick={currentStep === 3 ? HANDLE_CLOSE_MODAL : HANDLE_NEXT_STEP}
-        type="primary"
-        disabled={
-          (currentStep === 1 && !induction.name) ||
-          (currentStep === 2 && !induction.department) ||
-          (currentStep === 3 && !induction.description)
-        }
-      >
-        {currentStep === 3 ? "Continue to add questions" : "Next"}
-      </Button>
-    </div>
-  </Modal>
-)}
+              <div className="flex justify-between mt-12">
+                {currentStep > 0 && (
+                  <Button onClick={HANDLE_PREVIOUS_STEP} type="default">
+                    Back
+                  </Button>
+                )}
+                <Button
+                  onClick={currentStep === 3 ? HANDLE_CLOSE_MODAL : HANDLE_NEXT_STEP}
+                  type="primary"
+                  disabled={
+                    (currentStep === 1 && !induction.name) ||
+                    (currentStep === 2 && !induction.department) ||
+                    (currentStep === 3 && !induction.description)
+                  }
+                >
+                  {currentStep === 3 ? "Continue to add questions" : "Next"}
+                </Button>
+              </div>
+            </Modal>
+          )}
   
           {/* Main content area */}
           <div className="flex bg-gray-50">
@@ -327,18 +336,19 @@ const InductionCreate = () => {
                       )}
                     </label>
                     {isEditingDescription ? (
-                      <textarea
-                        id="description"
-                        name="description"
+                      <ReactQuill
                         value={induction.description}
-                        onChange={HANDLE_DESCRIPTION_CHANGE}
+                        onChange={(value) => setInduction({ ...induction, description: value })}
                         placeholder="Enter description"
-                        className="w-full h-40 border border-gray-300 rounded-lg p-2 text-base focus:ring-gray-800 focus:border-gray-800"
+                        className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
+                        modules={MODULES}
+                        formats={FORMATS}
                       />
-                    ) : (
-                      <p className="text-base">{induction.description || "No description added"}</p>
+                      ) : (
+                      <p className="text-base" dangerouslySetInnerHTML={{ __html: induction.description || "No description added" }} />
                     )}
                   </div>
+
                 </div>
   
                 {/* Questions Section */}
