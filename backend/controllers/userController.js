@@ -97,6 +97,9 @@ export const createUser = async (req, res) => {
     try {
       const userRef = db.collection("users").doc(userRecord.uid);
       await userRef.set({
+        userFirstName: firstName,
+        userLastName: lastName,
+        permission: permission,
         position: position,
         locations: Array.isArray(locations) ? locations : [],
         assignedInductions: Array.isArray(assignedInductions)
@@ -136,39 +139,6 @@ export const createUser = async (req, res) => {
 
     // Send welcome email with ReplyTo and CC, using the default template
     await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
-
-    // Send emails for assigned inductions
-    for (const induction of assignedInductions) {
-      const formattedAvailableFrom = induction.availableFrom
-        ? format(new Date(induction.availableFrom), "d MMMM yyyy")
-        : "Unavailable";
-      const formattedDueDate = induction.dueDate
-        ? format(new Date(induction.dueDate), "d MMMM yyyy")
-        : "Unavailable";
-
-      const inductionEmailSubject = `You have a new induction to complete: ${induction.name || 'Unnamed Induction'}`;
-      const inductionEmailBody = `
-        <h1>Kia ora ${firstName} ${lastName}!</h1>
-        <p>You have been assigned a new induction module to complete.</p>
-        <br>
-        
-        <h3>Here are the details:</h3>
-        <p><strong>Induction Name:</strong> ${induction.name || "Unnamed Induction"}</p>
-        <p><strong>Available from:</strong> ${formattedAvailableFrom}</p>
-        <p><strong>Due Date:</strong> ${formattedDueDate}</p>
-
-        <br>
-        <h3>How to complete the induction?</h3>
-        <p>Simply head to our induction portal website (${process.env.REACT_APP_VERCEL_DEPLOYMENT}) and log in using this email address. Navigate to the "My Inductions" tab, find this induction, and click "Start".</p>
-        <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}/inductions/my-inductions" class="button">AUT Events Induction Portal</a>
-
-        <p>If you have any questions, please feel free to reach out to your manager or reply to this email.</p>
-
-        <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
-      `;
-
-      await sendEmail(email, inductionEmailSubject, inductionEmailBody, replyToEmail, ccEmails);
-    }
     
     res.status(201).json({
       uid: userRecord.uid,
@@ -182,7 +152,6 @@ export const createUser = async (req, res) => {
   }
 };
 
-// Update a user
 export const updateUser = async (req, res) => {
   try {
     const {
@@ -206,11 +175,26 @@ export const updateUser = async (req, res) => {
     const existingData = userDoc.data();
     const existingInductions = existingData.assignedInductions || [];
 
-    // Find newly added inductions
+    // Identify new inductions (not already assigned by assignmentID)
     const newInductions = assignedInductions.filter(
       (induction) =>
-        !existingInductions.some((existing) => existing.id === induction.id)
+        !existingInductions.some((existing) => existing.assignmentID === induction.assignmentID)
     );
+
+    // Preserve existing inductions, ensuring updates are assignment-specific
+    const updatedInductions = assignedInductions.map((induction) => {
+      const existing = existingInductions.find((ex) => ex.assignmentID === induction.assignmentID);
+
+      if (existing) {
+        return { ...existing, ...induction }; // Merge updates while keeping assignment reference
+      }
+
+      // Ensure unique assignmentID
+      return {
+        ...induction,
+        assignmentID: `${uid}_${induction.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, // assignmentID is the user's ID, the induction's ID, the date, and a random string of 5 characters to ensure uniqueness
+      };
+    });
 
     // Update user in Firebase Auth
     const userResult = await admin.auth().updateUser(uid, {
@@ -223,12 +207,14 @@ export const updateUser = async (req, res) => {
 
     // Update Firestore
     await userRef.update({
+      usersName: `${firstName} ${lastName}`,
+      permission: permission,
       position: position,
       locations: Array.isArray(locations) ? locations : [],
-      assignedInductions: assignedInductions,
+      assignedInductions: updatedInductions,
     });
 
-    // Send emails for new inductions
+    // Send emails for newly assigned inductions
     for (const induction of newInductions) {
       const formattedAvailableFrom = induction.availableFrom
         ? format(new Date(induction.availableFrom), "d MMMM yyyy")
@@ -238,7 +224,7 @@ export const updateUser = async (req, res) => {
         : "Unavailable";
       const description = induction.description || "No description available.";
 
-      const emailSubject = `You have a new induction to complete: ${induction.name || 'Unnamed Induction'}`;
+      const emailSubject = `You have a new induction to complete: ${induction.name || "Unnamed Induction"}`;
       const emailBody = `
         <h1>Kia ora ${firstName} ${lastName}!</h1>
         <p>You have been assigned a new induction module to complete.</p>
@@ -259,15 +245,16 @@ export const updateUser = async (req, res) => {
         <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
       `;
 
-      const replyToEmail = 'autevents@brears.xyz';
-      const ccEmails = ['manager@brears.xyz'];
+      const replyToEmail = "autevents@brears.xyz";
+      //const ccEmails = ["manager@brears.xyz"];
 
-      await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
+      //await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
+      await sendEmail(email, emailSubject, emailBody, replyToEmail);
     }
 
     res.json({
       data: userResult,
-      message: "User updated and role set successfully. Emails sent for new inductions.",
+      message: "User updated successfully",
     });
   } catch (error) {
     console.error("Error updating user:", error);

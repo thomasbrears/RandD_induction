@@ -52,10 +52,10 @@ const DateCell = ({ date }) => (
 );
 
 // Reusable ActionButton Component
-const ActionButton = ({ status, inductionId }) => {
+const ActionButton = ({ status, assignmentID }) => {
   if ([Status.ASSIGNED, Status.IN_PROGRESS, Status.OVERDUE].includes(status)) {
     return (
-      <Link to={`/induction/take/${inductionId}`}>
+      <Link to={`/induction/take/${assignmentID}`}>
         <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
           {status === Status.IN_PROGRESS ? 'Continue' : 'Start'}
         </button>
@@ -63,7 +63,7 @@ const ActionButton = ({ status, inductionId }) => {
     );
   } else if (status === Status.COMPLETE) {
     return (
-      <Link to={`/induction/results/${inductionId}`}>
+      <Link to={`/induction/results/${assignmentID}`}>
         <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
           View Results
         </button>
@@ -131,9 +131,14 @@ const AssignedInductions = ({ uid }) => {
     }),
     columnHelper.display({
       id: 'actions',
-      cell: (info) => <ActionButton status={info.row.original.status} inductionId={info.row.original.id} />,
+      cell: (info) => (
+        <ActionButton 
+          status={info.row.original.status} 
+          assignmentID={info.row.original.assignmentID} 
+        />
+      ),
       header: 'Action',
-    }),
+    }),    
   ];
 
   const table = useReactTable({
@@ -245,7 +250,7 @@ const AssignedInductions = ({ uid }) => {
                   </p>
                 </div>
                 <div className="mt-4">
-                  <ActionButton status={row.original.status} inductionId={row.original.id} />
+                  <ActionButton status={row.original.status} assignmentID={row.original.id} />
                 </div>
               </div>
             ))}
