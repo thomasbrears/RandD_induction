@@ -7,7 +7,6 @@ import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import useAuth from "../hooks/useAuth";
-import "react-datepicker/dist/react-datepicker.css";
 import { getAllPositions } from '../api/PositionApi';
 import Status from "../models/Status";
 import { deleteUser, deactivateUser, reactivateUser } from "../api/UserApi";
@@ -37,58 +36,6 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
     lastName: z.string().min(1, "Last name is required"),
     email: z.string().email("Invalid email format"),
     locations: z.array(z.string()).min(1, "At least one location is required"),
-    newAssignedInductions: z
-      .array(
-        z.object({
-          id: z.string().optional(),
-          name: z.string().min(1, "Induction cannot be empty"),
-          dueDate: z.date(),
-          availableFrom: z.date(),
-        })
-      )
-      .optional()
-      .superRefine((inductions, ctx) => {
-        if (inductions) {
-          const uniqueIds = new Set();
-          inductions.forEach((induction, index) => {
-            if (induction.id && uniqueIds.has(induction.id)) {
-              ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "Duplicate inductions are not allowed",
-                path: [index, "id"],
-              });
-            } else if (induction.id) {
-              uniqueIds.add(induction.id);
-            }
-
-            if (induction.dueDate < induction.availableFrom) {
-              ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message:
-                  "Due date must be greater than or equal to the available from date.",
-                path: [index, "dueDate"],
-              });
-            }
-
-            const existingInduction = Array.isArray(user.assignedInductions)
-              ? user.assignedInductions.find(
-                  (existing) => existing.id === induction.id
-                )
-              : undefined;
-
-            if (
-              existingInduction &&
-              existingInduction.status !== Status.COMPLETED
-            ) {
-              ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: `Induction "${induction.name}" already exists and is not completed.`,
-                path: [index, "id"],
-              });
-            }
-          });
-        }
-      }),
   });
 
   const methods = useForm({

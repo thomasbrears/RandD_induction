@@ -5,7 +5,6 @@ import { useForm, FormProvider } from "react-hook-form";
 import useAuth from "../../hooks/useAuth";
 import { DatePicker } from 'antd';
 import moment from "moment";
-import "react-datepicker/dist/react-datepicker.css";
 import { getAllInductions } from "../../api/InductionApi";
 import { DefaultNewAssignedInduction } from "../../models/AssignedInduction";
 import Status from "../../models/Status";

@@ -84,7 +84,7 @@ const HomePage = () => {
         if (isAuthenticated) {
             fetchInductions();
         }
-    }, [isAuthenticated, user, fetchInductions]);
+    }, [isAuthenticated, user]);
 
     return (
         <>
