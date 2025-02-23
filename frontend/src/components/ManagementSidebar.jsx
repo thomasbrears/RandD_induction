@@ -1,17 +1,23 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { FaCog, FaUsers, FaClipboardList, FaChartBar, FaHome, FaPlus, FaFileAlt } from 'react-icons/fa';
+import { FaCog, FaUsers, FaUserPlus, FaClipboardList, FaChartBar, FaHome } from 'react-icons/fa';
+import { IoCreate } from "react-icons/io5";
+import useAuth from "../hooks/useAuth";
 
 const ManagementSidebar = () => {
   const location = useLocation();
+  const { user } = useAuth();
+
+  // Ensure user is available
+  if (!user) return null;
 
   // Updated list of sidebar links with icons
   const links = [
     { path: '/management/dashboard', label: 'Dashboard', icon: <FaHome /> },
     { path: '/management/users/view', label: 'View Users', icon: <FaUsers /> },
-    { path: '/management/users/create', label: 'Create User', icon: <FaPlus /> },
+    { path: '/management/users/create', label: 'Create User', icon: <FaUserPlus /> },
     { path: '/management/inductions/view', label: 'View Inductions', icon: <FaClipboardList /> },
-    { path: '/management/inductions/create', label: 'Create Induction', icon: <FaFileAlt /> },
+    { path: '/management/inductions/create', label: 'Create Induction', icon: <IoCreate /> },
     { path: '/management/inductions/results', label: 'View Results', icon: <FaChartBar /> },
     { path: '/admin/settings', label: 'Settings', icon: <FaCog />, adminOnly: true }
   ];
@@ -21,8 +27,8 @@ const ManagementSidebar = () => {
       {links.map((link, index) => {
         const isActive = location.pathname === link.path;
 
-        // Only render admin-only links for admin pages
-        if (link.adminOnly && !location.pathname.includes('/admin')) {
+        // Only render admin-only links for admin users
+        if (link.adminOnly && user.role !== 'admin') {
           return null;
         }
 

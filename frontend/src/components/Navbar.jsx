@@ -4,7 +4,7 @@ import useAuth from '../hooks/useAuth';
 import { FaBars, FaCaretDown } from 'react-icons/fa';
 
 const Navbar = () => {
-  const { user, signOut } = useAuth(); // Get the user object and signOut function from the useAuth hook
+  const { user, signOut, loading } = useAuth(); // Get the user object and signOut function from the useAuth hook
   const [showBar, setShowBar] = useState(true); // State for showing the top signin prompt bar
   const [isOpen, setMobileMenuOpen] = useState(false); // State for mobile menu toggle
   const [userDropdownOpen, setUserDropdownOpen] = useState(false); // User dropdown toggle
@@ -22,7 +22,7 @@ const Navbar = () => {
 
   return (
     <>
-      {!user && showBar && (
+      {!loading && !user && showBar && (
         <div className="bg-blue-800 text-white p-2 text-center relative">
           <Link to="/auth/signin" className="font-bold">
             Welcome to the AUT Events Induction Portal! Please Sign in to complete your inductions. →
@@ -30,7 +30,8 @@ const Navbar = () => {
           <button
             onClick={() => setShowBar(false)}
             className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white hover:text-black"
-          >✕
+          >
+            ✕
           </button>
         </div>
       )}
@@ -121,15 +122,16 @@ const Navbar = () => {
             )}
           </div>
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Menu Button (Hamburger to "X") */}
           <div className="md:hidden">
-            <button
-              onClick={() => setMobileMenuOpen(!isOpen)}
-              className="text-white focus:outline-none"
-            ><FaBars size={24} /> {/* Use the FaBars icon here */}
+            <button onClick={() => setMobileMenuOpen(!isOpen)} className="relative w-8 h-8 flex flex-col items-center justify-center">
+              <div className={`bg-white w-8 h-1 rounded transition-all duration-300 ${isOpen ? "rotate-45 translate-y-2" : ""}`} />
+              <div className={`bg-white w-8 h-1 rounded transition-all duration-300 my-1 ${isOpen ? "opacity-0" : "opacity-100"}`} />
+              <div className={`bg-white w-8 h-1 rounded transition-all duration-300 ${isOpen ? "-rotate-45 -translate-y-2" : ""}`} />
             </button>
           </div>
         </div>
+
         {/* Mobile Menu */}
         {isOpen && (
           <div className="md:hidden px-4 pb-3 space-y-1 bg-black">

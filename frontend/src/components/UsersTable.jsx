@@ -23,8 +23,8 @@ import {
 import "../style/Table.css";
 import Loading from '../components/Loading';
 import { Link, useNavigate } from "react-router-dom";
-import { FaUserEdit, FaUserPlus } from "react-icons/fa";
-import { MdManageAccounts, MdAutoGraph } from "react-icons/md";
+import { FaUserEdit, FaUserPlus, FaChartBar } from "react-icons/fa";
+import { MdManageAccounts } from "react-icons/md";
 
 const columnHelper = createColumnHelper();
 
@@ -174,13 +174,13 @@ const UsersTable = () => {
             </div>
   
             <Link to={"/management/users/create"}>
-              <button className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-2 rounded-md">
+              <button className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md">
                 <FaUserPlus className="inline mr-2" /> Add New User
               </button>
             </Link>
             <Link to={"/management/inductions/results"}>
-              <button className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-2 rounded-md">
-                <MdAutoGraph className="inline mr-2" /> View Results
+              <button className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md">
+                <FaChartBar className="inline mr-2" /> View Results
               </button>
             </Link>
           </div>

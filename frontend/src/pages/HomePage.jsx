@@ -60,8 +60,8 @@ const HomePage = () => {
                             </span>
                         </div>,
                         {
-                            position: 'bottom-left',
-                            autoClose: false,
+                            position: 'bottom-right',
+                            autoClose: 120000,
                             hideProgressBar: true,
                             closeOnClick: true,
                             draggable: true,
@@ -94,7 +94,7 @@ const HomePage = () => {
 
             {/* Background Image Section */}
             <div className="bg-cover bg-center h-[500px] flex justify-center items-center text-center text-white px-4 mb-12" style={{ backgroundImage: `url(/images/WG_OUTSIDE_AUT.webp)` }}>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold">Welcome to the AUT Events<br />Induction Platform!</h1>
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold">Welcome to the AUT Events<br />Induction Portal!</h1>
             </div>
 
             {/* Let's Get Started Section */}
@@ -158,8 +158,11 @@ const HomePage = () => {
                 <div className="absolute inset-0 bg-black opacity-70"></div> {/* Dark overlay on image */}
                 <h2 className="text-2xl text-center font-semibold mb-4 relative z-10">About Us</h2>
                 <div className="max-w-4xl mx-auto text-center relative z-10">
-                    <p className="text-lg mb-4">"At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non providentAt vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident..."</p>
-                    <p className="text-lg mb-4">"Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium..."</p>
+                    <p className="text-lg mb-4">We cater anywhere for anyone. Is it your place or ours? 
+                    <br /> Offering end-to-end management service from venue selection, catering and audio-visual solutions to your event and conference needs, our team of experts will work with you to design your event from inception to completion, customising each element to suit all budgets.
+                    <br /> Our menu, lovingly crafted by our Group Chef, offers a tantalising selection made from local produce and sustainable sources.
+                    <br />Available at our award-winning spaces in Auckland CBD and at some of the most iconic venues in town, our dedicated events team will work with you to create an impressive experience be it a day workshop, cocktail party or your all-important gala dinner.
+                    <br />Let us organise and manage your event so you can focus on your guests!</p>
                     <Link to="https://www.autevents.co.nz/" target="_blank" rel="noopener noreferrer" className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md text-center w-auto mx-auto">Visit the AUT Events Website</Link>
                 </div>
             </div>
@@ -168,7 +171,7 @@ const HomePage = () => {
             <div className="bg-white text-black py-16 mb-5">
                 <h2 className="text-2xl text-center font-semibold mb-4">Contact us - We’d love to hear from you!</h2>
                 <div className="max-w-4xl mx-auto text-center">
-                    <p className="text-lg mb-4">"At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident..."</p>
+                    <p className="text-lg mb-4">If you have any questions, feedback or complaints, please don't hesitate to get in touch with us using the button below or by direct email to your manager.</p>
                     <Link to="/contact" className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md text-center w-auto mx-auto">Contact us</Link>
                 </div>
             </div>

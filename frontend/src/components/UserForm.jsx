@@ -2,32 +2,29 @@ import { useState, useEffect } from "react";
 import Select from "react-select";
 import Permissions from "../models/Permissions";
 import { DefaultNewUser } from "../models/User";
-import Positions from "../models/Positions";
 import Locations from "../models/Locations";
 import { useForm, FormProvider } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import useAuth from "../hooks/useAuth";
-import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { getAllInductions } from "../api/InductionApi";
-import { DefaultNewAssignedInduction } from "../models/AssignedInduction";
+import { getAllPositions } from '../api/PositionApi';
 import Status from "../models/Status";
 import { deleteUser, deactivateUser, reactivateUser } from "../api/UserApi";
 import { useLocation, useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import ConfirmationModal from './ConfirmationModal';
 import { FaUserCheck, FaUserTimes, FaTrashAlt, FaSave, FaUserPlus, FaPlus } from 'react-icons/fa';
-import { IoRemoveCircle } from "react-icons/io5";
 
 export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
-  const [user, setUser] = useState(DefaultNewUser);
+  const [user, setUser] = useState({ ...DefaultNewUser, position: '' });
   const [actionType, setActionType] = useState(null); // Store whether it's deactivation, reactivation, or deletion
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
   const [isDeactivated, setIsDeactivated] = useState(false);
   const [availableInductions, setAvailableInductions] = useState([]);
   const [newAssignedInductions, setNewAssignedInductions] = useState([]);
+  const [positions, setPositions] = useState([]);
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -102,16 +99,6 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
   });
 
   useEffect(() => {
-    const fetchInductions = async () => {
-      if (currentUser) {
-        const inductions = await getAllInductions(currentUser);
-        setAvailableInductions(inductions);
-      }
-    };
-    fetchInductions();
-  }, [currentUser]);
-
-  useEffect(() => {
     setUser(userData);
     methods.reset(userData);
     if (userData.uid) {
@@ -126,6 +113,21 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
     }
   }, [userData, methods]);
 
+  useEffect(() => {
+    const fetchPositions = async () => {
+      try {
+        const positionsData = await getAllPositions();
+        // console.log("Positions data:", positionsData);
+        setPositions(positionsData);
+      } catch (error) {
+        console.error("Error fetching positions:", error);
+      }
+    };
+
+    fetchPositions();
+  }, []);
+
+  // Handle form submission
   const handleSubmit = async (data) => {
     setUser(data);
     const userToSubmit = {
@@ -136,13 +138,6 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
       position: user.position,
       permission: user.permission,
       locations: user.locations,
-      assignedInductions: [
-        ...(user.assignedInductions || []),
-        ...(data.newAssignedInductions || []).map((induction) => ({
-          ...DefaultNewAssignedInduction,
-          ...induction,
-        })),
-      ],
     };
 
     await onSubmit(userToSubmit);
@@ -158,44 +153,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
     }
   };
 
-  const handleAddInduction = () => {
-    const newInduction = {
-      ...DefaultNewAssignedInduction,
-      dueDate: new Date(),
-      availableFrom: new Date(),
-    };
-    const updatedInductions = [...newAssignedInductions, newInduction];
-    setNewAssignedInductions(updatedInductions);
-    methods.setValue("newAssignedInductions", updatedInductions, {
-      shouldValidate: true,
-    });
-  };
-
-  const handleRemoveInduction = (index) => {
-    const updatedInductions = newAssignedInductions.filter(
-      (_, i) => i !== index
-    );
-    setNewAssignedInductions(updatedInductions);
-    methods.setValue("newAssignedInductions", updatedInductions, {
-      shouldValidate: true,
-    });
-  };
-
-  const handleInductionChange = (index, field, value, label) => {
-    const updatedInductions = [...newAssignedInductions];
-    if (!updatedInductions[index]) {
-      updatedInductions[index] = { ...DefaultNewAssignedInduction };
-    }
-    updatedInductions[index][field] = value;
-    if (field === "id" && label) {
-      updatedInductions[index].name = label;
-    }
-    setNewAssignedInductions(updatedInductions);
-    methods.setValue("newAssignedInductions", updatedInductions, {
-      shouldValidate: true,
-    });
-  };
-
+  // Handle locations change
   const handleLocationsChange = (selectedOptions) => {
     const selectedValues = selectedOptions
       ? selectedOptions.map((option) => option.value)
@@ -211,66 +169,87 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
     methods.trigger("locations");
   };
 
+  // Get available permissions based on the current user's role
   const availablePermissions =
     currentUser?.role === Permissions.ADMIN
       ? Object.values(Permissions)
       : [Permissions.USER];
 
-  // Handle deactivate/reactivate action
+  // Handle user deactivate/reactivate action
   const handleDeactivateOrReactivate = () => {
     const action = user.disabled ? 'reactivate' : 'deactivate';
     setActionType(action);
     setConfirmDeactivate(true); // Open the modal for confirmation
   };
 
-  // Handle delete action
+  // Handle user delete action
   const handleDelete = () => {
     setActionType('delete');
     setConfirmDelete(true); // Open the modal for confirmation
   };
 
-  // Confirm deactivation or reactivation
+  // Confirm user deactivation or reactivation
   const confirmDeactivationOrReactivation = () => {
-    if (actionType === 'deactivate') {
-      deactivateUser(currentUser, user.uid)
-        .then((data) => {
-          toast.success("User deactivated successfully!");
-          setUser({ ...user, disabled: true }); // Update state immediately
-          setIsDeactivated(true); // Update the deactivated banner status
-        })
-        .catch((err) => {
-          toast.error("Failed to deactivate user");
-        });
-    } else if (actionType === 'reactivate') {
-      reactivateUser(currentUser, user.uid)
-        .then((data) => {
-          toast.success("User reactivated successfully!");
-          setUser({ ...user, disabled: false }); // Update state immediately
-          setIsDeactivated(false); // Update the deactivated banner status
-        })
-        .catch((err) => {
-          toast.error("Failed to reactivate user");
-        });
-    }
     setConfirmDeactivate(false); // Close the modal
-  };
+  
+    const actionPromise =
+      actionType === 'deactivate'
+        ? deactivateUser(currentUser, user.uid)
+        : reactivateUser(currentUser, user.uid);
+  
+    toast.promise(actionPromise, {
+      pending: actionType === 'deactivate'
+        ? "Deactivating user..."
+        : "Reactivating user...",
+      success: actionType === 'deactivate'
+        ? "User deactivated successfully!"
+        : "User reactivated successfully!",
+      error: actionType === 'deactivate'
+        ? "Failed to deactivate user."
+        : "Failed to reactivate user.",
+    });
+  
+    actionPromise
+      .then(() => {
+        setUser({
+          ...user,
+          disabled: actionType === 'deactivate',
+        }); // Update state immediately
+        setIsDeactivated(actionType === 'deactivate'); // Update the deactivated banner status
+      })
+      .catch((err) => {
+        console.error(err); // Log the error for debugging
+      });
+  };  
 
-  // Confirm deletion
+  // Confirm user deletion
   const confirmDeletion = () => {
+    setConfirmDelete(false); // Close the modal
+  
     if (currentUser && user) {
-      deleteUser(currentUser, user.uid)
+      const deletePromise = deleteUser(currentUser, user.uid);
+  
+      toast.promise(deletePromise, {
+        pending: "Deleting user...",
+        success: "User deleted successfully!",
+        error: {
+          render({ data }) {
+            // Extract error message from the rejected promise
+            const errorMessage = data?.response?.data?.message || "An error occurred";
+            return errorMessage;
+          },
+        },
+      });
+  
+      deletePromise
         .then(() => {
-          toast.success("User deleted successfully!", { position: 'top-right', autoClose: 3000 });
-          navigate("/management/users/view");
+          navigate("/management/users/view"); // Redirect after successful deletion
         })
         .catch((err) => {
-          const errorMessage = err.response?.data?.message || "An error occurred";
-          toast.error(errorMessage);
-          console.error(err);
+          console.error(err); // Log the error for debugging
         });
     }
-    setConfirmDelete(false); // Close the modal
-  };
+  };  
 
   return (
     <>
@@ -282,6 +261,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
           )}
         <div className="flex justify-between items-center">
           <h1>User Details</h1>
+          {/* Render action buttons for existing users for deleting and deactivating/reactivating */}
           {isEditPage && isExistingUser && (
               <div className="flex space-x-2">
                 <button
@@ -307,11 +287,13 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
               </div>
             )}
         </div>
+          {/* User Details Form */}
           <FormProvider {...methods}>
             <form
               onSubmit={methods.handleSubmit(handleSubmit)}
               className="w-full"
             >
+              {/* First Name and Last Name */}
               <div className="flex flex-wrap -mx-3 mb-6">
                 <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
                   <label
@@ -353,6 +335,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                 </div>
               </div>
 
+              {/* Email and Permission */}
               <div className="flex flex-wrap -mx-3 mb-6">
                 <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
                   <label
@@ -396,6 +379,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                 </div>
               </div>
 
+              {/* Position dropdown */}
               <div className="flex flex-wrap -mx-3 mb-6">
                 <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
                   <label
@@ -407,17 +391,25 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                   <select
                     className="block appearance-none w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
                     value={user.position}
-                    onChange={(e) =>
-                      setUser({ ...user, position: e.target.value })
-                    }
+                    onChange={(e) => setUser({ ...user, position: e.target.value })}
                   >
-                    {Object.values(Positions).map((pos) => (
-                      <option className="text-gray-700" key={pos} value={pos}>
-                        {pos.charAt(0).toUpperCase() + pos.slice(1)}
-                      </option>
-                    ))}
+                    <option value="" disabled>Select Position</option> {/* Default "Select Position" option */}
+                    {positions.length === 0 ? (
+                      <option className="text-gray-700">Loading positions...</option>
+                    ) : (
+                      positions.map((pos) => {
+                        const positionName = String(pos.name); // Convert to string if not already
+                        return (
+                          <option key={pos.id} value={positionName}>
+                            {positionName.charAt(0).toUpperCase() + positionName.slice(1)}
+                          </option>
+                        );
+                      })
+                    )}
                   </select>
                 </div>
+
+                {/* Location Multi-Select */}
                 <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
                   <label
                     className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
@@ -474,120 +466,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                 </div>
               </div>
 
-              <div className="w-full md:w-full px-3 flex justify-between items-center">
-                <h1 className="text-left flex-grow">Assign Inductions</h1>
-                <button
-                  type="button"
-                  onClick={handleAddInduction}
-                  className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-2 rounded-md"
-                ><FaPlus className="inline mr-2" /> Add Induction
-                </button>
-              </div>
-
-              <div className="bg-gray-100 p-4 rounded-md mt-4 mb-4">
-                {newAssignedInductions.map((induction, index) => (
-                  <div key={index} className="mb-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Select
-                        options={availableInductions.map((ind) => ({
-                          value: ind.id,
-                          label: ind.name,
-                        }))}
-                        onChange={(selected) =>
-                          handleInductionChange(
-                            index,
-                            "id",
-                            selected.value,
-                            selected.label
-                          )
-                        }
-                        value={
-                          availableInductions.find(
-                            (ind) => ind.id === induction.id
-                          )
-                            ? {
-                                value: induction.id,
-                                label: availableInductions.find(
-                                  (ind) => ind.id === induction.id
-                                ).name,
-                              }
-                            : null
-                        }
-                        className="flex-1 w-3/4"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveInduction(index)}
-                        className="text-white bg-red-700 hover:bg-red-900 px-3 py-2 rounded-md"
-                      ><IoRemoveCircle className="inline mr-2" /> Remove
-                      </button>
-                    </div>
-                    <div className="flex flex-col md:flex-row space-x-0 md:space-x-4 mb-2">
-                      <div className="flex items-center w-full mb-2 md:mb-0">
-                        <label
-                          className="block uppercase tracking-wide text-gray-700 text-xs font-bold mr-2"
-                          htmlFor="available-from"
-                        >
-                          Available From:
-                        </label>
-                        <DatePicker
-                          className="flex-grow h-10 border border-gray-300 bg-white rounded-md"
-                          selected={induction.availableFrom || new Date()}
-                          onChange={(date) =>
-                            handleInductionChange(index, "availableFrom", date)
-                          }
-                          placeholderText="Available From"
-                        />
-                      </div>
-
-                      <div className="flex items-center w-full mb-2 md:mb-0">
-                        <label
-                          className="block uppercase tracking-wide text-gray-700 text-xs font-bold mr-2"
-                          htmlFor="due-date"
-                        >
-                          Due Date:
-                        </label>
-                        <DatePicker
-                          className="flex-grow h-10 border border-gray-300 bg-white rounded-md"
-                          selected={induction.dueDate || new Date()}
-                          onChange={(date) =>
-                            handleInductionChange(index, "dueDate", date)
-                          }
-                          placeholderText="Due Date"
-                        />
-                      </div>
-                    </div>
-                    {methods.formState.errors.newAssignedInductions?.[index]
-                      ?.dueDate && (
-                      <p className="text-red-500 text-xs italic mt-2">
-                        {
-                          methods.formState.errors.newAssignedInductions[index]
-                            .dueDate.message
-                        }
-                      </p>
-                    )}
-                    {methods.formState.errors.newAssignedInductions?.[index]
-                      ?.id && (
-                      <p className="text-red-500 text-xs italic mt-2">
-                        {
-                          methods.formState.errors.newAssignedInductions[index]
-                            .id.message
-                        }
-                      </p>
-                    )}
-                    {methods.formState.errors.newAssignedInductions?.[index]
-                      ?.name && (
-                      <p className="text-red-500 text-xs italic mt-2">
-                        {
-                          methods.formState.errors.newAssignedInductions[index]
-                            .name.message
-                        }
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-
+              {/* Submit Button - "Save" for existing user, "Create" for new user */}
               <div className="flex justify-center">
                 <button
                   className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-2 rounded-md"
@@ -638,75 +517,6 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
           />
         </div>
       </div>
-
-      {user.uid && (
-        <div className="flex items-start justify-center pt-8">
-          <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-4xl mx-4 md:mx-8">
-            {user.assignedInductions &&
-            Array.isArray(user.assignedInductions) &&
-            user.assignedInductions.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse border border-gray-200 w-full">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border border-gray-300 px-4 py-2 text-left">
-                        Induction Name
-                      </th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">
-                        Available From
-                      </th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">
-                        Due Date
-                      </th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">
-                        Completion Date
-                      </th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {user.assignedInductions.map((induction, index) => (
-                      <tr key={index}>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {induction.name}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {induction.availableFrom
-                            ? new Date(
-                                induction.availableFrom
-                              ).toLocaleDateString()
-                            : "N/A"}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {induction.dueDate
-                            ? new Date(induction.dueDate).toLocaleDateString()
-                            : "N/A"}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {induction.completionDate
-                            ? new Date(
-                                induction.completionDate
-                              ).toLocaleDateString()
-                            : "N/A"}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {induction.status}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-600">
-                No assigned inductions for this user.
-              </p>
-            )}
-          </div>
-        </div>
-      )}
     </>
   );
 };

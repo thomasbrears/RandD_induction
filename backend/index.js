@@ -3,6 +3,8 @@ import cors from "cors";
 import { authMiddleware } from "./middleware/authMiddleware.js";
 import userRoutes from "./routes/userRoutes.js";
 import inductionRoutes from "./routes/inductionRoutes.js";
+import departmentRoutes from "./routes/departmentRoutes.js";
+import positionRoutes from "./routes/positionRoutes.js";
 
 const app = express();
 
@@ -22,6 +24,12 @@ app.use(express.json());
 
 // Authentication middleware
 app.use(authMiddleware);
+
+// Department Routes
+app.use("/api/departments", departmentRoutes);
+
+// Position Routes
+app.use("/api/positions", positionRoutes);
 
 // User Routes
 app.use("/api/users", userRoutes);
