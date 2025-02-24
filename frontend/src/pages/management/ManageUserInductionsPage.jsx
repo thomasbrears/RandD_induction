@@ -9,6 +9,7 @@ import { toast } from 'react-toastify';
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
 import UserInductionManagement from '../../components/management/UserInductionManagement';
+import { FaUserEdit } from "react-icons/fa";
 
 const ManageUserInductionPage = () => {
   const [viewedUser, setViewedUser] = useState(DefaultNewUser);
@@ -63,6 +64,10 @@ const ManageUserInductionPage = () => {
      }
   }; 
 
+  const handleEditUserDetails = (uid) => {
+    navigate("/management/users/edit", { state: { uid } });
+  };
+
   return (
     <>
       <Helmet><title>Manage Inductions | AUT Events Induction Portal</title></Helmet>
@@ -85,7 +90,22 @@ const ManageUserInductionPage = () => {
           {loading ? (
             <p className="text-gray-600">{loadingMessage}</p>
           ) : (
-            <UserInductionManagement userData={viewedUser} onSubmit={handleSubmit} />
+            <>
+              <UserInductionManagement userData={viewedUser} onSubmit={handleSubmit} />
+
+              {/* Large Edit User Details Button */}
+              <div className="flex justify-center mt-8">
+                <button
+                  onClick={() => handleEditUserDetails(viewedUser.uid)}
+                  className="mt-8 text-lg text-white text-bold px-6 py-3 border-2 rounded-lg bg-blue-500 
+                            transition-all duration-300 transform hover:border-blue-500 hover:bg-inherit  hover:text-gray-700 
+                            shadow-md"
+                >
+                  <FaUserEdit className="inline mr-3 " />
+                  Click here to edit user details for {viewedUser.firstName || 'User'}
+                </button>
+              </div>
+            </>
           )}
         </div>
       </div>
