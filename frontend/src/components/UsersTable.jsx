@@ -101,7 +101,7 @@ const UsersTable = () => {
 
           <button
             onClick={() => handleManageInductions(row.original.uid)}
-            className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-1 rounded"
+            className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-1 rounded mt-2"
           ><MdManageAccounts className="inline mr-2" /> Manage Inductions
           </button>
         </div>
@@ -159,20 +159,23 @@ const UsersTable = () => {
         <Loading message={loadingMessage} />
       ) : (
         <>
-          <div className="mb-4 flex items-center gap-4">
-            <div className="relative flex-grow">
-              <input
-                value={globalFilter ?? ""}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                placeholder="Search..."
-                className="box-size-border w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-              />
-              <Search
-                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-                size={20}
-              />
-            </div>
-  
+        {/*Search Bar*/}
+        <div className="mb-4 flex flex-col lg:flex-row lg:items-center gap-4">
+          <div className="relative flex-grow">
+            <input
+              value={globalFilter ?? ""}
+              onChange={(e) => setGlobalFilter(e.target.value)}
+              placeholder="Search..."
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+            />
+            <Search
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+              size={20}
+            />
+          </div>
+
+          {/*Desktop buttons*/}
+          <div className="lg:flex gap-4 hidden mt-4 lg:mt-0">
             <Link to={"/management/users/create"}>
               <button className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md">
                 <FaUserPlus className="inline mr-2" /> Add New User
@@ -184,9 +187,25 @@ const UsersTable = () => {
               </button>
             </Link>
           </div>
+
+          {/* Mobile Buttons Below Search */}
+          <div className="lg:hidden mt-4 space-y-2">
+            <Link to={"/management/users/create"}>
+              <button className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md w-full">
+                <FaUserPlus className="inline mr-2" /> Add New User
+              </button>
+            </Link>
+            <Link to={"/management/inductions/results"}>
+              <button className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md w-full mt-2 mb-2">
+                <FaChartBar className="inline mr-2" /> View Results
+              </button>
+            </Link>
+          </div>
+        </div>
   
-          <div className="overflow-x-auto bg-white shadow-md rounded-lg">
-            <table className="min-w-full divide-y divide-gray-200">
+          {/* Desktop Table */}
+          <div className="hidden lg:block">
+            <table className="min-w-full divide-y divide-gray-200 bg-white shadow-md rounded-lg">
               <thead className="bg-gray-50">
                 {table.getHeaderGroups().map((headerGroup) => (
                   <tr key={headerGroup.id}>
@@ -197,9 +216,7 @@ const UsersTable = () => {
                       >
                         <div
                           {...{
-                            className: header.column.getCanSort()
-                              ? "cursor-pointer select-none flex items-center"
-                              : "",
+                            className: header.column.getCanSort() ? "cursor-pointer select-none flex items-center" : '',
                             onClick: header.column.getToggleSortingHandler(),
                           }}
                         >
@@ -233,8 +250,49 @@ const UsersTable = () => {
               </tbody>
             </table>
           </div>
+
+          {/* Mobile List of Table */}
+          <div className="lg:hidden space-y-4">
+            {table.getRowModel().rows.map((row) => (
+              <div key={row.id} className="bg-white shadow-md rounded-lg p-4">
+                <h3 className="text-lg font-semibold">
+                  <Link to={`/user/${row.original.uid}`} className="text-black hover:underline">
+                    {row.original.firstName} {row.original.lastName}
+                  </Link>
+                </h3>
+                <div className="text-sm text-gray-600 mt-2">
+                  <p>
+                    <span className="font-semibold">Email: </span> 
+                    <a href={`mailto:${row.original.email}`} className="text-blue-500 hover:underline">{row.original.email}</a>
+                  </p>
+                  <p>
+                    <span className="font-semibold">Permission: </span> {row.original.permission}
+                  </p>
+                </div>
+
+                {/*User Actions*/}
+                <div className="flex flex-wrap">
+                  <button
+                    onClick={() => handleViewEdit(row.original.uid)}
+                    className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-1 rounded mt-2 mr-2"
+                  >
+                    <FaUserEdit className="inline ml-2" /> Edit
+                  </button>
+
+                  <button
+                    onClick={() => handleManageInductions(row.original.uid)}
+                    className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-1 rounded mt-2 mr-2"
+                  >
+                    <MdManageAccounts className="inline ml-2" /> Manage Inductions
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
   
-          <div className="flex sm:flex-row justify-between items-center mt-4 text-sm text-gray-700">
+          {/* Pagination Controls */}
+          <div className="flex flex-col sm:flex-row justify-between items-center mt-4 text-sm text-gray-700">
+            {/* Items per page */}
             <div className="flex items-center mb-4 sm:mb-0">
               <span className="mr-2">Items per page</span>
               <select
@@ -251,7 +309,7 @@ const UsersTable = () => {
                 ))}
               </select>
             </div>
-  
+            {/* Pagination Buttons */}
             <div className="flex items-center space-x-2">
               <button
                 className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"

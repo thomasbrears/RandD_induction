@@ -186,6 +186,7 @@ export const UserInductionManagement = ({ userData = DefaultNewUser, onSubmit })
       ...user,
       assignedInductions: updatedAssignedInductions,
     };
+    setUser(updatedUser);
   
     // Call the onSubmit function to update the user with the new induction data
     await onSubmit(updatedUser);
@@ -379,7 +380,7 @@ export const UserInductionManagement = ({ userData = DefaultNewUser, onSubmit })
                     className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md"
                     type="submit"
                     >
-                    <FaSave className="inline mr-2" /> Add Induction Assignemnts
+                    <FaSave className="inline mr-2" /> Add Induction Assignments
                     </button>
                 </div>
                 )}
