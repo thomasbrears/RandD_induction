@@ -71,7 +71,7 @@ const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
 const App = () => {
   return (
     <HelmetProvider>
-      <div className="App flex flex-col min-h-screen">
+      <div className="App flex flex-col min-h-screen ">
         {/* Toastify message container with default actions*/}
         <ToastContainer
           theme="light" // Set light theme
@@ -84,7 +84,7 @@ const App = () => {
           pauseOnFocusLoss={false} // Keep toast running even when focus is lost
         />
         <Router>
-          <Navbar />
+          <Navbar/>
           <ToastContainer/>
           <div className="flex-grow">
             <Routes>

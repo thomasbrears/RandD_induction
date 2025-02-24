@@ -114,12 +114,12 @@ const HomePage = () => {
                         {userRole === 'admin' || userRole === 'manager' ? (
                             <>
                                 {/* Manager or Admin content */}
-                                <h2 className="text-3xl text-center font-semibold mb-4">Hi {user.displayName ? user.displayName.split(" ")[0] : ""}, Let's get started</h2>
+                                <h2 className="text-3xl text-center font-semibold mb-4">Hi {user.displayName ? user.displayName.split(" ")[0] : ""}, let's get started</h2>
                                 <p className="text-xl text-center mb-6">How should we get started today?</p>
 
                                 {/* Show overdue inductions message if applicable */}
                                 {overdueInductionsCount > 0 && (
-                                    <p className="text-red-500 text-center mb-6">
+                                    <p className="text-red-500 text-center mb-8">
                                         <Link to="/inductions/my-inductions" >You have {overdueInductionsCount} overdue induction{overdueInductionsCount > 1 ? 's' : ''}. Please complete {overdueInductionsCount > 1 ? 'them' : 'it'} as soon as possible.</Link>  {/* Message with cases for 1 or muiltiple overdue inductions and a link to the inductions page */}
                                     </p>
                                 )}
@@ -131,15 +131,15 @@ const HomePage = () => {
                         ) : (
                             <>
                                 {/* Standard user content */}
-                                <h2 className="text-3xl text-center font-semibold mb-4">Hi {user.displayName ? user.displayName.split(" ")[0] : ""}, Let's get started</h2>
-                                <p className="text-xl text-center mb-2">
+                                <h2 className="text-3xl text-center font-semibold mb-4">Hi {user.displayName ? user.displayName.split(" ")[0] : ""}, let's get started</h2>
+                                <p className="text-xl text-center mb-8">
                                     {loading ? "Loading your inductions..." : 
-                                    (error ? `Error: ${error}` : `You currently have ${inductionsCount > 0 ? inductionsCount : "no"} inductions to complete...`)}
+                                    (error ? `Error: ${error}` : `You currently have ${inductionsCount > 0 ? inductionsCount : "no"} induction${inductionsCount > 1 ? 's' : ''} to complete...`)}
                                 </p>
 
                                 {/* Show overdue inductions message if applicable */}
                                 {overdueInductionsCount > 0 && (
-                                    <p className="text-red-500 text-center mb-6">
+                                    <p className="text-red-500 text-center mb-8">
                                         You have {overdueInductionsCount} overdue induction{overdueInductionsCount > 1 ? 's' : ''}. Please complete {overdueInductionsCount > 1 ? 'them' : 'it'} as soon as possible. {/* Message with cases for 1 or muiltiple overdue inductions */}
                                     </p>
                                 )}
@@ -157,13 +157,22 @@ const HomePage = () => {
                 {/* Dark overlay */}
                 <div className="absolute inset-0 bg-black opacity-70"></div> {/* Dark overlay on image */}
                 <h2 className="text-2xl text-center font-semibold mb-4 relative z-10">About Us</h2>
-                <div className="max-w-4xl mx-auto text-center relative z-10">
-                    <p className="text-lg mb-4">We cater anywhere for anyone. Is it your place or ours? 
-                    <br /> Offering end-to-end management service from venue selection, catering and audio-visual solutions to your event and conference needs, our team of experts will work with you to design your event from inception to completion, customising each element to suit all budgets.
-                    <br /> Our menu, lovingly crafted by our Group Chef, offers a tantalising selection made from local produce and sustainable sources.
-                    <br />Available at our award-winning spaces in Auckland CBD and at some of the most iconic venues in town, our dedicated events team will work with you to create an impressive experience be it a day workshop, cocktail party or your all-important gala dinner.
-                    <br />Let us organise and manage your event so you can focus on your guests!</p>
-                    <Link to="https://www.autevents.co.nz/" target="_blank" rel="noopener noreferrer" className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md text-center w-auto mx-auto">Visit the AUT Events Website</Link>
+                <div className="max-w-3xl mx-auto text-center relative z-10 leading-relaxed space-y-4">
+                <p className="text-lg"> We cater anywhere for anyone. Is it your place or ours?</p>
+                <p className="text-lg">Offering end-to-end management service from venue selection, catering, and audio-visual solutions to your event and conference needs,
+                     our team of experts will work with you to design your event from inception to completion, customizing each element to suit all budgets.</p>
+                <p className="text-lg">Our menu, lovingly crafted by our Group Chef, offers a tantalizing selection made from local produce and sustainable sources.</p>
+                <p className="text-lg">Available at our award-winning spaces in Auckland CBD and at some of the most iconic venues in town, our dedicated events team will
+                     work with you to create an impressive experience—be it a day workshop, cocktail party, or your all-important gala dinner.</p>
+                <p className="text-lg">Let us organize and manage your event so you can focus on your guests!</p>
+                <Link
+                    to="https://www.autevents.co.nz/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md inline-block mt-4"
+                >
+                    Visit the AUT Events Website
+                </Link>
                 </div>
             </div>
 
@@ -171,7 +180,7 @@ const HomePage = () => {
             <div className="bg-white text-black py-16 mb-5">
                 <h2 className="text-2xl text-center font-semibold mb-4">Contact us - We’d love to hear from you!</h2>
                 <div className="max-w-4xl mx-auto text-center">
-                    <p className="text-lg mb-4">If you have any questions, feedback or complaints, please don't hesitate to get in touch with us using the button below or by direct email to your manager.</p>
+                    <p className="text-lg mb-8">If you have any questions, feedback or complaints, please don't hesitate to get in touch with us using the button below or by direct email to your manager.</p>
                     <Link to="/contact" className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md text-center w-auto mx-auto">Contact us</Link>
                 </div>
             </div>
