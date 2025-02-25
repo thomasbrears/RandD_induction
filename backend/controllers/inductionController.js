@@ -54,4 +54,34 @@ export const getInductionById = async (req, res) => {
   }
 };
 
-// Add an update induction endpoint (future implementation)
+export const updateInductionById = async (req, res) => {
+  try {
+    const { id, name, department, description, questions } = req.body;
+
+    if (!id) {
+      return res.status(400).json({ message: "Induction ID is required" });
+    }
+
+    const inductionRef = db.collection("inductions").doc(id);
+
+    // Check if the induction exists
+    const inductionDoc = await inductionRef.get();
+    if (!inductionDoc.exists) {
+      return res.status(404).json({ message: "Induction not found" });
+    }
+
+    // Update the induction document
+    await inductionRef.update({
+      name,
+      department,
+      description,
+      questions,
+    });
+
+    res.json({ message: "Induction updated successfully" });
+
+  } catch (error) {
+    console.error("Error updating induction:", error);
+    res.status(500).send(error);
+  }
+};
