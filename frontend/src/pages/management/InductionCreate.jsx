@@ -262,6 +262,7 @@ const InductionCreate = () => {
                 setInduction={setInduction}
                 handleSubmit={HANDLE_SUBMIT}
                 isSubmitDisabled={isSubmitDisabled}
+                isCreatingInduction={true}
               />
   
               {/* Main content for managing induction details */}

@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
-import Departments from "../../models/Departments";
 import InductionForm from "../../components/InductionForm";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -116,130 +115,139 @@ const InductionEdit = () => {
       {/* Main content area */}
       {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
       <div className="flex bg-gray-50">
+        
           {/* Management Sidebar */}
           <div className="hidden md:flex">
             <ManagementSidebar />
           </div>
-          <div className="flex-1 ml-6 md:ml-8 p-6">
-              {/* Induction Form Component */}
-              <InductionForm
-                induction={induction}
-                setInduction={setInduction}
-                handleSubmit={handleSubmit}
-                isSubmitDisabled={isSubmitDisabled}
-              />
 
-              {/* Main content for managing induction details */}
-              <div className="p-4 mx-auto max-w-5xl space-y-6">
-                <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
-                  {/* Department Section */}
-                  <div className="space-y-2">
-                    <label htmlFor="department" className="text-sm font-bold text-gray-700 flex items-center">
-                      Department:
-                      {!isEditingDepartment ? (
-                        <button
-                          type="button"
-                          onClick={TOGGLE_EDIT_DEPARTMENT}
-                          className="ml-2 text-gray-600 hover:text-gray-800"
-                          title="Edit department"
-                        >
-                          <FaEdit />
-                        </button>
+          {loading ? (
+            <Loading message={loadingMessage} />
+          ):(
+            <>
+              <div className="flex-1 ml-6 md:ml-8 p-6">
+                {/* Induction Form Component */}
+                <InductionForm
+                  induction={induction}
+                  setInduction={setInduction}
+                  handleSubmit={handleSubmit}
+                  isSubmitDisabled={isSubmitDisabled}
+                  isCreatingInduction={false}
+                />
+
+                {/* Main content for managing induction details */}
+                <div className="p-4 mx-auto max-w-5xl space-y-6">
+                  <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
+                    {/* Department Section */}
+                    <div className="space-y-2">
+                      <label htmlFor="department" className="text-sm font-bold text-gray-700 flex items-center">
+                        Department:
+                        {!isEditingDepartment ? (
+                          <button
+                            type="button"
+                            onClick={TOGGLE_EDIT_DEPARTMENT}
+                            className="ml-2 text-gray-600 hover:text-gray-800"
+                            title="Edit department"
+                          >
+                            <FaEdit />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={TOGGLE_EDIT_DEPARTMENT}
+                            className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
+                          >
+                            <FaCheck className="inline mr-2" /> Update
+                          </button>
+                        )}
+                      </label>
+                      {isEditingDepartment ? (
+                        <div className="flex items-center space-x-2">
+                          <select
+                            id="department"
+                            name="department"
+                            value={induction.department}
+                            onChange={handleDepartmentChange}
+                            className="border border-gray-300 rounded-lg p-2 focus:ring-gray-800 focus:border-gray-800"
+                          >
+                            <option value="">Select a department</option>
+                            {Departments.map((dept) => (
+                              <option key={dept.id} value={dept.name}>
+                                {dept.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
                       ) : (
-                        <button
-                          type="button"
-                          onClick={TOGGLE_EDIT_DEPARTMENT}
-                          className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
-                        >
-                          <FaCheck className="inline mr-2" /> Update
-                        </button>
+                        <span className="text-base">{induction.department || "Select a department"}</span>
                       )}
-                    </label>
-                    {isEditingDepartment ? (
-                      <div className="flex items-center space-x-2">
-                        <select
-                          id="department"
-                          name="department"
-                          value={induction.department}
-                          onChange={handleDepartmentChange}
-                          className="border border-gray-300 rounded-lg p-2 focus:ring-gray-800 focus:border-gray-800"
-                        >
-                          <option value="">Select a department</option>
-                          {Departments.map((dept) => (
-                            <option key={dept.id} value={dept.name}>
-                              {dept.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ) : (
-                      <span className="text-base">{induction.department || "Select a department"}</span>
-                    )}
+                    </div>
+
+                    {/* Description Section */}
+                    <div className="space-y-2">
+                      <label htmlFor="description" className="text-sm font-bold text-gray-700 flex items-center">
+                        Description:
+                        {!isEditingDescription ? (
+                          <button
+                            type="button"
+                            onClick={TOGGLE_EDIT_DESCRIPTION}
+                            className="ml-2 text-gray-600 hover:text-gray-800"
+                            title="Edit description"
+                          >
+                            <FaEdit />
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={TOGGLE_EDIT_DESCRIPTION}
+                            className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
+                          >
+                            <FaCheck className="inline mr-2" /> Update
+                          </button>
+                        )}
+                      </label>
+                      {isEditingDescription ? (
+                        <ReactQuill
+                          value={induction.description}
+                          onChange={(value) => setInduction({ ...induction, description: value })}
+                          placeholder="Enter description"
+                          className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
+                          modules={MODULES}
+                          formats={FORMATS}
+                        />
+                        ) : (
+                        <p className="text-base" dangerouslySetInnerHTML={{ __html: induction.description || "No description added" }} />
+                      )}
+                    </div>
+
                   </div>
 
-                  {/* Description Section */}
-                  <div className="space-y-2">
-                    <label htmlFor="description" className="text-sm font-bold text-gray-700 flex items-center">
-                      Description:
-                      {!isEditingDescription ? (
-                        <button
-                          type="button"
-                          onClick={TOGGLE_EDIT_DESCRIPTION}
-                          className="ml-2 text-gray-600 hover:text-gray-800"
-                          title="Edit description"
-                        >
-                          <FaEdit />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={TOGGLE_EDIT_DESCRIPTION}
-                          className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
-                        >
-                          <FaCheck className="inline mr-2" /> Update
-                        </button>
-                      )}
-                    </label>
-                    {isEditingDescription ? (
-                      <ReactQuill
-                        value={induction.description}
-                        onChange={(value) => setInduction({ ...induction, description: value })}
-                        placeholder="Enter description"
-                        className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
-                        modules={MODULES}
-                        formats={FORMATS}
-                      />
-                      ) : (
-                      <p className="text-base" dangerouslySetInnerHTML={{ __html: induction.description || "No description added" }} />
-                    )}
+                  {/* Questions Section */}
+                  <hr />
+                  <div className="flex-1">
+                    <h2 className="text-xl font-semibold">Questions</h2>
+                    <p className="text-sm text-gray-500">Let's add some questions to the induction!</p>
                   </div>
 
-                </div>
+                  <div className="bg-white p-6 rounded-lg shadow-md">
+                    <p>Add question functionality in development</p>
+                  </div>
 
-                {/* Questions Section */}
-                <hr />
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold">Questions</h2>
-                  <p className="text-sm text-gray-500">Let's add some questions to the induction!</p>
+                  {/* Save Button */}
+                  <div className="flex justify-center mt-6">
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
+                      disabled={isSubmitDisabled}
+                    >
+                      <FaSave className="inline mr-2" /> Save Induction
+                    </button>
+                  </div>
                 </div>
-
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                  <p>Add question functionality in development</p>
-                </div>
-
-                {/* Save Button */}
-                <div className="flex justify-center mt-6">
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
-                    disabled={isSubmitDisabled}
-                  >
-                    <FaSave className="inline mr-2" /> Save Induction
-                  </button>
-                </div>
-              </div>
-          </div>
+            </div>
+            </>
+          )}
         </div>
     </>
   );

@@ -10,6 +10,7 @@ import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
 import UserInductionManagement from '../../components/management/UserInductionManagement';
 import { FaUserEdit } from "react-icons/fa";
+import Loading from '../../components/Loading';
 
 const ManageUserInductionPage = () => {
   const [viewedUser, setViewedUser] = useState(DefaultNewUser);
@@ -88,7 +89,7 @@ const ManageUserInductionPage = () => {
         {/* Main content area */}
         <div className="flex-1 ml-6 md:ml-8 p-6">
           {loading ? (
-            <p className="text-gray-600">{loadingMessage}</p>
+            <Loading message={loadingMessage} />
           ) : (
             <>
               <UserInductionManagement userData={viewedUser} onSubmit={handleSubmit} />

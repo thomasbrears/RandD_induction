@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FaEdit, FaSave, FaCheck } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 
-const InductionForm = ({ induction, setInduction, handleSubmit, isSubmitDisabled }) => {
+const InductionForm = ({ induction, setInduction, handleSubmit, isSubmitDisabled , isCreatingInduction}) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [isEditingDepartment, setIsEditingDepartment] = useState(false);
   const [isEditingDescription, setIsEditingDescription] = useState(false);
@@ -83,7 +83,7 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isSubmitDisabled
             className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
             disabled={isSubmitDisabled}
           >
-            <FaSave className="inline mr-2" /> Create Induction
+            <FaSave className="inline mr-2" /> {isCreatingInduction ? "Create": "Save"} Induction
           </button>
         </div>
       </div>
