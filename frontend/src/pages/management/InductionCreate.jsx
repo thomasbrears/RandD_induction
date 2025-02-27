@@ -337,16 +337,20 @@ const InductionCreate = () => {
                       )}
                     </label>
                     {isEditingDescription ? (
-                      <ReactQuill
-                        value={induction.description}
-                        onChange={(value) => setInduction({ ...induction, description: value })}
-                        placeholder="Enter description"
-                        className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
-                        modules={MODULES}
-                        formats={FORMATS}
-                      />
+                      <div className="prose">
+                        <ReactQuill
+                          value={induction.description}
+                          onChange={(value) => setInduction({ ...induction, description: value })}
+                          placeholder="Enter description"
+                          className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
+                          modules={MODULES}
+                          formats={FORMATS}
+                        />
+                      </div>
                       ) : (
-                      <p className="text-base" dangerouslySetInnerHTML={{ __html: induction.description || "No description added" }} />
+                      <div className="prose">
+                        <p className="text-base" dangerouslySetInnerHTML={{ __html: induction.description || "No description added" }} />
+                      </div>
                     )}
                   </div>
 

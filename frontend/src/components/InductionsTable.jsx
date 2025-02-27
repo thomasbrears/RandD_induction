@@ -11,7 +11,6 @@ import {
 } from "@tanstack/react-table";
 import {
   User,
-  Mail,
   ArrowUpDown,
   Search,
   ChevronsLeft,
@@ -24,6 +23,7 @@ import Loading from './Loading';
 import { Link, useNavigate } from "react-router-dom";
 import { FaUserEdit, FaUserPlus} from "react-icons/fa";
 import { getAllInductions } from "../api/InductionApi";
+import "react-quill/dist/quill.snow.css";
 
 const columnHelper = createColumnHelper();
 
@@ -64,7 +64,12 @@ const InductionsTable = () => {
     }),
 
     columnHelper.accessor("description", {
-      cell: (info) => info.getValue(),
+      cell: (info) => (
+        <div className="prose">
+          <div dangerouslySetInnerHTML={{ __html: info.getValue() }} className="text-base" />
+        </div>
+        
+      ),
       header: () => (
         <span className="flex items-center">
           <User className="mr-2" size={16} /> Description
