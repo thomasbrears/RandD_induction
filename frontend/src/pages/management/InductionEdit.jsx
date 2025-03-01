@@ -259,25 +259,38 @@ const InductionEdit = () => {
                   onSave={handleSaveQuestion}
                 />
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h2 className="text-xl font-semibold">Questions</h2>
-                    <p className="text-sm text-gray-500">Let's add some questions to the induction!</p>
-                  </div>
-                  <button
-                    className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md mr-2"
-                    type="button"
-                    onClick={handleAddQuestion}
-                  >
-                    Add Question
-                  </button>
-                </div>
-
                 <div className="bg-white p-6 rounded-lg shadow-md">
-                  <QuestionList
-                    questions={questions}
-                    setQuestions={setQuestions}
-                  />
+                  {/* Top Row - Title, Description, Add Question Button */}
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-xl font-semibold">Questions</h2>
+                      <p className="text-sm text-gray-500">Let's add some questions to the induction!</p>
+                    </div>
+                    <button
+                      className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
+                      type="button"
+                      onClick={handleAddQuestion}
+                    >
+                      Add Question
+                    </button>
+                  </div>
+
+                  {/* Question List*/}
+                  <div className="mt-4">
+                    <QuestionList questions={questions} setQuestions={setQuestions} />
+                  </div>
+
+                  {questions.length > 0 && (
+                    <div className="mt-6 flex justify-center">
+                      <button
+                        className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
+                        type="button"
+                        onClick={handleAddQuestion}
+                      >
+                        Add Question
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 {/* Save Button */}
