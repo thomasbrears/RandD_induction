@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Modal, Select, Input, Button, Upload, Checkbox } from "antd";
-import QuestionTypes from "../models/QuestionTypes";
+import QuestionTypes from "../../models/QuestionTypes";
 import { Check, X } from "lucide-react";
 
 const QuestionForm = ({ visible, onClose, onSave }) => {
@@ -96,6 +96,7 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                     className="w-full"
                     value={questionType}
                     onChange={handleQuestionTypeChange}
+                    autoFocus
                 >
                     <Select.Option value={QuestionTypes.MULTICHOICE}>Multiple Choice</Select.Option>
                     <Select.Option value={QuestionTypes.TRUE_FALSE}>True/False</Select.Option>

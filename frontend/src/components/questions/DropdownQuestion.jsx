@@ -1,11 +1,18 @@
 import { useState } from "react";
-import { Input } from "antd";
-import { FaEdit } from "react-icons/fa";
+import { Input, Checkbox } from "antd";
+import { FaEdit} from "react-icons/fa";
 
-const TrueFalseQuestion = ({ question, onChange }) => {
+const DropdownQuestion = ({ question, onChange }) => {
   const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
 
+  // Define the toolbar options
+  const MODULES = {
+    toolbar: [["bold", "italic", "underline"]],
+  };
+
+  const FORMATS = ["bold", "italic", "underline"];
+  
   const startEditing = (field) => setEditingField(field);
   const stopEditing = () => {
     onChange(question.id, localValues);
@@ -15,14 +22,6 @@ const TrueFalseQuestion = ({ question, onChange }) => {
   const handleChange = (field, value) => {
     setLocalValues((prev) => ({ ...prev, [field]: value }));
     onChange(question.id, field, value);
-  };
-
-  const handleTrueFalseAnswerSelect = (index) => {
-    setLocalValues((prev) => ({
-      ...prev,
-      answers: [index],
-    }));
-    onChange(question.id, "answers", [index]);
   };
 
   return (
@@ -46,30 +45,27 @@ const TrueFalseQuestion = ({ question, onChange }) => {
         )}
       </div>
 
-      {/* Options (True/False) */}
-      <div className="mt-4">
-        <div className="flex justify-between items-center">
-          <p className="font-semibold">Options:</p>
-          <p className="text-sm text-gray-500">Choose the correct answer.</p>
-        </div>
-
+      {/* Options */}
+      <div>
+        <p className="font-semibold">Options:</p>
         {localValues.options.map((option, index) => (
-          <div
-            key={index}
-            className={`flex items-center gap-2 mt-2 p-2 rounded-md cursor-pointer border-2 ${localValues.answers.length > 0 && localValues.answers[0] === index
-                ? "bg-green-100 border-green-500"
-                : "bg-white border-gray-300"
-              }`}
-            onClick={() => handleTrueFalseAnswerSelect(index)}
-          >
-            <input
-              type="radio"
-              name="trueFalseAnswer"
-              checked={localValues.answers.length > 0 ? localValues.answers[0] === index : index === 0}
-              onChange={() => handleTrueFalseAnswerSelect(index)}
-              className="cursor-pointer"
-            />
-            <span className="text-gray-700 text-sm">{option}</span>
+          <div key={index} className="flex items-center gap-2">
+            <Checkbox checked={question.answers.includes(index)} />
+            {editingField === `option-${index}` ? (
+              <Input
+                value={localValues.options[index]}
+                onChange={(e) => {
+                  const newOptions = [...localValues.options];
+                  newOptions[index] = e.target.value;
+                  handleChange("options", newOptions);
+                }}
+                onBlur={stopEditing}
+              />
+            ) : (
+              <span className="cursor-pointer text-gray-600" onClick={() => startEditing(`option-${index}`)}>
+                {option} <FaEdit className="inline-block ml-2 text-gray-500" />
+              </span>
+            )}
           </div>
         ))}
       </div>
@@ -77,4 +73,4 @@ const TrueFalseQuestion = ({ question, onChange }) => {
   );
 };
 
-export default TrueFalseQuestion;
+export default DropdownQuestion;

@@ -13,8 +13,8 @@ import ReactQuill from 'react-quill';
 import { FaEdit, FaSave, FaCheck } from 'react-icons/fa';
 import Loading from "../../components/Loading";
 import "react-quill/dist/quill.snow.css";
-import QuestionList from "../../components/QuestionList";
-import QuestionForm from "../../components/QuestionForm";
+import QuestionList from "../../components/questions/QuestionList";
+import QuestionForm from "../../components/questions/QuestionForm";
 
 const InductionEdit = () => {
   const { user, loading: authLoading } = useAuth();
