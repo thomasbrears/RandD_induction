@@ -1,10 +1,17 @@
 import { useState } from "react";
-import { Input } from "antd";
-import { FaEdit } from "react-icons/fa";
+import { FaEdit, FaCheck } from "react-icons/fa";
+import ReactQuill from "react-quill";
 
 const FileUploadQuestion = ({ question, onChange }) => {
 const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
+
+  // Define the toolbar options
+  const MODULES = {
+    toolbar: [["bold", "italic", "underline"]],
+  };
+
+  const FORMATS = ["bold", "italic", "underline"];
 
   const startEditing = (field) => setEditingField(field);
   const stopEditing = () => {
@@ -20,23 +27,46 @@ const [editingField, setEditingField] = useState(null);
   return (
     <div className="p-4 rounded-md bg-white">
       {/* Description */}
-      <div className="mb-2">
-        <p className="font-semibold">Description:</p>
-        {editingField === "description" ? (
-          <Input.TextArea
-            value={localValues.description}
-            onChange={(e) => handleChange("description", e.target.value)}
-            onBlur={stopEditing}
-            autoSize={{ minRows: 1, maxRows: 5 }}
-            onPressEnter={stopEditing}
-            allowClear={true}
-          />
-        ) : (
-          <p className="cursor-pointer text-gray-600 cursor-text break-words w-full" onClick={() => startEditing("description")}>
-            {question.description || "No description"} <FaEdit className="inline-block ml-2 text-gray-500" />
-          </p>
-        )}
-      </div>
+            <div className="mb-2">
+              <div className="flex items-center">
+                <p className="font-semibold mr-2">Description:</p>
+                {editingField === "description" ? (
+                  <button
+                    type="button"
+                    onClick={stopEditing}
+                    className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm flex items-center"
+                  >
+                    <FaCheck className="inline mr-2" /> Update
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => startEditing("description")}
+                    className="ml-2 text-gray-600 hover:text-gray-800"
+                    title="Edit description"
+                  >
+                    <FaEdit />
+                  </button>
+                )}
+              </div>
+      
+              {editingField === "description" ? (
+                <div className="prose !max-w-none w-full mt-2">
+                  <ReactQuill
+                    value={localValues.description}
+                    onChange={(value) => handleChange("description", value)}
+                    placeholder="Enter description"
+                    className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
+                    modules={MODULES}
+                    formats={FORMATS}
+                  />
+                </div>
+              ) : (
+                <div className="prose !max-w-none w-full break-words mt-2">
+                  <p className="text-base cursor-pointer text-gray-600" dangerouslySetInnerHTML={{ __html: question.description || "No description" }} />
+                </div>
+              )}
+            </div>
     </div>
   );
 };

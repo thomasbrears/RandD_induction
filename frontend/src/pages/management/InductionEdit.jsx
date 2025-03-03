@@ -208,7 +208,7 @@ const InductionEdit = () => {
                   </div>
 
                   {/* Description Section */}
-                  <div className="space-y-2">
+                  <div className="space-y-2 w-full">
                     <label htmlFor="description" className="text-sm font-bold text-gray-700 flex items-center">
                       Description:
                       {!isEditingDescription ? (
@@ -230,8 +230,9 @@ const InductionEdit = () => {
                         </button>
                       )}
                     </label>
+
                     {isEditingDescription ? (
-                      <div className="prose">
+                      <div className="prose !max-w-none w-full">
                         <ReactQuill
                           value={induction.description}
                           onChange={(value) => setInduction({ ...induction, description: value })}
@@ -242,12 +243,11 @@ const InductionEdit = () => {
                         />
                       </div>
                     ) : (
-                      <div className="prose">
+                      <div className="prose !max-w-none w-full break-words">
                         <p className="text-base" dangerouslySetInnerHTML={{ __html: induction.description || "No description added" }} />
                       </div>
                     )}
                   </div>
-
                 </div>
 
                 {/* Questions Section */}
