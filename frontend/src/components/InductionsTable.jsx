@@ -10,7 +10,9 @@ import {
   getPaginationRowModel,
 } from "@tanstack/react-table";
 import {
-  User,
+  List,
+  FileText,
+  BookType,
   ArrowUpDown,
   Search,
   ChevronsLeft,
@@ -21,7 +23,7 @@ import {
 import "../style/Table.css";
 import Loading from './Loading';
 import { Link, useNavigate } from "react-router-dom";
-import { FaUserEdit, FaUserPlus} from "react-icons/fa";
+import { FaUserEdit, FaUserPlus } from "react-icons/fa";
 import { getAllInductions } from "../api/InductionApi";
 import "react-quill/dist/quill.snow.css";
 
@@ -37,42 +39,43 @@ const InductionsTable = () => {
   const [loadingMessage, setLoadingMessage] = useState('');
 
   const handleEditInduction = async (id) => {
-    navigate("/management/inductions/edit", {state: {id}});
+    navigate("/management/inductions/edit", { state: { id } });
   };
 
   const handleInductionAssignment = async (id) => {
-    navigate("/management/users/inductions", {state: {id}});
+    navigate("/management/users/inductions", { state: { id } });
   };
 
   const columns = [
     columnHelper.accessor("name", {
-      cell: (info) => info.getValue(),
+      cell: (info) => (
+        <div className="break-words text-sm ">{info.getValue()}</div>
+      ),
       header: () => (
         <span className="flex items-center">
-          <User className="mr-2" size={16} /> Induction Name
+          <BookType className="mr-2" size={16} /> Induction Title
         </span>
       ),
     }),
 
     columnHelper.accessor("department", {
-      cell: (info) => info.getValue(),
+      cell: (info) => <span className="whitespace-nowrap">{info.getValue()}</span>,
       header: () => (
         <span className="flex items-center">
-          <User className="mr-2" size={16} /> Department
+          <List className="mr-2" size={16} /> Department
         </span>
       ),
     }),
 
     columnHelper.accessor("description", {
       cell: (info) => (
-        <div className="prose">
-          <div dangerouslySetInnerHTML={{ __html: info.getValue() }} className="text-base" />
+        <div className="prose !max-w-xs break-words text-base text-sm font-heliaCoreBook text-gray-500">
+          <div dangerouslySetInnerHTML={{ __html: info.getValue() }} />
         </div>
-        
       ),
       header: () => (
         <span className="flex items-center">
-          <User className="mr-2" size={16} /> Description
+          <FileText className="mr-2" size={16} /> Description
         </span>
       ),
     }),
@@ -85,9 +88,9 @@ const InductionsTable = () => {
           <button
             onClick={() => handleEditInduction(row.original.id)}
             className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-1 rounded"
-          ><FaUserEdit className="inline mr-2" /> Edit
-          </button>  
-          &nbsp; &nbsp;
+          >
+            <FaUserEdit className="inline mr-2" /> Edit
+          </button>
         </div>
       ),
     },
@@ -141,108 +144,115 @@ const InductionsTable = () => {
         <Loading message={loadingMessage} />
       ) : (
         <>
-        {/*Search Bar*/}
-        <div className="mb-4 flex flex-col lg:flex-row lg:items-center gap-4">
-          <div className="relative flex-grow">
-            <input
-              value={globalFilter ?? ""}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              placeholder="Search..."
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-            />
-            <Search
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-              size={20}
-            />
+          {/*Search Bar*/}
+          <div className="mb-4 flex flex-col lg:flex-row lg:items-center gap-4">
+            <div className="relative flex-grow">
+              <input
+                value={globalFilter ?? ""}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                placeholder="Search..."
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+              />
+              <Search
+                className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
+                size={20}
+              />
+            </div>
+
+            {/*Desktop buttons*/}
+            <div className="lg:flex gap-4 hidden mt-4 lg:mt-0">
+              <Link to={"/management/inductions/create"}>
+                <button className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md">
+                  <FaUserPlus className="inline mr-2" /> Create New Induction
+                </button>
+              </Link>
+            </div>
+
+            {/* Mobile Buttons Below Search */}
+            <div className="lg:hidden mt-4 space-y-2">
+              <Link to={"/management/inductions/create"}>
+                <button className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md">
+                  <FaUserPlus className="inline mr-2" /> Create New Induction
+                </button>
+              </Link>
+            </div>
           </div>
 
-          {/*Desktop buttons*/}
-          <div className="lg:flex gap-4 hidden mt-4 lg:mt-0">
-            <Link to={"/management/inductions/create"}>
-              <button className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md">
-                <FaUserPlus className="inline mr-2" /> Create New Induction
-              </button>
-            </Link>
-          </div>
-
-          {/* Mobile Buttons Below Search */}
-          <div className="lg:hidden mt-4 space-y-2">
-            <Link to={"/management/inductions/create"}>
-              <button className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md">
-                <FaUserPlus className="inline mr-2" /> Create New Induction
-              </button>
-            </Link>
-          </div>
-        </div>
-  
           {/* Desktop Table */}
-          <div className="hidden lg:block">
-            <table className="min-w-full divide-y divide-gray-200 bg-white shadow-md rounded-lg">
-              <thead className="bg-gray-50">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th
-                        key={header.id}
-                        className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                      >
-                        <div
-                          {...{
-                            className: header.column.getCanSort() ? "cursor-pointer select-none flex items-center" : '',
-                            onClick: header.column.getToggleSortingHandler(),
-                          }}
-                        >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                          <ArrowUpDown className="ml-2" size={14} />
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50">
-                    {row.getVisibleCells().map((cell) => (
-                      <td
-                        key={cell.id}
-                        className="px-6 py-4 text-sm text-gray-500"
+        <div className="hidden lg:block mt-2">
+          <div className="!w-full">
+          <table className="w-full table-auto max-w-full min-w-full divide-y divide-gray-200 bg-white shadow-md rounded-lg">
+            <thead className="bg-gray-50 max-w-[200px] md:max-w-[300px]">
+              {table.getHeaderGroups().map((headerGroup) => (
+                <tr key={headerGroup.id}>
+                  {headerGroup.headers.map((header) => (
+                    <th
+                      key={header.id}
+                      className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-[200px] md:max-w-[250px]"
+                    >
+                      <div
+                        {...{
+                          className: header.column.getCanSort()
+                            ? "cursor-pointer select-none flex items-center"
+                            : "",
+                          onClick: header.column.getToggleSortingHandler(),
+                        }}
                       >
                         {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
+                          header.column.columnDef.header,
+                          header.getContext()
                         )}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        <ArrowUpDown className="ml-2" size={14} />
+                      </div>
+                    </th>
+                  ))}
+                </tr>  
+              ))}
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {table.getRowModel().rows.map((row) => (
+                <tr key={row.id} className="hover:bg-gray-50">
+                  {row.getVisibleCells().map((cell) => (
+                    <td
+                      key={cell.id}
+                      className="px-6 py-4 text-sm text-gray-500 break-words whitespace-normal max-w-xs max-w-[200px] md:max-w-[250px]" 
+                    >
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
           </div>
+        </div>
 
           {/* Mobile List of Table */}
           <div className="lg:hidden space-y-4">
             {table.getRowModel().rows.map((row) => (
               <div key={row.id} className="bg-white shadow-md rounded-lg p-4">
-                <h3 className="text-lg font-semibold">
+                {/* Induction Title */}
+                <h3 className="text-lg font-semibold break-words whitespace-normal">
                   <Link to={`/inductions/${row.original.id}`} className="text-black hover:underline">
                     {row.original.name}
                   </Link>
                 </h3>
-                <div className="text-sm text-gray-600 mt-2">
+
+                <div className="text-sm text-gray-600 mt-2 break-words whitespace-normal">
                   <p>
-                    <span className="font-semibold">Department: </span> 
-                    <a href={`mailto:${row.original.department}`} className="text-blue-500 hover:underline">{row.original.department}</a>
+                    <span className="font-semibold">Department: </span>
+                    <a href={`mailto:${row.original.department}`} className="text-blue-500 hover:underline">
+                      {row.original.department}
+                    </a>
                   </p>
                   <p>
-                    <span className="font-semibold">Descriptions: </span> {row.original.description}
+                    <span className="font-semibold">Description: </span>
+                    <span className="prose !max-w-none text-base">
+                      <div dangerouslySetInnerHTML={{ __html: row.original.description }} />
+                    </span>
                   </p>
                 </div>
 
-                {/*User Actions*/}
                 <div className="flex flex-wrap">
                   <button
                     onClick={() => handleEditInduction(row.original.id)}
@@ -254,7 +264,7 @@ const InductionsTable = () => {
               </div>
             ))}
           </div>
-  
+
           {/* Pagination Controls */}
           <div className="flex flex-col sm:flex-row justify-between items-center mt-4 text-sm text-gray-700">
             {/* Items per page */}
@@ -283,7 +293,7 @@ const InductionsTable = () => {
               >
                 <ChevronsLeft size={20} />
               </button>
-  
+
               <button
                 className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
                 onClick={() => table.previousPage()}
@@ -291,7 +301,7 @@ const InductionsTable = () => {
               >
                 <ChevronLeft size={20} />
               </button>
-  
+
               <span className="flex items-center">
                 <input
                   min={1}
@@ -306,7 +316,7 @@ const InductionsTable = () => {
                 />
                 <span className="ml-1">of {table.getPageCount()}</span>
               </span>
-  
+
               <button
                 className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
                 onClick={() => table.nextPage()}
@@ -314,7 +324,7 @@ const InductionsTable = () => {
               >
                 <ChevronRight size={20} />
               </button>
-  
+
               <button
                 className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
                 onClick={() => table.setPageIndex(table.getPageCount() - 1)}
@@ -327,7 +337,7 @@ const InductionsTable = () => {
         </>
       )}
     </div>
-  );  
+  );
 };
 
 export default InductionsTable;

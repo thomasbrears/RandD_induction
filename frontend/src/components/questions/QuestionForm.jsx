@@ -41,9 +41,14 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
     };
 
     const handleRemoveOption = (index) => {
-        setOptions(options.filter((_, i) => i !== index));
-        setAnswers(answers.filter((i) => i !== index));
-    };
+        const updatedOptions = options.filter((_, i) => i !== index);
+        const updatedAnswers = answers
+          .filter((answerIndex) => answerIndex !== index)
+          .map((answerIndex) => (answerIndex > index ? answerIndex - 1 : answerIndex));
+      
+        setOptions(updatedOptions);
+        setAnswers(updatedAnswers);
+      };
 
     const handleOptionChange = (index, value) => {
         const updatedOptions = [...options];
@@ -184,71 +189,75 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                     {options.map((option, index) => (
                         <div
                             key={index}
-                            className={`flex items-center gap-2 mt-2 p-2 rounded-md border-2 transition-colors ${
-                            answers.includes(index)
+                            className={`flex items-center gap-2 mt-2 p-2 rounded-md border-2 transition-colors ${answers.includes(index)
                                 ? "bg-green-100 border-green-500"
-                                : "bg-red-100 border-red-500"
-                            }`}
+                                : "bg-gray-200 border-gray-400"
+                                }`}
                         >
                             <button
-                            type="button"
-                            onClick={() => handleAnswerSelect(index)}
-                            className={`w-7 h-7 flex items-center justify-center rounded-md cursor-pointer transition-all ${
-                                answers.includes(index) ? "bg-green-500" : "bg-red-500"
-                            }`}
+                                type="button"
+                                onClick={() => handleAnswerSelect(index)}
+                                className={`relative w-7 h-7 flex items-center justify-center rounded-md cursor-pointer transition-all ${answers.includes(index) ? "bg-green-500" : "bg-gray-400"
+                                    }`}
                             >
-                            {answers.includes(index) ? (
-                                <Check className="text-white w-5 h-5" /> // Green tick
-                            ) : (
-                                <X className="text-white w-5 h-5" /> // Red cross
-                            )}
+                                <span className="group">
+                                    {answers.includes(index) ? (
+                                        <Check className="text-white w-5 h-5" />
+                                    ) : (
+                                        <X className="text-white w-5 h-5" />
+                                    )}
+                                    {/* Tooltip */}
+                                    <span className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black text-white text-xs rounded px-2 py-1 whitespace-nowrap">
+                                        {answers.includes(index) ? "Correct answer" : "Incorrect answer"}
+                                    </span>
+                                </span>
                             </button>
 
                             <Input
-                            value={option}
-                            onChange={(e) => handleOptionChange(index, e.target.value)}
-                            placeholder="Enter your answer option"
-                            className="flex-1"
+                                value={option}
+                                onChange={(e) => handleOptionChange(index, e.target.value)}
+                                placeholder="Enter your answer option"
+                                className="flex-1"
                             />
 
                             <Button
-                            onClick={() => handleRemoveOption(index)}
-                            className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md"
+                                onClick={() => handleRemoveOption(index)}
+                                className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md"
                             >
-                            Remove
+                                Remove
                             </Button>
                         </div>
-                        ))}
+                    ))}
                 </div>
             )}
 
             {questionType === QuestionTypes.TRUE_FALSE && (
-            <div className="mt-4">
-                <div className="flex justify-between items-center">
-                <label>Options:</label>
-                <p className="text-sm text-gray-500">Choose correct answer.</p>
-                </div>
+                <div className="mt-4">
+                    <div className="flex justify-between items-center">
+                        <label>Options:</label>
+                        <p className="text-sm text-gray-500">Choose correct answer.</p>
+                    </div>
 
-                {options.map((option, index) => (
-                <div
-                    key={index}
-                    className={`flex items-center gap-2 mt-2 p-2 rounded-md cursor-pointer border-2 ${
-                    answers.length > 0 && answers[0] === index
-                        ? 'bg-green-100 border-green-500'
-                        : 'bg-white border-transparent'
-                    }`}
-                >
-                    <input
-                    type="radio"
-                    name="trueFalseAnswer"
-                    checked={answers.length > 0 ? answers[0] === index : index === 0}
-                    onChange={() => handleTrueFalseAnswerSelect(index)}
-                    className="cursor-pointer"
-                    />
-                    <label className="text-gray-700 text-sm">{option}</label>
+                    {options.map((option, index) => (
+                        <div
+                            key={index}
+                            className={`flex items-center gap-2 mt-2 p-2 rounded-md cursor-pointer border-2 ${answers.length > 0 && answers[0] === index
+                                ? 'bg-green-100 border-green-500'
+                                : 'bg-white border-transparent'
+                                }`}
+                        >
+                            <input
+                                type="radio"
+                                name="trueFalseAnswer"
+                                value={index}
+                                checked={answers.length > 0 ? answers[0] === index : index === 0}
+                                onChange={() => handleTrueFalseAnswerSelect(index)}
+                                className="cursor-pointer"
+                            />
+                            <label className="text-gray-700 text-sm">{option}</label>
+                        </div>
+                    ))}
                 </div>
-                ))}
-            </div>
             )}
 
             {/*implement form input checking */}

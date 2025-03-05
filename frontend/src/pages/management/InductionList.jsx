@@ -23,7 +23,7 @@ const InductionList = () => {
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 ml-6 md:ml-8 p-6">
+        <div className="flex-1 ml-6 md:ml-8 p-6 max-w-full overflow-hidden">
           <InductionsTable />
         </div>
       </div>

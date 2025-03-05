@@ -88,13 +88,14 @@ const TrueFalseQuestion = ({ question, onChange }) => {
             key={index}
             className={`flex items-center gap-2 mt-2 p-2 rounded-md cursor-pointer border-2 ${localValues.answers.length > 0 && localValues.answers[0] === index
               ? "bg-green-100 border-green-500"
-              : "bg-white border-gray-300"
+              : "bg-white border-transparent"
               }`}
             onClick={() => handleTrueFalseAnswerSelect(index)}
           >
             <input
               type="radio"
               name="trueFalseAnswer"
+              value={index}
               checked={localValues.answers.length > 0 ? localValues.answers[0] === index : index === 0}
               onChange={() => handleTrueFalseAnswerSelect(index)}
               className="cursor-pointer"

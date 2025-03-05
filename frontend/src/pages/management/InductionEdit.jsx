@@ -138,7 +138,7 @@ const InductionEdit = () => {
 
       {/* Main content area */}
       {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
-      <div className="flex bg-gray-50">
+      <div className="flex bg-gray-50 w-full">
 
         {/* Management Sidebar */}
         <div className="hidden md:flex">
@@ -149,7 +149,7 @@ const InductionEdit = () => {
           <Loading message={loadingMessage} />
         ) : (
           <>
-            <div className="flex-1 ml-6 md:ml-8 p-6">
+            <div className="flex-1 ml-6 md:ml-8 p-6 w-full max-w-full overflow-hidden">
               {/* Induction Form Component */}
               <InductionForm
                 induction={induction}
