@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FaEdit, FaCheck } from "react-icons/fa";
 import ReactQuill from "react-quill";
 
-const FileUploadQuestion = ({ question, onChange, onDeleteQuestion }) => {
+const FileUploadQuestion = ({ question, onChange}) => {
 const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
 

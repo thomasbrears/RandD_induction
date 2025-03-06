@@ -243,7 +243,7 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                             key={index}
                             className={`flex items-center gap-2 mt-2 p-2 rounded-md cursor-pointer border-2 ${answers.length > 0 && answers[0] === index
                                 ? 'bg-green-100 border-green-500'
-                                : 'bg-white border-transparent'
+                                : 'bg-gray-200 border-gray-400'
                                 }`}
                         >
                             <input

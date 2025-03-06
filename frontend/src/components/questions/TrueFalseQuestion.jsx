@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FaEdit, FaCheck } from "react-icons/fa";
 import ReactQuill from "react-quill";
 
-const TrueFalseQuestion = ({ question, onChange, onDeleteQuestion }) => {
+const TrueFalseQuestion = ({ question, onChange}) => {
   const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
 
@@ -88,7 +88,7 @@ const TrueFalseQuestion = ({ question, onChange, onDeleteQuestion }) => {
             key={index}
             className={`flex items-center gap-2 mt-2 p-2 rounded-md cursor-pointer border-2 ${localValues.answers.length > 0 && localValues.answers[0] === index
               ? "bg-green-100 border-green-500"
-              : "bg-white border-transparent"
+              : "bg-gray-200 border-gray-400"
               }`}
             onClick={() => handleTrueFalseAnswerSelect(index)}
           >

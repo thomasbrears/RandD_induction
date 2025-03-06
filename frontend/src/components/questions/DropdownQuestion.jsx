@@ -4,7 +4,7 @@ import { FaEdit, FaCheck } from "react-icons/fa";
 import ReactQuill from "react-quill";
 import { Check, X } from "lucide-react";
 
-const DropdownQuestion = ({ question, onChange , onDeleteQuestion}) => {
+const DropdownQuestion = ({ question, onChange }) => {
   const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
 
@@ -120,17 +120,20 @@ const DropdownQuestion = ({ question, onChange , onDeleteQuestion}) => {
         {localValues.options.map((option, index) => (
           <div
             key={index}
-            className={`flex items-center gap-2 mt-2 p-2 rounded-md border-2 transition-colors ${localValues.answers.includes(index)
-              ? "bg-green-100 border-green-500"
-              : "bg-gray-200 border-gray-400"
+            className={`flex items-start gap-2 mt-2 p-2 rounded-md border-2 transition-colors ${localValues.answers.includes(index)
+                ? "bg-green-100 border-green-500"
+                : "bg-gray-200 border-gray-400"
               }`}
           >
+            {/* Custom Checkbox */}
             <button
               type="button"
               onClick={() => handleAnswerSelect(index)}
               className={`relative w-7 h-7 flex items-center justify-center rounded-md cursor-pointer transition-all ${localValues.answers.includes(index) ? "bg-green-500" : "bg-gray-400"
                 }`}
-              title={localValues.answers.includes(index) ? "Correct answer" : "Incorrect answer"}
+              title={
+                localValues.answers.includes(index) ? "Correct answer" : "Incorrect answer"
+              }
             >
               <span className="group">
                 {localValues.answers.includes(index) ? (
@@ -141,44 +144,53 @@ const DropdownQuestion = ({ question, onChange , onDeleteQuestion}) => {
               </span>
             </button>
 
-            {/* Editable option text */}
+            {/* Editable Option Text */}
             {editingField === `option-${index}` ? (
-              <Input
-                className="flex-1"
-                placeholder="Enter your answer option"
-                value={localValues.options[index]}
-                onChange={(e) => {
-                  const newOptions = [...localValues.options];
-                  newOptions[index] = e.target.value;
-                  handleLocalChange("options", newOptions);
-                }}
-                onBlur={() => stopEditing("options", localValues.options)}
-              />
+              <div className="flex flex-1 flex-col gap-2">
+                {/* Input Area */}
+                <Input.TextArea
+                  className="flex-1 min-w-0"
+                  placeholder="Enter your answer option"
+                  value={localValues.options[index]}
+                  onChange={(e) => {
+                    const newOptions = [...localValues.options];
+                    newOptions[index] = e.target.value;
+                    handleLocalChange("options", newOptions);
+                  }}
+                  autoSize={{ minRows: 1, maxRows: 5 }}
+                  maxLength={500}
+                  showCount={true}
+                />
+
+                {/* Update Button */}
+                <button
+                  type="button"
+                  onClick={() => stopEditing("options", localValues.options)}
+                  className="bg-gray-800 text-white px-3 py-1 rounded-md text-sm flex items-center self-start"
+                >
+                  <FaCheck className="mr-1" /> Update
+                </button>
+              </div>
             ) : (
-              <span className="cursor-pointer text-gray-600 flex-1"
+              <div
+                className="cursor-pointer text-gray-600 flex-1 break-words min-w-0"
                 onClick={() => startEditing(`option-${index}`)}
-                title="Edit Option Text">
+                title="Edit Option Text"
+              >
                 {option} <FaEdit className="inline-block ml-2 text-gray-500" />
-              </span>
+              </div>
             )}
 
-            {/* Remove option button */}
+            {/* Remove Option Button */}
             <Button
               onClick={() => handleRemoveOption(index)}
-              className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md"
+              className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md self-start"
             >
               Remove
             </Button>
           </div>
         ))}
       </div>
-      {/* Delete Question button */}
-      <Button
-        onClick={() => onDeleteQuestion()}
-        className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md"
-      >
-        Delete Question
-      </Button>
     </div>
   );
 };
