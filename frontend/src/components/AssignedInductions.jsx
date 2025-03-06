@@ -52,10 +52,10 @@ const DateCell = ({ date }) => (
 );
 
 // Reusable ActionButton Component
-const ActionButton = ({ status, assignmentID }) => {
+const ActionButton = ({ status, id, assignmentID }) => {
   if ([Status.ASSIGNED, Status.IN_PROGRESS, Status.OVERDUE].includes(status)) {
     return (
-      <Link to={`/induction/take/${assignmentID}`}>
+      <Link to={`/induction/take?id=${id}`}>
         <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
           {status === Status.IN_PROGRESS ? 'Continue' : 'Start'}
         </button>
@@ -107,7 +107,7 @@ const AssignedInductions = ({ uid }) => {
   const columns = [
     columnHelper.accessor('name', {
       cell: (info) => (
-        <Link to={`/induction/take/${info.row.original.id}`} className="text-black hover:underline">
+        <Link to={`/induction/take?id=${info.row.original.id}`} className="text-black hover:underline">
           {info.getValue()}
         </Link>
       ),
@@ -134,7 +134,8 @@ const AssignedInductions = ({ uid }) => {
       cell: (info) => (
         <ActionButton 
           status={info.row.original.status} 
-          assignmentID={info.row.original.assignmentID} 
+          assignmentID={info.row.original.assignmentID}
+          id={info.row.original.id} 
         />
       ),
       header: 'Action',
@@ -231,7 +232,7 @@ const AssignedInductions = ({ uid }) => {
             {table.getRowModel().rows.map((row) => (
               <div key={row.id} className="bg-white shadow-md rounded-lg p-4">
                 <h3 className="text-lg font-semibold">
-                  <Link to={`/induction/take/${row.original.id}`} className="text-black hover:underline">
+                  <Link to={`/induction/take?id=${row.original.id}`} className="text-black hover:underline">
                     {row.original.name}
                   </Link>
                 </h3>
@@ -250,7 +251,7 @@ const AssignedInductions = ({ uid }) => {
                   </p>
                 </div>
                 <div className="mt-4">
-                  <ActionButton status={row.original.status} assignmentID={row.original.id} />
+                  <ActionButton status={row.original.status} assignmentID={row.original.assignmentID} id={row.original.id} />
                 </div>
               </div>
             ))}
