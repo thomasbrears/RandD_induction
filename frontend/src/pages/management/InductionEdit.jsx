@@ -149,7 +149,7 @@ const InductionEdit = () => {
           <Loading message={loadingMessage} />
         ) : (
           <>
-            <div className="flex-1 ml-6 md:ml-8 p-6 w-full max-w-full overflow-hidden">
+            <div className="flex-1 ml-6 md:ml-8 p-6 w-full max-w-full">
               {/* Induction Form Component */}
               <InductionForm
                 induction={induction}

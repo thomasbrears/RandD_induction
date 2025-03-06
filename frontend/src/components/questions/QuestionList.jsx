@@ -42,12 +42,16 @@ const QuestionList = ({ questions = [], setQuestions }) => {
     );
   };
 
+  const handleQuestionDelete = (id) => {
+    setQuestions((prevQuestions) => prevQuestions.filter((q) => q.id !== id));
+  };
+
   return (
     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd} sensors={sensors}>
       <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
         <ul className="space-y-2">
           {questions.map((question) => (
-            <QuestionItem key={question.id} question={question} onChange={handleQuestionChange} />
+            <QuestionItem key={question.id} question={question} onChange={handleQuestionChange} onDeleteQuestion={handleQuestionDelete}/>
           ))}
         </ul>
       </SortableContext>

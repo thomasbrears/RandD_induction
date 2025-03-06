@@ -10,24 +10,27 @@ import DropdownQuestion from "./DropdownQuestion";
 import FileUploadQuestion from "./FileUploadQuestion";
 import { FaGripLines, FaChevronDown, FaChevronUp, FaEdit } from 'react-icons/fa';
 import QuestionTypes from "../../models/QuestionTypes";
+import ConfirmationModal from "../ConfirmationModal";
 
-const QuestionItem = ({ question, onChange }) => {
+const QuestionItem = ({ question, onChange, onDeleteQuestion }) => {
+    const [hasExpandedBefore, setHasExpandedBefore] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [editingField, setEditingField] = useState(null);
     const [localValues, setLocalValues] = useState({ ...question });
     const contentRef = useRef(null);
     const [maxHeight, setMaxHeight] = useState("0px");
     const [isAnimating, setIsAnimating] = useState(false);
+    const [confirmAction, setConfirmAction] = useState(false);
+    const [actionType, setActionType] = useState(null);
 
     const startEditing = (field) => setEditingField(field);
-    const stopEditing = () => {
-        onChange(question.id, localValues);
+    const stopEditing = (field, value) => {
+        onChange(question.id, field, value);
         setEditingField(null);
     };
 
-    const handleChange = (field, value) => {
+    const handleLocalChange = (field, value) => {
         setLocalValues((prev) => ({ ...prev, [field]: value }));
-        onChange(question.id, field, value);
     };
 
     const toggleExpand = () => setIsExpanded((prev) => !prev);
@@ -40,7 +43,18 @@ const QuestionItem = ({ question, onChange }) => {
         transition,
     };
 
+    const handleConfirmDelete = ()=>{
+        setActionType('delete');
+        setConfirmAction(true);
+    };
+
     useEffect(() => {
+        if (!hasExpandedBefore && !isExpanded) {
+            return;
+        }
+
+        setHasExpandedBefore(true);
+
         if (isExpanded) {
             setIsAnimating(true);
             const height = contentRef.current?.scrollHeight;
@@ -72,13 +86,13 @@ const QuestionItem = ({ question, onChange }) => {
     const renderQuestion = () => {
         switch (question.type) {
             case QuestionTypes.TRUE_FALSE:
-                return <TrueFalseQuestion question={question} onChange={onChange} />;
+                return <TrueFalseQuestion question={question} onChange={onChange} onDeleteQuestion={handleConfirmDelete} />;
             case QuestionTypes.MULTICHOICE:
-                return <MultichoiceQuestion question={question} onChange={onChange} />;
+                return <MultichoiceQuestion question={question} onChange={onChange} onDeleteQuestion={handleConfirmDelete}/>;
             case QuestionTypes.DROPDOWN:
-                return <DropdownQuestion question={question} onChange={onChange} />;
+                return <DropdownQuestion question={question} onChange={onChange} onDeleteQuestion={handleConfirmDelete}/>;
             case QuestionTypes.FILE_UPLOAD:
-                return <FileUploadQuestion question={question} onChange={onChange} />;
+                return <FileUploadQuestion question={question} onChange={onChange} onDeleteQuestion={handleConfirmDelete}/>;
             default:
                 return <span>{question.question}</span>;
         }
@@ -99,12 +113,35 @@ const QuestionItem = ({ question, onChange }) => {
         }
     };
 
+    const cancelActionHandler = () => {
+        setConfirmAction(false);
+    };
+
+    const confirmActionHandler = () => {
+        if(actionType === 'delete'){
+            onDeleteQuestion(localValues.id);
+        }
+        setConfirmAction(false);
+    };
+
     return (
+        <>
+        <ConfirmationModal
+            isOpen={confirmAction}
+            message="Are you sure you want to delete this question?"
+            subtext="This action cannot be undone."
+            onCancel={cancelActionHandler}
+            onConfirm={confirmActionHandler}
+            actionLabel="Yes, Delete Question"
+            cancelLabel="Cancel"
+        />
+        
         <li ref={setNodeRef} style={style} {...attributes} className="p-3 bg-white shadow-md rounded-md flex flex-col border w-full">
             {/* Header Section */}
             <div className="flex items-center w-full gap-4">
                 {/* Drag Icon */}
-                <span {...listeners} className="text-gray-600 cursor-grab flex items-center">
+                <span {...listeners} className="text-gray-600 cursor-grab flex items-center"
+                    title="Drag to change question order">
                     <FaGripLines />
                 </span>
 
@@ -116,12 +153,11 @@ const QuestionItem = ({ question, onChange }) => {
                             <div className="flex flex-wrap items-center flex-grow">
                                 <Input.TextArea
                                     value={localValues.question}
-                                    onChange={(e) => handleChange("question", e.target.value)}
-                                    onBlur={stopEditing}
+                                    onChange={(e) => handleLocalChange("question", e.target.value)}
+                                    onBlur={() => stopEditing("question", localValues.question)}
                                     placeholder="Enter your question..."
                                     autoSize={{ minRows: 1, maxRows: 5 }}
                                     className="w-full text-xl font-semibold"
-                                    onPressEnter={stopEditing}
                                     allowClear={true}
                                 />
                             </div>
@@ -130,6 +166,7 @@ const QuestionItem = ({ question, onChange }) => {
                         <p
                             className="text-xl font-semibold cursor-text break-words w-full "
                             onClick={() => startEditing("question")}
+                            title="Edit Question"
                         >
                             {question.question} <FaEdit className="inline-block text-gray-500 ml-2" />
                         </p>
@@ -141,6 +178,7 @@ const QuestionItem = ({ question, onChange }) => {
                     type="button"
                     className="text-gray-700 ml-2 shrink-0"
                     onClick={toggleExpand}
+                    title={isExpanded?"Hide Question Details":"Show Question Details"}
                 >
                     {isExpanded ? <FaChevronUp size={20} /> : <FaChevronDown size={20} />}
                 </button>
@@ -159,6 +197,7 @@ const QuestionItem = ({ question, onChange }) => {
                 <div className="p-3">{renderQuestion()}</div>
             </div>
         </li>
+        </>
     );
 };
 

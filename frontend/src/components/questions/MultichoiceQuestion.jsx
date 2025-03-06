@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Input, Button, Checkbox } from "antd";
+import { Input, Button } from "antd";
 import { FaEdit, FaCheck } from "react-icons/fa";
 import ReactQuill from "react-quill";
-import { Check, X } from "lucide-react";
+import { Check, X, Trash } from "lucide-react";
 
-const MultichoiceQuestion = ({ question, onChange }) => {
+const MultichoiceQuestion = ({ question, onChange, onDeleteQuestion }) => {
   const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
 
@@ -16,14 +16,18 @@ const MultichoiceQuestion = ({ question, onChange }) => {
   const FORMATS = ["bold", "italic", "underline"];
 
   const startEditing = (field) => setEditingField(field);
-  const stopEditing = () => {
-    onChange(question.id, localValues);
+  const stopEditing = (field, value) => {
+    onChange(question.id, field, value);
     setEditingField(null);
   };
 
   const handleChange = (field, value) => {
     setLocalValues((prev) => ({ ...prev, [field]: value }));
     onChange(question.id, field, value);
+  };
+
+  const handleLocalChange = (field, value) => {
+    setLocalValues((prev) => ({ ...prev, [field]: value }));
   };
 
   const handleAddOption = () => {
@@ -34,9 +38,12 @@ const MultichoiceQuestion = ({ question, onChange }) => {
     const newOptions = [...localValues.options];
     newOptions.splice(index, 1);
 
-    const newAnswers = localValues.answers
-      .map(answerIndex => (answerIndex > index ? answerIndex - 1 : answerIndex))
-      .filter(answerIndex => answerIndex !== index);
+    const newAnswers =
+      Array.isArray(localValues.answers) && localValues.answers.length > 0
+        ? localValues.answers
+          .map((answerIndex) => (answerIndex > index ? answerIndex - 1 : answerIndex))
+          .filter((answerIndex) => answerIndex !== index)
+        : [];
 
     handleChange("options", newOptions);
     handleChange("answers", newAnswers);
@@ -63,7 +70,7 @@ const MultichoiceQuestion = ({ question, onChange }) => {
           {editingField === "description" ? (
             <button
               type="button"
-              onClick={stopEditing}
+              onClick={() => stopEditing("description", localValues.description)}
               className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm flex items-center"
             >
               <FaCheck className="inline mr-2" /> Update
@@ -84,7 +91,7 @@ const MultichoiceQuestion = ({ question, onChange }) => {
           <div className="prose !max-w-none w-full mt-2">
             <ReactQuill
               value={localValues.description}
-              onChange={(value) => handleChange("description", value)}
+              onChange={(value) => handleLocalChange("description", value)}
               placeholder="Enter description"
               className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
               modules={MODULES}
@@ -118,11 +125,13 @@ const MultichoiceQuestion = ({ question, onChange }) => {
               : "bg-gray-200 border-gray-400"
               }`}
           >
+            {/* Custom Checkbox */}
             <button
               type="button"
               onClick={() => handleAnswerSelect(index)}
               className={`relative w-7 h-7 flex items-center justify-center rounded-md cursor-pointer transition-all ${localValues.answers.includes(index) ? "bg-green-500" : "bg-gray-400"
                 }`}
+              title={localValues.answers.includes(index) ? "Correct answer" : "Incorrect answer"}
             >
               <span className="group">
                 {localValues.answers.includes(index) ? (
@@ -130,43 +139,62 @@ const MultichoiceQuestion = ({ question, onChange }) => {
                 ) : (
                   <X className="text-white w-5 h-5" />
                 )}
-                {/* Tooltip */}
-                <span className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black text-white text-xs rounded px-2 py-1 whitespace-nowrap">
-                  {localValues.answers.includes(index) ? "Correct answer" : "Incorrect answer"}
-                </span>
               </span>
             </button>
 
-            {/* Editable option text */}
+            {/* Editable Option Text */}
             {editingField === `option-${index}` ? (
-              <Input
-                className="flex-1"
+              <Input.TextArea
+                className="flex-1 min-w-[150px]"
                 placeholder="Enter your answer option"
                 value={localValues.options[index]}
                 onChange={(e) => {
                   const newOptions = [...localValues.options];
                   newOptions[index] = e.target.value;
-                  handleChange("options", newOptions);
+                  handleLocalChange("options", newOptions);
                 }}
-                onBlur={stopEditing}
+                onBlur={() => stopEditing("options", localValues.options)}
+                autoSize={{ minRows: 1, maxRows: 5 }}
+                maxLength={500}
+                showCount={true}
+                style={{
+                  marginBottom: '20px', 
+                  paddingBottom: '0px', 
+                }}
               />
             ) : (
-              <span className="cursor-pointer text-gray-600 flex-1" onClick={() => startEditing(`option-${index}`)}>
+              <div
+                className="cursor-pointer text-gray-600 flex-1 break-words min-w-[150px] p-1"
+                onClick={() => startEditing(`option-${index}`)}
+                title="Edit Option Text"
+              >
                 {option} <FaEdit className="inline-block ml-2 text-gray-500" />
-              </span>
+              </div>
             )}
 
-            {/* Remove option button */}
+            {/* Remove Option Button */}
             <Button
               onClick={() => handleRemoveOption(index)}
-              className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md"
+              className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md ml-2"
             >
               Remove
             </Button>
           </div>
         ))}
+
+
+      </div>
+      {/* Delete Question button */}
+      <div className="flex justify-end mt-4">
+        <Button
+          onClick={() => onDeleteQuestion()}
+          className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md flex items-center gap-2"
+        >
+          <Trash className="w-4 h-4" /> Delete Question
+        </Button>
       </div>
     </div>
+
   );
 };
 
