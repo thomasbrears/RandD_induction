@@ -9,36 +9,64 @@ import Loading from '../components/Loading';
 const InductionFormPage = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
+  // Support both assignmentID (preferred) and id (legacy) parameters
   const assignmentID = searchParams.get('assignmentID');
+  const id = searchParams.get('id');
+  const idParam = assignmentID || id; // Use whichever is available
   const navigate = useNavigate();
   
   const [induction, setInduction] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
   const [started, setStarted] = useState(false);
   const [formData, setFormData] = useState({});
+  const [loadAttempts, setLoadAttempts] = useState(0);
 
   useEffect(() => {
     const fetchInduction = async () => {
       try {
-        if (!assignmentID) {
-          toast.error('No induction assignment specified');
+        if (!idParam) {
+          toast.error('No induction specified');
           navigate('/inductions/my-inductions');
           return;
         }
         
-        // Get the induction details using the assignmentID
-        const data = await getInduction(user, assignmentID);
-        setInduction(data);
-        setLoading(false);
+        setLoading(true);
+        setNotFound(false);
+        
+        const data = await getInduction(user, idParam);
+        
+        if (data) {
+          setInduction(data);
+          setLoading(false);
+        } else {
+          // Only set not found after a delay to prevent flash
+          setTimeout(() => {
+            if (loadAttempts < 3) { // Try up to 3 times
+              setLoadAttempts(prev => prev + 1);
+            } else {
+              setNotFound(true);
+              setLoading(false);
+            }
+          }, 1000);
+        }
       } catch (error) {
         console.error('Error fetching induction:', error);
-        toast.error('Failed to load induction');
-        setLoading(false);
+        
+        // Only show error toast and set not found after final attempt
+        if (loadAttempts >= 2) {
+          toast.error('Failed to load induction');
+          setNotFound(true);
+          setLoading(false);
+        } else {
+          // Try again if we haven't reached max attempts
+          setLoadAttempts(prev => prev + 1);
+        }
       }
     };
 
     fetchInduction();
-  }, [assignmentID, user, navigate]);
+  }, [idParam, user, navigate, loadAttempts]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -61,7 +89,7 @@ const InductionFormPage = () => {
     return <Loading />;
   }
 
-  if (!induction) {
+  if (notFound) {
     return (
       <>
         <Helmet><title>Induction Not Found | AUT Events Induction Portal</title></Helmet>

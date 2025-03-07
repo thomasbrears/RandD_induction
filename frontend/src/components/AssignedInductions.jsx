@@ -52,7 +52,7 @@ const DateCell = ({ date }) => (
 );
 
 // Reusable ActionButton Component
-const ActionButton = ({ status, id, assignmentID }) => {
+const ActionButton = ({ status, assignmentID }) => {
   if ([Status.ASSIGNED, Status.IN_PROGRESS, Status.OVERDUE].includes(status)) {
     return (
       <Link to={`/induction/take?assignmentID=${assignmentID}`}>
@@ -135,7 +135,6 @@ const AssignedInductions = ({ uid }) => {
         <ActionButton 
           status={info.row.original.status} 
           assignmentID={info.row.original.assignmentID}
-          id={info.row.original.id} 
         />
       ),
       header: 'Action',
@@ -251,7 +250,7 @@ const AssignedInductions = ({ uid }) => {
                   </p>
                 </div>
                 <div className="mt-4">
-                  <ActionButton status={row.original.status} assignmentID={row.original.assignmentID} id={row.original.id} />
+                  <ActionButton status={row.original.status} assignmentID={row.original.assignmentID} />
                 </div>
               </div>
             ))}
