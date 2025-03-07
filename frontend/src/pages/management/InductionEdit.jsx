@@ -41,13 +41,19 @@ const InductionEdit = () => {
   };
 
   const handleSaveQuestion = (newQuestion) => {
-    setQuestions(prevQuestions => {
-      const updatedQuestions = [...prevQuestions, newQuestion];
-      console.log(updatedQuestions);
-      return updatedQuestions;
-    });
-
+    setInduction((prevInduction) => ({
+      ...prevInduction,
+      questions: [...prevInduction.questions, newQuestion],
+    }));
+  
     setShowModal(false);
+  };
+
+  const handleUpdateQuestions = (updateFunction) => {
+    setInduction((prevInduction) => ({
+      ...prevInduction,
+      questions: updateFunction(prevInduction.questions || []), 
+    }));
   };
 
   useEffect(() => {
@@ -110,8 +116,9 @@ const InductionEdit = () => {
     // Check if any required fields are missing and show warning if so
     const missingFields = [];
     if (!induction.name) missingFields.push("Induction name");
-    if (!induction.department) missingFields.push("Department");
+    if (!induction.department) missingFields.push("Department"); //double check if this works???
     if (!induction.description) missingFields.push("Description");
+    //more required fields (for each question, no empty options, at least 1 answer, no empty question)
 
     if (missingFields.length > 0) {
       toast.warn(`Please fill in the following fields: ${missingFields.join(", ")}`);
@@ -277,10 +284,10 @@ const InductionEdit = () => {
 
                   {/* Question List*/}
                   <div className="mt-4">
-                    <QuestionList questions={questions} setQuestions={setQuestions} />
+                    <QuestionList questions={induction.questions} setQuestions={handleUpdateQuestions} />
                   </div>
 
-                  {questions.length > 0 && (
+                  {induction.questions.length > 0 && (
                     <div className="mt-6 flex justify-center">
                       <button
                         className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
