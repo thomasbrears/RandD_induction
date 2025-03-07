@@ -1,37 +1,26 @@
 import React, { useState } from 'react';
-import { FaEdit, FaSave, FaCheck } from 'react-icons/fa';
+import { FaEdit, FaSave, FaCheck, FaTimes } from 'react-icons/fa';
 import { toast } from 'react-toastify';
-import { Input } from 'antd';
+import { Input, Button } from 'antd';
 
 const InductionForm = ({ induction, setInduction, handleSubmit, isSubmitDisabled, isCreatingInduction }) => {
   const [isEditingName, setIsEditingName] = useState(false);
-  const [isEditingDepartment, setIsEditingDepartment] = useState(false);
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
+  const [localInductionName, setLocalInductionName] = useState(induction.name || '');
 
   const toggleEditName = () => setIsEditingName((prev) => !prev);
-  const toggleEditDepartment = () => setIsEditingDepartment((prev) => !prev);
-  const toggleEditDescription = () => setIsEditingDescription((prev) => !prev);
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setInduction({
-      ...induction,
-      [name]: value,
-    });
+  const handleCancel = () => {
+    setLocalInductionName(induction.name);
+    setIsEditingName(false);
   };
 
-  const handleDepartmentChange = (e) => {
-    setInduction({
-      ...induction,
-      department: e.target.value,
-    });
+  const handleLocalChange = (e) => {
+    setLocalInductionName(e.target.value);
   };
 
-  const handleDescriptionChange = (e) => {
-    setInduction({
-      ...induction,
-      description: e.target.value,
-    });
+  const handleUpdateName = () => {
+    setInduction({ ...induction, name: localInductionName });
+    setIsEditingName(false);
   };
 
   return (
@@ -52,21 +41,30 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isSubmitDisabled
                   <FaEdit />
                 </button>
               ) : (
-                <button
-                  type="button"
-                  onClick={toggleEditName}
-                  className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
-                >
-                  <FaCheck className="inline mr-2" /> Update
-                </button>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={()=> handleUpdateName()}
+                    className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
+                  >
+                    <FaCheck className="inline mr-2" /> Update
+                  </Button>
+                  {/* Cancel Button */}
+                  <Button
+                    onClick={() => handleCancel()}
+                    className="bg-red-500 text-white px-2 py-1 rounded-md text-sm flex items-center h-8"
+                  >
+                    <FaTimes className="mr-1 w-4 h-4" /> Cancel
+                  </Button>
+                </div>
               )}
             </label>
             {isEditingName ? (
               <Input.TextArea
                 id="name"
                 name="name"
-                value={induction.name}
-                onChange={handleChange}
+                value={localInductionName}
+                onChange={handleLocalChange}
                 placeholder="Enter Induction Name"
                 className="w-full border border-gray-300 rounded-lg p-2 text-base focus:ring-gray-800 focus:border-gray-800"
                 autoSize={{ minRows: 1, maxRows: 3 }}
@@ -74,7 +72,9 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isSubmitDisabled
                 showCount={true}
               />
             ) : (
-              <div className="w-full text-xl font-semibold break-words overflow-hidden">{induction.name || "Untitled Induction"}</div>
+              <div className="w-full text-xl font-semibold break-words overflow-hidden">
+                {induction.name || "Untitled Induction"}
+              </div>
             )}
           </div>
         </div>

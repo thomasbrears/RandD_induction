@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Modal, Select, Input, Button, Upload, Checkbox } from "antd";
 import QuestionTypes from "../../models/QuestionTypes";
 import { Check, X } from "lucide-react";
+import ReactQuill from "react-quill";
 
 const QuestionForm = ({ visible, onClose, onSave }) => {
     const [questionType, setQuestionType] = useState("");
@@ -13,6 +14,13 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
 
     const [showImageUpload, setShowImageUpload] = useState(false);
     const [imageFile, setImageFile] = useState(null); {/*figure out how this works later */ }
+
+    // Define the toolbar options
+    const MODULES = {
+        toolbar: [["bold", "italic", "underline"]],
+    };
+
+    const FORMATS = ["bold", "italic", "underline"];
 
     const handleQuestionTypeChange = (value) => {
         setQuestionType(value);
@@ -43,12 +51,12 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
     const handleRemoveOption = (index) => {
         const updatedOptions = options.filter((_, i) => i !== index);
         const updatedAnswers = answers
-          .filter((answerIndex) => answerIndex !== index)
-          .map((answerIndex) => (answerIndex > index ? answerIndex - 1 : answerIndex));
-      
+            .filter((answerIndex) => answerIndex !== index)
+            .map((answerIndex) => (answerIndex > index ? answerIndex - 1 : answerIndex));
+
         setOptions(updatedOptions);
         setAnswers(updatedAnswers);
-      };
+    };
 
     const handleOptionChange = (index, value) => {
         const updatedOptions = [...options];
@@ -133,15 +141,21 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                                 onChange={() => setShowDescription(!showDescription)}
                                 className="cursor-pointer"
                             />
+                            
                         </label>
 
                         {/* Hidden input field for description */}
                         {showDescription && (
-                            <Input
-                                value={description}
-                                onChange={(e) => setDescription(e.target.value)}
-                                placeholder="Enter description..."
-                            />
+                            <div className="prose !max-w-none w-full">
+                            <ReactQuill
+                            value={description}
+                            onChange={(value) => setDescription(value)} 
+                            placeholder="Enter description..."
+                            className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
+                            modules={MODULES}
+                            formats={FORMATS}
+                          />
+                          </div>
                         )}
                     </div>
 

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { FaEdit, FaCheck } from "react-icons/fa";
 import ReactQuill from "react-quill";
 
-const TrueFalseQuestion = ({ question, onChange}) => {
+const TrueFalseQuestion = ({ question, onChange, isExpanded }) => {
   const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
 

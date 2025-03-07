@@ -1,12 +1,22 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Input, Button } from "antd";
-import { FaEdit, FaCheck } from "react-icons/fa";
+import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 import ReactQuill from "react-quill";
-import { Check, X, Trash } from "lucide-react";
 
-const MultichoiceQuestion = ({ question, onChange }) => {
+const MultichoiceQuestion = ({ question, onChange, isExpanded }) => {
   const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
+
+  useEffect(() => {
+    if (!isExpanded && editingField) {
+      if (editingField.startsWith("option-")) {
+        stopEditing("options", localValues.options);
+      } else {
+        stopEditing(editingField, localValues[editingField]);
+      }
+      setEditingField(null);
+    }
+  }, [isExpanded, editingField]);
 
   // Define the toolbar options
   const MODULES = {
@@ -28,6 +38,11 @@ const MultichoiceQuestion = ({ question, onChange }) => {
 
   const handleLocalChange = (field, value) => {
     setLocalValues((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleCancel = (field) => {
+    setLocalValues((prev) => ({ ...prev, [field]: question[field] }));
+    setEditingField(null);
   };
 
   const handleAddOption = () => {
@@ -68,13 +83,22 @@ const MultichoiceQuestion = ({ question, onChange }) => {
         <div className="flex items-center">
           <p className="font-semibold mr-2">Description:</p>
           {editingField === "description" ? (
-            <button
-              type="button"
-              onClick={() => stopEditing("description", localValues.description)}
-              className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm flex items-center"
-            >
-              <FaCheck className="inline mr-2" /> Update
-            </button>
+            <div className="flex gap-2">
+              {/* Update Button */}
+              <Button
+                onClick={() => stopEditing("description", localValues.description)}
+                className="bg-gray-800 font-normal text-white px-2 py-1 rounded-md text-sm flex items-center"
+              >
+                <FaCheck className="inline mr-2" /> Update
+              </Button>
+              {/* Cancel Button */}
+              <Button
+                onClick={() => handleCancel("description")}
+                className="bg-red-500 text-white px-2 py-1 rounded-md text-sm flex items-center h-8"
+              >
+                <FaTimes className="mr-1 w-4 h-4" /> Cancel
+              </Button>
+            </div>
           ) : (
             <button
               type="button"
@@ -92,7 +116,7 @@ const MultichoiceQuestion = ({ question, onChange }) => {
             <ReactQuill
               value={localValues.description}
               onChange={(value) => handleLocalChange("description", value)}
-              placeholder="Enter description"
+              placeholder="Enter description..."
               className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
               modules={MODULES}
               formats={FORMATS}
@@ -121,8 +145,8 @@ const MultichoiceQuestion = ({ question, onChange }) => {
           <div
             key={index}
             className={`flex items-start gap-2 mt-2 p-2 rounded-md border-2 transition-colors ${localValues.answers.includes(index)
-                ? "bg-green-100 border-green-500"
-                : "bg-gray-200 border-gray-400"
+              ? "bg-green-100 border-green-500"
+              : "bg-gray-200 border-gray-400"
               }`}
           >
             {/* Custom Checkbox */}
@@ -137,9 +161,9 @@ const MultichoiceQuestion = ({ question, onChange }) => {
             >
               <span className="group">
                 {localValues.answers.includes(index) ? (
-                  <Check className="text-white w-5 h-5" />
+                  <FaCheck className="text-white w-5 h-5" />
                 ) : (
-                  <X className="text-white w-5 h-5" />
+                  <FaTimes className="text-white w-5 h-5" />
                 )}
               </span>
             </button>
@@ -162,14 +186,23 @@ const MultichoiceQuestion = ({ question, onChange }) => {
                   showCount={true}
                 />
 
-                {/* Update Button */}
-                <button
-                  type="button"
-                  onClick={() => stopEditing("options", localValues.options)}
-                  className="bg-gray-800 text-white px-3 py-1 rounded-md text-sm flex items-center self-start"
-                >
-                  <FaCheck className="mr-1" /> Update
-                </button>
+                <div className="flex gap-2">
+                  {/* Update Button */}
+                  <Button
+                    onClick={() => stopEditing("options", localValues.options)}
+                    className="bg-gray-800 text-white px-3 py-1 rounded-md text-sm flex items-center h-8"
+                  >
+                    <FaCheck className="mr-1 w-4 h-4" /> Update
+                  </Button>
+
+                  {/* Cancel Button */}
+                  <Button
+                    onClick={() => handleCancel("options")}
+                    className="bg-red-500 text-white px-3 py-1 rounded-md text-sm flex items-center h-8"
+                  >
+                    <FaTimes className="mr-1 w-4 h-4" /> Cancel
+                  </Button>
+                </div>
               </div>
             ) : (
               <div
