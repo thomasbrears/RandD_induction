@@ -9,7 +9,7 @@ import Loading from '../components/Loading';
 const InductionFormPage = () => {
   const { user } = useAuth();
   const [searchParams] = useSearchParams();
-  const inductionId = searchParams.get('id');
+  const assignmentID = searchParams.get('assignmentID');
   const navigate = useNavigate();
   
   const [induction, setInduction] = useState(null);
@@ -20,13 +20,14 @@ const InductionFormPage = () => {
   useEffect(() => {
     const fetchInduction = async () => {
       try {
-        if (!inductionId) {
-          toast.error('No induction specified');
+        if (!assignmentID) {
+          toast.error('No induction assignment specified');
           navigate('/inductions/my-inductions');
           return;
         }
         
-        const data = await getInduction(user, inductionId);
+        // Get the induction details using the assignmentID
+        const data = await getInduction(user, assignmentID);
         setInduction(data);
         setLoading(false);
       } catch (error) {
@@ -37,7 +38,7 @@ const InductionFormPage = () => {
     };
 
     fetchInduction();
-  }, [inductionId, user, navigate]);
+  }, [assignmentID, user, navigate]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -84,11 +85,16 @@ const InductionFormPage = () => {
       <div className="p-6 max-w-4xl mx-auto">
         {!started ? (
           <div className="bg-white shadow-md rounded-lg p-6">
-            <h1 className="text-2xl font-bold text-gray-800 mb-4">{induction.name}</h1>
+            <h1 className="text-2xl font-bold text-gray-800 mb-4 break-words">{induction.name}</h1>
             
             <div className="mb-6 space-y-4">
               <div className="p-4 bg-gray-50 rounded-md">
-                <p className="text-gray-700">{induction.description || 'No description provided.'}</p>
+                <div className="prose !max-w-none w-full break-words overflow-hidden">
+                  <p 
+                    className="text-gray-700"
+                    dangerouslySetInnerHTML={{ __html: induction.description || 'No description provided.' }}
+                  />
+                </div>
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -115,7 +121,7 @@ const InductionFormPage = () => {
           </div>
         ) : (
           <div>
-            <h1 className="text-2xl font-bold mb-4">{induction.name}</h1>
+            <h1 className="text-2xl font-bold mb-4 break-words">{induction.name}</h1>
             <p>Welcome, {user?.email}! Please complete the induction form below.</p>
             {/* Actual induction form content would go here */}
             <div className="mt-6">

@@ -55,15 +55,26 @@ export const createNewInduction = async (user, inductionData) => {
   }
 };
 
-export const getInduction = async (user, id) => {
+export const getInduction = async (user, assignmentID) => {
   try {
       const token = user?.token;
       const headers = token ? {authtoken: token}: {};
-      const response = await axios.get(`${API_URL}/inductions/get-induction`,{
+      
+      // First get the assigned induction details
+      const assignedResponse = await axios.get(`${API_URL}/users/get-assigned-induction`,{
           headers,
-          params: { id },
+          params: { assignmentID },
       });
-    return response.data;
+      
+      // If the API doesn't have a specific endpoint for getting an assigned induction,
+      // we would need to get the induction ID from the assignment and then get the induction details
+      const induction = assignedResponse.data?.induction;
+      
+      if (!induction) {
+        throw new Error('Failed to get induction details');
+      }
+      
+      return induction;
   } catch (error) {
     console.error("Error fetching induction:", error);
     throw error; 
