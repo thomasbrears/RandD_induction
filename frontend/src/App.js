@@ -23,6 +23,7 @@ import InductionList from './pages/management/InductionList';
 import InductionEdit from './pages/management/InductionEdit';
 import InductionCreate from './pages/management/InductionCreate';
 import InductionResults from './pages/management/InductionResults';
+import InductionViewResults from './pages/management/InductionViewResults.jsx';
 import EditUser from './pages/management/EditUser';
 import Settings from './pages/management/Settings';
 import ManageAccount from './pages/ManageAccountPage';
@@ -129,6 +130,7 @@ const App = () => {
               <Route path="/management/inductions/edit" element={<PrivateRoute component={InductionEdit} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/management/inductions/create" element={<PrivateRoute component={InductionCreate} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/management/inductions/results" element={<PrivateRoute component={InductionResults} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              <Route path="/management/inductions/results/view" element={<PrivateRoute component={InductionViewResults} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
             </Routes>
           </div>
           <Footer />

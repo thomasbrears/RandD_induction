@@ -3,7 +3,7 @@ import { Input, Button } from "antd";
 import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 import ReactQuill from "react-quill";
 
-const MultichoiceQuestion = ({ question, onChange, isExpanded }) => {
+const MultichoiceQuestion = ({ question, onChange, isExpanded}) => {
   const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
 
@@ -81,7 +81,7 @@ const MultichoiceQuestion = ({ question, onChange, isExpanded }) => {
       {/* Description */}
       <div className="mb-2">
         <div className="flex items-center">
-          <p className="font-semibold mr-2">Description:</p>
+        <p className="font-semibold mr-2">Description: <span className="font-normal text-gray-500">(optional)</span></p>
           {editingField === "description" ? (
             <div className="flex gap-2">
               {/* Update Button */}

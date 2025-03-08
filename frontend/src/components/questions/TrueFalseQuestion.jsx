@@ -1,10 +1,17 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { FaEdit, FaCheck } from "react-icons/fa";
 import ReactQuill from "react-quill";
 
 const TrueFalseQuestion = ({ question, onChange, isExpanded }) => {
   const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
+
+  useEffect(() => {
+    if (!isExpanded && editingField) {
+      stopEditing(editingField, localValues[editingField]);
+      setEditingField(null);
+    }
+  }, [isExpanded, editingField]);
 
   // Define the toolbar options
   const MODULES = {
@@ -37,7 +44,7 @@ const TrueFalseQuestion = ({ question, onChange, isExpanded }) => {
       {/* Description */}
       <div className="mb-2">
         <div className="flex items-center">
-          <p className="font-semibold mr-2">Description:</p>
+          <p className="font-semibold mr-2">Description: <span className="font-normal text-gray-500">(optional)</span></p>
           {editingField === "description" ? (
             <button
               type="button"
@@ -80,7 +87,7 @@ const TrueFalseQuestion = ({ question, onChange, isExpanded }) => {
       <div className="mt-4">
         <div className="flex justify-between items-center">
           <p className="font-semibold">Options:</p>
-          <p className="text-sm text-gray-500">Choose the correct answer.</p>
+          <p className="text-base text-gray-500">Choose the correct answer.</p>
         </div>
 
         {localValues.options.map((option, index) => (
@@ -100,7 +107,7 @@ const TrueFalseQuestion = ({ question, onChange, isExpanded }) => {
               onChange={() => handleTrueFalseAnswerSelect(index)}
               className="cursor-pointer"
             />
-            <span className="text-gray-700 text-sm">{option}</span>
+            <span className="text-gray-700 text-base">{option}</span>
           </div>
         ))}
       </div>

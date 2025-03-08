@@ -23,7 +23,7 @@ import {
 import "../style/Table.css";
 import Loading from './Loading';
 import { Link, useNavigate } from "react-router-dom";
-import { FaUserEdit, FaUserPlus } from "react-icons/fa";
+import { FaUserEdit, FaUserPlus, FaChartBar } from "react-icons/fa";
 import { getAllInductions } from "../api/InductionApi";
 import "react-quill/dist/quill.snow.css";
 
@@ -40,6 +40,10 @@ const InductionsTable = () => {
 
   const handleEditInduction = async (id) => {
     navigate("/management/inductions/edit", { state: { id } });
+  };
+
+  const handleViewInductionResults = async (id) => {
+    navigate("/management/inductions/results/view", { state: { id } });
   };
 
   const handleInductionAssignment = async (id) => {
@@ -84,12 +88,18 @@ const InductionsTable = () => {
       id: "actions",
       header: () => <span></span>,
       cell: ({ row }) => (
-        <div>
+        <div className="flex gap-2">
           <button
             onClick={() => handleEditInduction(row.original.id)}
             className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-1 rounded"
           >
             <FaUserEdit className="inline mr-2" /> Edit
+          </button>
+          <button
+            onClick={() => handleViewInductionResults(row.original.id)}
+            className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-1 rounded"
+          >
+            <FaChartBar className="inline mr-2" /> View Results
           </button>
         </div>
       ),
@@ -179,53 +189,55 @@ const InductionsTable = () => {
           </div>
 
           {/* Desktop Table */}
-        <div className="hidden lg:block mt-2">
-          <div className="!w-full">
-          <table className="w-full table-auto max-w-full min-w-full divide-y divide-gray-200 bg-white shadow-md rounded-lg">
-            <thead className="bg-gray-50 max-w-[200px] md:max-w-[300px]">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <tr key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => (
-                    <th
-                      key={header.id}
-                      className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider max-w-[200px] md:max-w-[250px]"
-                    >
-                      <div
-                        {...{
-                          className: header.column.getCanSort()
-                            ? "cursor-pointer select-none flex items-center"
-                            : "",
-                          onClick: header.column.getToggleSortingHandler(),
-                        }}
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext()
-                        )}
-                        <ArrowUpDown className="ml-2" size={14} />
-                      </div>
-                    </th>
+          <div className="hidden lg:block mt-2">
+            <div className="!w-full">
+              <table className="w-full table-auto max-w-full min-w-full divide-y divide-gray-200 bg-white shadow-md rounded-lg">
+                <thead className="bg-gray-50 max-w-[200px] md:max-w-[300px]">
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <tr key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => (
+                        <th
+                          key={header.id}
+                          className={`px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${header.id === "actions" ? "w-[250px]" : "max-w-[200px] md:max-w-[250px]"
+                            }`}
+                        >
+                          <div
+                            {...{
+                              className: header.column.getCanSort()
+                                ? "cursor-pointer select-none flex items-center"
+                                : "",
+                              onClick: header.column.getToggleSortingHandler(),
+                            }}
+                          >
+                            {flexRender(
+                              header.column.columnDef.header,
+                              header.getContext()
+                            )}
+                            <ArrowUpDown className="ml-2" size={14} />
+                          </div>
+                        </th>
+                      ))}
+                    </tr>
                   ))}
-                </tr>  
-              ))}
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {table.getRowModel().rows.map((row) => (
-                <tr key={row.id} className="hover:bg-gray-50">
-                  {row.getVisibleCells().map((cell) => (
-                    <td
-                      key={cell.id}
-                      className="px-6 py-4 text-sm text-gray-500 break-words whitespace-normal max-w-xs max-w-[200px] md:max-w-[250px]" 
-                    >
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </td>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {table.getRowModel().rows.map((row) => (
+                    <tr key={row.id} className="hover:bg-gray-50">
+                      {row.getVisibleCells().map((cell) => (
+                        <td
+                          key={cell.id}
+                          className={`px-6 py-4 text-sm text-gray-500 ${cell.column.id === "actions" ? "w-[250px]" : "max-w-[200px] md:max-w-[250px]"
+                            }`}
+                        >
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                        </td>
+                      ))}
+                    </tr>
                   ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
 
           {/* Mobile List of Table */}
           <div className="lg:hidden space-y-4">
@@ -259,6 +271,12 @@ const InductionsTable = () => {
                     className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-1 rounded mt-2 mr-2"
                   >
                     <FaUserEdit className="inline ml-2" /> Edit
+                  </button>
+                  <button
+                    onClick={() => handleViewInductionResults(row.original.id)}
+                    className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-1 rounded mt-2 mr-2"
+                  >
+                    <FaChartBar className="inline mr-2" /> View Results
                   </button>
                 </div>
               </div>

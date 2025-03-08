@@ -52,7 +52,7 @@ const QuestionList = ({ questions = [], setQuestions }) => {
       <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
         <ul className="space-y-2">
           {questions.map((question) => (
-            <QuestionItem key={question.id} question={question} onChange={handleQuestionChange} onDeleteQuestion={handleQuestionDelete}/>
+            <QuestionItem  key={question.id} question={question} onChange={handleQuestionChange} onDeleteQuestion={handleQuestionDelete}/>
           ))}
         </ul>
       </SortableContext>
