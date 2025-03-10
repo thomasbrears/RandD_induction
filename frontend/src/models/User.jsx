@@ -20,7 +20,8 @@ export const DefaultNewUser = {
     lastName: "",
     email: "",
     permission: Permissions.USER,
-    position: Positions.TEAM,
+    position: "",
+    department: "",
     locations: [],
     assignedInductions: [],
 };

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async';
 import UsersTable from '../../components/UsersTable';
 import '../../style/Global.css';
@@ -16,30 +16,18 @@ const ViewUsers = () => {
         subtext="View and manage all users" 
       />
 
-      {/* Desktop View */}
-      <div className="hidden lg:block">
-        {/* Main container */}
-        <div className="flex px-4 md:px-0 bg-gray-50">
-          {/* Management Sidebar */}
-          <div className="hidden md:flex">
-            <ManagementSidebar />
-          </div>
-
-          {/* Main content area */}
-          <div className="p-6 flex-grow">
-            <UsersTable />
-          </div>
+      {/* Unified Layout - Always show side-by-side from 750px up */}
+      <div className="flex flex-row px-4 md:px-0 bg-gray-50 relative">
+        {/* Sidebar container - Always present but controlled by ManagementSidebar component */}
+        <div className="relative z-10">
+          <ManagementSidebar />
         </div>
-      </div>
 
-      {/* Mobile View */}
-      <div className="lg:hidden space-y-4">
-        {/* Main content area */}
-        <div className="p-6">
+        {/* Main content area - Always beside the sidebar from 750px up */}
+        <div className="flex-grow p-4 lg:p-6 overflow-x-auto">
           <UsersTable />
         </div>
       </div>
-      
     </>
   );
 };

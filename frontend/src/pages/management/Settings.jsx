@@ -5,11 +5,12 @@ import { Tabs } from 'antd';
 import { toast } from 'react-toastify';
 import { AiOutlineSetting } from 'react-icons/ai';
 import { FaBuilding, FaUserTie } from 'react-icons/fa';
-import { GiSettingsKnobs } from 'react-icons/gi';
+import { IoLocation } from "react-icons/io5";
 import useAuth from '../../hooks/useAuth';
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
 import ManageDepartments from '../../components/management/ManageDepartments';
+import ManageLocations from '../../components/management/ManageLocations';
 import ManagePositions from '../../components/management/ManagePositions';
 
 const Settings = () => {
@@ -45,14 +46,14 @@ const Settings = () => {
       />
 
       {/* Main container */}
-      <div className="flex px-4 md:px-0 bg-gray-50">
+      <div className="flex  md:px-0 bg-gray-50">
         {/* Management Sidebar */}
-        <div className="hidden md:flex">
+        <div>
           <ManagementSidebar />
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 p-6 bg-white rounded-lg shadow-md">
+        <div className="flex-1 bg-white rounded-lg shadow-md overflow-x-auto">
 
           <Tabs type="card">
             {/* Overview Tab */}
@@ -76,6 +77,7 @@ const Settings = () => {
                   <ul className="list-disc list-inside mt-2 text-gray-600">
                     <li><FaBuilding className="inline-block mr-2" /> View, create, edit & delete available departments.</li>
                     <li><FaUserTie className="inline-block mr-2" /> View, create, edit & delete available positions.</li>
+                    <li><IoLocation className="inline-block mr-2" /> View, create, edit & delete available locations.</li>
                     <li><AiOutlineSetting className="inline-block mr-2" /> More setting options coming soon</li>
                   </ul>
                 </div>
@@ -106,6 +108,19 @@ const Settings = () => {
               key="3"
             >
               <ManagePositions />
+            </items>
+
+            {/* Manage Locations Tab */}
+            <items
+              tab={
+                <span>
+                  <IoLocation className="inline-block mr-2" />
+                  Manage Locations
+                </span>
+              }
+              key="4"
+            >
+              <ManageLocations />
             </items>
           </Tabs>
         </div>

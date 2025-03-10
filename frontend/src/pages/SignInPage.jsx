@@ -21,15 +21,29 @@ function LoginPage() {
         return tokenResult.claims.role;  // Fetch the role from the claims
     };
 
-    // Function for email and password sign-in
+    // Email validation function
+    const isValidEmail = (email) => {
+        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        return emailRegex.test(email);
+    };
+
+    // Function for email and password sign in
     const handleEmailPasswordSignIn = async (e) => {
         e.preventDefault();
 
-        // Check if email and password are entered
+        // Check if email is entered
         if (!email) {
             toast.error('Please enter your email.');
             return;
         }
+
+        // Check if email is in valid format
+        if (!isValidEmail(email)) {
+            toast.error('Invalid email format. Please enter a valid email address.');
+            return;
+        }
+        
+        // Check if password is entered
         if (!password) {
             toast.error('Please enter your password.');
             return;
@@ -71,7 +85,7 @@ function LoginPage() {
                 }
             }            
         } catch (error) {
-            console.error("Error during sign-in:", error);
+            console.error("Error during sign in:", error);
             switch (error.code) {
                 case 'auth/user-not-found':
                     toast.error('No user found with this email.');
@@ -97,13 +111,19 @@ function LoginPage() {
         }
     };
 
-    // Function for passwordless sign-in using email link
+    // Function for passwordless sign in using email link
     const handlePasswordlessSignIn = async (e) => {
         e.preventDefault();
 
         // Check if email is entered
         if (!email) {
             toast.error('Please enter your email.');
+            return;
+        }
+
+        // Check if email is in valid format
+        if (!isValidEmail(email)) {
+            toast.error('Invalid email format. Please enter a valid email address.');
             return;
         }
 
@@ -114,15 +134,15 @@ function LoginPage() {
 
         try {
             setLoading(true);
-            setLoadingMessage(`Sending sign-in link to ${email}...`);	
+            setLoadingMessage(`Sending sign in link to ${email}...`);	
 
             await sendSignInLinkToEmail(auth, email, actionCodeSettings);
             window.localStorage.setItem('emailForSignIn', email);
-            toast.success('Sign-in link sent! Please check your email and click the link included.', { autoClose: 7000 });
-            navigate('/auth/complete-signin'); // Redirect to complete sign-in page
+            toast.success('sign in link sent! Please check your email and click the link included.', { autoClose: 7000 });
+            navigate('/auth/complete-signin'); // Redirect to complete sign in page
         } catch (error) {
             // Handle Firebase Auth specific error messages
-            console.error("Error sending sign-in link:", error);
+            console.error("Error sending sign in link:", error);
 
             switch (error.code) {
                 case 'auth/invalid-email':
@@ -144,7 +164,7 @@ function LoginPage() {
                     toast.error('Your account is disabled. Please contact your supervisor or manager for assistance.');
                     break; 
                 default:
-                    toast.error('Error sending sign-in link. Please try again.');
+                    toast.error('Error sending sign in link. Please try again.');
                     break;
             }
         } finally {
@@ -154,7 +174,7 @@ function LoginPage() {
 
     return (
         <>
-            <Helmet> <title>Sign-in | AUT Events Induction Portal</title> </Helmet>
+            <Helmet> <title>Sign in | AUT Events Induction Portal</title> </Helmet>
             <div 
                 className="min-h-screen flex items-center justify-center bg-cover bg-center px-4" 
                 style={{ backgroundImage: 'url(/images/WG_OUTSIDE_AUT.webp)' }} // Background image
@@ -167,7 +187,7 @@ function LoginPage() {
                         <Link to="/contact" className="font-bold text-black hover:underline">contact us.</Link>
                     </p>
                     <p className="text-sm text-gray-600 mb-4 text-center">
-                        If you have not set a password, please enter your email and click the "email me a sign-in link" option below or{' '}
+                        If you have not set a password, please enter your email and click the "email me a sign in link" option below or{' '}
                         <Link to="/auth/reset-password" className="font-bold text-black hover:underline">set your password here.</Link>
                     </p>
     
@@ -213,7 +233,7 @@ function LoginPage() {
                                 </div>
     
                                 <button type="button" onClick={handlePasswordlessSignIn} className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
-                                    Send me a Sign-in Link
+                                    Send me a sign in Link
                                 </button>
                             </>
                         )}
@@ -221,7 +241,7 @@ function LoginPage() {
                         {!showPasswordField && (
                             <>
                                 <button type="button" onClick={handlePasswordlessSignIn} className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
-                                    Email me a Sign-in Link (Recommended)
+                                    Email me a Sign in Link
                                 </button>
     
                                 <div className="flex items-center justify-between mt-4">

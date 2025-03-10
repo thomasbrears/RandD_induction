@@ -47,7 +47,7 @@ const EditUser = () => {
     if (user) {
       updateUser(user, userData)
         .then(() => {
-          toast.success("User updated successfully!", { position: "top-right", autoClose: 3000 });
+          toast.success("User updated successfully!");
           setUpdatedUser({
             uid: userData.uid,
             firstName: userData.firstName,
@@ -78,11 +78,11 @@ const EditUser = () => {
       />
 
       <div className="flex px-4 md:px-0 bg-gray-50">
-        <div className="hidden md:flex">
+        <div>
           <ManagementSidebar />
         </div>
 
-        <div className="flex-1 ml-6 md:ml-8 p-6">
+        <div className="flex-1">
           {loading ? (
             <p className="text-gray-600">{loadingMessage}</p>
           ) : userUpdated && updatedUser ? (

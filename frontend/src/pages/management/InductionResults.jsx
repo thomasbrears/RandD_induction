@@ -17,7 +17,7 @@ const InductionResults = () => {
       {/* Main container */}
       <div className="flex px-4 md:px-0 bg-gray-50">
         {/* Management Sidebar */}
-        <div className="hidden md:flex">
+        <div>
           <ManagementSidebar />
         </div>
 

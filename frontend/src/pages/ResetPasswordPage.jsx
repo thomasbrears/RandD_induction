@@ -80,7 +80,7 @@ function ResetPasswordPage() {
                     <div className="text-center mt-4">
                         <p className="text-sm text-gray-600">
                             Remembered your password?{' '}
-                            <Link to="/signin" className="font-bold text-black hover:underline">Sign in</Link>
+                            <Link to="/auth/signin" className="font-bold text-black hover:underline">Sign in</Link>
                         </p>
                     </div>
                 </div>

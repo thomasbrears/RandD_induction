@@ -49,7 +49,8 @@ export const getUser = async (req, res) => {
       permission: userResult.customClaims
         ? userResult.customClaims.role
         : Permissions.USER,
-      position: userDoc.exists ? userDoc.data().position : Positions.TEAM,
+      position: userDoc.exists ? userDoc.data().position : "",
+      department: userDoc.exists ? userDoc.data().department : "",
       locations: userDoc.exists ? userDoc.data().locations : [],
       disabled: userResult.disabled,
       assignedInductions: userDoc.exists
@@ -73,6 +74,7 @@ export const createUser = async (req, res) => {
       email,
       permission,
       position,
+      department,
       locations,
       assignedInductions,
     } = req.body;
@@ -101,6 +103,7 @@ export const createUser = async (req, res) => {
         userLastName: lastName,
         permission: permission,
         position: position,
+        department: department,
         locations: Array.isArray(locations) ? locations : [],
         assignedInductions: Array.isArray(assignedInductions)
           ? assignedInductions
@@ -161,6 +164,7 @@ export const updateUser = async (req, res) => {
       email,
       permission,
       position,
+      department,
       locations,
       assignedInductions = [],
     } = req.body;
@@ -210,6 +214,7 @@ export const updateUser = async (req, res) => {
       usersName: `${firstName} ${lastName}`,
       permission: permission,
       position: position,
+      department: department,
       locations: Array.isArray(locations) ? locations : [],
       assignedInductions: updatedInductions,
     });
