@@ -45,7 +45,7 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion }) => {
         useSortable({ id: question.id });
 
     const style = {
-        transform: CSS.Transform.toString(transform),
+        transform: transform ? CSS.Translate.toString(transform) : undefined,
         transition,
     };
 

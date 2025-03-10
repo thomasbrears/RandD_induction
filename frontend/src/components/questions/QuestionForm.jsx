@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Modal, Select, Input, Button, Upload, Checkbox } from "antd";
 import QuestionTypes from "../../models/QuestionTypes";
 import { Check, X } from "lucide-react";
@@ -11,6 +11,7 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
     const [answers, setAnswers] = useState([]);
     const [showDescription, setShowDescription] = useState(false);
     const [description, setDescription] = useState("");
+    const [validationErrors, setValidationErrors] = useState({});
 
     const [showImageUpload, setShowImageUpload] = useState(false);
     const [imageFile, setImageFile] = useState(null); {/*figure out how this works later */ }
@@ -85,7 +86,52 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
         setDescription("");
     };
 
+    const validateForm = () => {
+        const errors = {};
+
+        if (!questionType) {
+            errors.questionType = "Question type is required";
+        }
+        if (!questionText.trim()) {
+            errors.questionText = "Question text cannot be empty";
+        }
+        if ((questionType === QuestionTypes.MULTICHOICE || questionType === QuestionTypes.DROPDOWN) && options.length === 0) {
+            errors.options = "At least one option is required";
+        }
+        if ((questionType === QuestionTypes.MULTICHOICE || questionType === QuestionTypes.DROPDOWN) && answers.length === 0) {
+            errors.answers = "At least one answer must be selected";
+        }
+        if (options.some(option => option.trim() === "")) {
+            errors.options = "Options cannot be empty";
+        }
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    useEffect(() => {
+        setValidationErrors((prevErrors) => {
+            const errors = { ...prevErrors };
+
+            if (questionType) delete errors.questionType;
+            if (questionText.trim()) delete errors.questionText;
+            if ((questionType === QuestionTypes.MULTICHOICE || questionType === QuestionTypes.DROPDOWN) && options.length > 0) {
+                delete errors.options;
+            }
+            if ((questionType === QuestionTypes.MULTICHOICE || questionType === QuestionTypes.DROPDOWN) && answers.length > 0) {
+                delete errors.answers;
+            }
+            if (!options.some(option => option.trim() === "")) {
+                delete errors.options;
+            }
+
+            return errors;
+        });
+    }, [questionType, questionText, options, answers]);
+
     const handleSubmit = () => {
+        if (!validateForm()) return;
+
         const newQuestion = {
             id: Date.now().toString(),
             type: questionType,
@@ -116,8 +162,8 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                     <Select.Option value={QuestionTypes.DROPDOWN}>Dropdown</Select.Option>
                     <Select.Option value={QuestionTypes.FILE_UPLOAD}>File Upload</Select.Option>
                 </Select>
+                {validationErrors.questionType && <p className="text-red-500 text-sm">{validationErrors.questionType}</p>}
             </div>
-
 
             {questionType && (
                 <>
@@ -129,6 +175,7 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                             onChange={(e) => setQuestionText(e.target.value)}
                             placeholder="Enter your question"
                         />
+                        {validationErrors.questionText && <p className="text-red-500 text-sm">{validationErrors.questionText}</p>}
                     </div>
 
                     <div className="mt-4">
@@ -141,21 +188,21 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                                 onChange={() => setShowDescription(!showDescription)}
                                 className="cursor-pointer"
                             />
-                            
+
                         </label>
 
                         {/* Hidden input field for description */}
                         {showDescription && (
                             <div className="prose !max-w-none w-full">
-                            <ReactQuill
-                            value={description}
-                            onChange={(value) => setDescription(value)} 
-                            placeholder="Enter description..."
-                            className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
-                            modules={MODULES}
-                            formats={FORMATS}
-                          />
-                          </div>
+                                <ReactQuill
+                                    value={description}
+                                    onChange={(value) => setDescription(value)}
+                                    placeholder="Enter description..."
+                                    className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
+                                    modules={MODULES}
+                                    formats={FORMATS}
+                                />
+                            </div>
                         )}
                     </div>
 
@@ -198,6 +245,8 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                             Add Option
                         </Button>
                     </div>
+                    {validationErrors.options && <p className="text-red-500 text-sm">{validationErrors.options}</p>}
+                    {validationErrors.answers && <p className="text-red-500 text-sm">{validationErrors.answers}</p>}
 
                     {/* Option inputs */}
                     {options.map((option, index) => (
@@ -274,10 +323,10 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                 </div>
             )}
 
-            {/*implement form input checking */}
+            {/*Save button */}
             <div className="mt-6 flex justify-end">
                 <Button onClick={onClose} className="mr-2">Cancel</Button>
-                <Button type="primary" onClick={handleSubmit} disabled={!questionText || (questionType !== QuestionTypes.FILE_UPLOAD && answers.length === 0)}>
+                <Button type="primary" onClick={handleSubmit} disabled={Object.keys(validationErrors).length > 0}>
                     Save
                 </Button>
             </div>

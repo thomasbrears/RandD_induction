@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Input, Button } from "antd";
 import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 import ReactQuill from "react-quill";
+import {MODULES, FORMATS} from "../../models/QuillConfig";
 
 const MultichoiceQuestion = ({ question, onChange, isExpanded}) => {
   const [editingField, setEditingField] = useState(null);
@@ -17,13 +18,6 @@ const MultichoiceQuestion = ({ question, onChange, isExpanded}) => {
       setEditingField(null);
     }
   }, [isExpanded, editingField]);
-
-  // Define the toolbar options
-  const MODULES = {
-    toolbar: [["bold", "italic", "underline"]],
-  };
-
-  const FORMATS = ["bold", "italic", "underline"];
 
   const startEditing = (field) => setEditingField(field);
   const stopEditing = (field, value) => {

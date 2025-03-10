@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect} from "react";
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
-import InductionForm from "../../components/InductionForm";
+import InductionFormHeader from "../../components/InductionFormHeader";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import useAuth from "../../hooks/useAuth";
@@ -8,31 +8,20 @@ import { DefaultNewInduction } from "../../models/Inductions";
 import { updateInduction, getInduction } from "../../api/InductionApi";
 import PageHeader from "../../components/PageHeader";
 import ManagementSidebar from "../../components/ManagementSidebar";
-import { getAllDepartments } from "../../api/DepartmentApi";
-import ReactQuill from 'react-quill';
-import { FaEdit, FaSave, FaCheck } from 'react-icons/fa';
+import { FaSave} from 'react-icons/fa';
 import Loading from "../../components/Loading";
 import "react-quill/dist/quill.snow.css";
-import QuestionList from "../../components/questions/QuestionList";
-import QuestionForm from "../../components/questions/QuestionForm";
+import InductionFormContent from "../../components/InductionFormContent";
 
 const InductionEdit = () => {
   const { user, loading: authLoading } = useAuth();
   const [induction, setInduction] = useState(DefaultNewInduction);
-  const [localDepartment, setLocalDepartment] = useState(induction.department);
-  const [localDescription, setLocalDescription] = useState(induction.description);
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
-  const [isEditingDepartment, setIsEditingDepartment] = useState(false);
-  const [isSubmitDisabled, setIsSubmitDisabled] = useState(true);
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
-  const [Departments, setDepartments] = useState([]);
   const location = useLocation();
   const navigate = useNavigate();
   const id = location.state?.id;
-  const [showModal, setShowModal] = useState(false);
-
-  //Data fetchers/ updaters
+  
   useEffect(() => {
     if (id && !authLoading) {
       const fetchInduction = async () => {
@@ -41,8 +30,6 @@ const InductionEdit = () => {
           setLoadingMessage(`Loading the inductions's details...`);
           const inductionData = await getInduction(user, id);
           setInduction(inductionData);
-          setLocalDepartment(inductionData.department);
-          setLocalDescription(inductionData.description);
         } catch (err) {
           toast.error(err.response?.data?.message || "An error occurred");
         } finally {
@@ -56,92 +43,6 @@ const InductionEdit = () => {
     }
   }, [id, user, authLoading, navigate]);
 
-  //maybe adjust this one for input validation too?
-  useEffect(() => {
-    const isFormComplete = induction.name && induction.department && induction.description;
-    setIsSubmitDisabled(!isFormComplete);
-  }, [induction]);
-
-  useEffect(() => {
-    const getDepartments = async () => {
-      const data = await getAllDepartments();
-      setDepartments(data);
-    };
-    getDepartments();
-  }, []);
-
-  //Question methods
-  const handleCloseModal = () => {
-    setShowModal(false);
-  };
-
-  const handleAddQuestion = () => {
-    setShowModal(true);
-  };
-
-  const handleSaveQuestion = (newQuestion) => {
-    setInduction((prevInduction) => ({
-      ...prevInduction,
-      questions: [...prevInduction.questions, newQuestion],
-    }));
-
-    setShowModal(false);
-  };
-
-  const handleUpdateQuestions = (updateFunction) => {
-    setInduction((prevInduction) => ({
-      ...prevInduction,
-      questions: updateFunction(prevInduction.questions || []),
-    }));
-  };
-
-  // Define the toolbar options
-  const MODULES = {
-    toolbar: [["bold", "italic", "underline"]],
-  };
-
-  const FORMATS = ["bold", "italic", "underline"];
-
-  // Functions for toggling edit/view modes for department and description
-  const TOGGLE_EDIT_DEPARTMENT = () => setIsEditingDepartment((prev) => !prev);
-  const TOGGLE_EDIT_DESCRIPTION = () => setIsEditingDescription((prev) => !prev);
-
-  //Methods for updating department
-  const handleLocalDepartmentChange = (e) => {
-    setLocalDepartment(e.target.value);
-  };
-
-  const handleDepartmentUpdate = () => {
-    setInduction({
-      ...induction,
-      department: localDepartment,
-    });
-    TOGGLE_EDIT_DEPARTMENT();
-  };
-
-  const handleDepartmentCancel = () => {
-    setLocalDepartment(induction.department);
-    TOGGLE_EDIT_DEPARTMENT();
-  };
-
-  //Methods for updating Description
-  const handleLocalDescriptionChange = (value) => {
-    setLocalDescription(value);
-  };
-
-  const handleDescriptionUpdate = () => {
-    setInduction({
-      ...induction,
-      description: localDescription,
-    });
-    TOGGLE_EDIT_DESCRIPTION();
-  };
-
-  const handleDescriptionCancel = () => {
-    setLocalDescription(induction.description);
-    TOGGLE_EDIT_DESCRIPTION();
-  };
-
   // Function to handle form submission, validate inputs and call API
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -152,6 +53,7 @@ const InductionEdit = () => {
 
     if (missingFields.length > 0) {
       toast.warn(`Please fill in the following fields: ${missingFields.join(", ")}`);
+      console.log(missingFields);
       return;
     }
     console.log(induction.description);
@@ -164,14 +66,15 @@ const InductionEdit = () => {
     }
   };
 
+  //Make output pretty
   const checkForMissingFields = () => {
     const missingFields = [];
-
+  
     const isContentEmpty = (content) => {
       const strippedContent = content.replace(/<[^>]+>/g, '').trim();
-      return strippedContent === ''; 
+      return strippedContent === '';
     };
-
+  
     if (!induction.name || induction.name.trim() === "") {
       missingFields.push("Induction name");
     }
@@ -181,8 +84,60 @@ const InductionEdit = () => {
     if (induction.department === "Select a department" || !induction.department) {
       missingFields.push("Department");
     }
+  
+    // Check if there is at least one question
+    if (!induction.questions || induction.questions.length === 0) {
+      missingFields.push("At least one question");
+    } else {
 
-
+      let questionsMissingAnswer = 0;
+      let questionsMissingText = 0;
+      let questionsMissingType = 0;
+      let questionsMissingOptions = 0;
+      let optionsMissingText = 0;
+    
+      induction.questions.forEach((question, index) => {
+        if (!question.question || question.question.trim() === "") {
+          questionsMissingText++;
+        }
+    
+        if (!question.type || question.type.trim() === "") {
+          questionsMissingType++;
+        }
+    
+        if (!question.answers || question.answers.length === 0) {
+          questionsMissingAnswer++;
+        }
+    
+        if (!question.options || question.options.length === 0) {
+          questionsMissingOptions++;
+        } else {
+          question.options.forEach((option, optionIndex) => {
+            if (!option.trim()) {
+              optionsMissingText++;
+            }
+          });
+        }
+      });
+    
+      // Summarize missing fields for questions
+      if (questionsMissingAnswer > 0) {
+        missingFields.push(`${questionsMissingAnswer} question${questionsMissingAnswer > 1 ? "s":""} need at least one answer`);
+      }
+      if (questionsMissingText > 0) {
+        missingFields.push(`${questionsMissingText} question${questionsMissingText > 1 ? "s":""} need text`);
+      }
+      if (questionsMissingType > 0) {
+        missingFields.push(`${questionsMissingType} question${questionsMissingType > 1 ? "s":""} need a type`);
+      }
+      if (questionsMissingOptions > 0) {
+        missingFields.push(`${questionsMissingOptions} question${questionsMissingOptions > 1 ? "s":""} need options`);
+      }
+      if (optionsMissingText > 0) {
+        missingFields.push(`${optionsMissingText} option${optionsMissingText > 1 ? "s":""} are missing text`);
+      }
+    }
+  
     return missingFields;
   };
 
@@ -211,165 +166,23 @@ const InductionEdit = () => {
           <>
             <div className="flex-1">
               {/* Induction Form Component */}
-              <InductionForm
+              <InductionFormHeader
                 induction={induction}
                 setInduction={setInduction}
                 handleSubmit={handleSubmit}
-                isSubmitDisabled={isSubmitDisabled}
                 isCreatingInduction={false}
               />
 
               {/* Main content for managing induction details */}
               <div className="p-4 mx-auto max-w-5xl space-y-6">
-                <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
-                  {/* Department Section */}
-                  <div className="space-y-2">
-                    <label htmlFor="department" className="text-sm font-bold text-gray-700 flex items-center">
-                      Department:
-                      {!isEditingDepartment ? (
-                        <button
-                          type="button"
-                          onClick={TOGGLE_EDIT_DEPARTMENT}
-                          className="ml-2 text-gray-600 hover:text-gray-800"
-                          title="Edit department"
-                        >
-                          <FaEdit />
-                        </button>
-                      ) : (
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => { handleDepartmentUpdate() }}
-                            className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
-                          >
-                            <FaCheck className="inline mr-2" /> Update
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { handleDepartmentCancel() }}
-                            className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
-                          >
-                            <FaCheck className="inline mr-2" /> Cancel
-                          </button>
-                        </div>
-                      )}
-                    </label>
-                    {isEditingDepartment ? (
-                      <div className="flex items-center space-x-2">
-                        <select
-                          id="department"
-                          name="department"
-                          value={localDepartment}
-                          onChange={handleLocalDepartmentChange}
-                          className="border border-gray-300 rounded-lg p-2 focus:ring-gray-800 focus:border-gray-800"
-                        >
-                          <option value="">Select a department</option>
-                          {Departments.map((dept) => (
-                            <option key={dept.id} value={dept.name}>
-                              {dept.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ) : (
-                      <span className="text-base">{induction.department || "Select a department"}</span>
-                    )}
-                  </div>
 
-                  {/* Description Section */}
-                  <div className="space-y-2 w-full">
-                    <label htmlFor="description" className="text-sm font-bold text-gray-700 flex items-center">
-                      Description:
-                      {!isEditingDescription ? (
-                        <button
-                          type="button"
-                          onClick={TOGGLE_EDIT_DESCRIPTION}
-                          className="ml-2 text-gray-600 hover:text-gray-800"
-                          title="Edit description"
-                        >
-                          <FaEdit />
-                        </button>
-                      ) : (
-                        <div className="flex gap-2">
-                          <button
-                            type="button"
-                            onClick={() => { handleDescriptionUpdate() }}
-                            className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
-                          >
-                            <FaCheck className="inline mr-2" /> Update
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => { handleDescriptionCancel() }}
-                            className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
-                          >
-                            <FaCheck className="inline mr-2" /> Cancel
-                          </button>
-                        </div>
-                      )}
-                    </label>
-
-                    {isEditingDescription ? (
-                      <div className="prose !max-w-none w-full">
-                        <ReactQuill
-                          value={localDescription}
-                          onChange={(value) => { handleLocalDescriptionChange(value) }}
-                          placeholder="Enter description"
-                          className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
-                          modules={MODULES}
-                          formats={FORMATS}
-                        />
-                      </div>
-                    ) : (
-                      <div className="prose !max-w-none w-full break-words">
-                        <p className="text-base" dangerouslySetInnerHTML={{ __html: induction.description || "No description added" }} />
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Questions Section */}
-                <hr />
-                {/*Modal for creating the questions */}
-                <QuestionForm
-                  visible={showModal}
-                  onClose={handleCloseModal}
-                  onSave={handleSaveQuestion}
+                <InductionFormContent
+                 induction={induction}
+                 setInduction={setInduction}
+                 //validateAll
+                 //saveAll
+                 //setEditingField???
                 />
-
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                  {/* Top Row - Title, Description, Add Question Button */}
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h2 className="text-xl font-semibold">Questions</h2>
-                      <p className="text-sm text-gray-500">Let's add some questions to the induction!</p>
-                    </div>
-                    <button
-                      className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
-                      type="button"
-                      onClick={handleAddQuestion}
-                    >
-                      Add Question
-                    </button>
-                  </div>
-
-                  {/* Question List*/}
-                  <div className="mt-4">
-                    <QuestionList questions={induction.questions} setQuestions={handleUpdateQuestions} />
-                  </div>
-
-                  {induction.questions.length > 0 && (
-                    <div className="mt-6 flex justify-center">
-                      <button
-                        className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
-                        type="button"
-                        onClick={handleAddQuestion}
-                      >
-                        Add Question
-                      </button>
-                    </div>
-                  )}
-                </div>
 
                 {/* Save Button */}
                 <div className="flex justify-center mt-6">
@@ -389,4 +202,5 @@ const InductionEdit = () => {
     </>
   );
 };
+
 export default InductionEdit;

@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { FaEdit, FaCheck } from "react-icons/fa";
+import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
+import { Button } from "antd";
 import ReactQuill from "react-quill";
+import {MODULES, FORMATS} from "../../models/QuillConfig";
 
 const FileUploadQuestion = ({ question, onChange, isExpanded }) => {
   const [editingField, setEditingField] = useState(null);
@@ -13,22 +15,19 @@ const FileUploadQuestion = ({ question, onChange, isExpanded }) => {
     }
   }, [isExpanded, editingField]);
 
-  // Define the toolbar options
-  const MODULES = {
-    toolbar: [["bold", "italic", "underline"]],
-  };
-
-  const FORMATS = ["bold", "italic", "underline"];
-
   const startEditing = (field) => setEditingField(field);
-  const stopEditing = () => {
-    onChange(question.id, localValues);
+  const stopEditing = (field, value) => {
+    onChange(question.id, field, value);
     setEditingField(null);
   };
 
-  const handleChange = (field, value) => {
+  const handleLocalChange = (field, value) => {
     setLocalValues((prev) => ({ ...prev, [field]: value }));
-    onChange(question.id, field, value);
+  };
+
+  const handleCancel = (field) => {
+    setLocalValues((prev) => ({ ...prev, [field]: question[field] }));
+    setEditingField(null);
   };
 
   return (
@@ -38,13 +37,22 @@ const FileUploadQuestion = ({ question, onChange, isExpanded }) => {
         <div className="flex items-center">
           <p className="font-semibold mr-2">Description: <span className="font-normal text-gray-500">(optional)</span></p>
           {editingField === "description" ? (
-            <button
-              type="button"
-              onClick={stopEditing}
-              className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm flex items-center"
-            >
-              <FaCheck className="inline mr-2" /> Update
-            </button>
+            <div className="flex gap-2">
+              {/* Update Button */}
+              <Button
+                onClick={() => stopEditing("description", localValues.description)}
+                className="bg-gray-800 font-normal text-white px-2 py-1 rounded-md text-sm flex items-center"
+              >
+                <FaCheck className="inline mr-2" /> Update
+              </Button>
+              {/* Cancel Button */}
+              <Button
+                onClick={() => handleCancel("description")}
+                className="bg-red-500 text-white px-2 py-1 rounded-md text-sm flex items-center h-8"
+              >
+                <FaTimes className="mr-1 w-4 h-4" /> Cancel
+              </Button>
+            </div>
           ) : (
             <button
               type="button"
@@ -61,8 +69,8 @@ const FileUploadQuestion = ({ question, onChange, isExpanded }) => {
           <div className="prose !max-w-none w-full mt-2">
             <ReactQuill
               value={localValues.description}
-              onChange={(value) => handleChange("description", value)}
-              placeholder="Enter description"
+              onChange={(value) => handleLocalChange("description", value)}
+              placeholder="Enter description..."
               className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
               modules={MODULES}
               formats={FORMATS}
@@ -74,7 +82,7 @@ const FileUploadQuestion = ({ question, onChange, isExpanded }) => {
           </div>
         )}
       </div>
-    </div>
+    </div >
   );
 };
 

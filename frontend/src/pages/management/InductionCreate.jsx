@@ -4,7 +4,7 @@ import { createNewInduction } from "../../api/InductionApi";
 import { toast } from 'react-toastify';
 import PageHeader from "../../components/PageHeader";
 import ManagementSidebar from "../../components/ManagementSidebar";
-import InductionForm from "../../components/InductionForm";
+import InductionForm from "../../components/InductionFormHeader";
 import { DefaultNewInduction } from "../../models/Inductions";
 import useAuth from "../../hooks/useAuth";
 import { getAllDepartments } from "../../api/DepartmentApi";

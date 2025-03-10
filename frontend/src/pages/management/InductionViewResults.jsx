@@ -6,7 +6,8 @@ import useAuth from "../../hooks/useAuth";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import { DefaultNewInduction } from "../../models/Inductions";
-import {getInduction } from "../../api/InductionApi";
+import { getInduction } from "../../api/InductionApi";
+import Loading from '../../components/Loading';
 
 const InductionViewResults = () => {
   const { user, loading: authLoading } = useAuth();
@@ -48,17 +49,22 @@ const InductionViewResults = () => {
         subtext={`View the results for ${induction.name}`}
       />
 
-      {/* Main container */}
-      <div className="flex px-4 md:px-0 bg-gray-50">
+      {/* Main content area */}
+      {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
+      <div className="flex bg-gray-50 w-full">
+
         {/* Management Sidebar */}
         <div className="hidden md:flex">
           <ManagementSidebar />
         </div>
 
-        {/* Main content area */}
-        <div className="flex-1 ml-6 md:ml-8 p-6">
-          <p>Results will be displayed here</p>
-        </div>
+        {loading ? (
+          <Loading message={loadingMessage} />
+        ) : (
+          <div className="flex-1 ml-6 md:ml-8 p-6">
+            <p>Results will be displayed here</p>
+          </div>
+        )}
       </div>
     </>
   );

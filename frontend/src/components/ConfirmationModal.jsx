@@ -4,8 +4,8 @@ const ConfirmationModal = ({ isOpen, message, subtext, onCancel, onConfirm, acti
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex justify-center items-center">
-      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md">
+    <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex justify-center items-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-lg max-w-md z-60">
         <h2 className="text-xl">{message}</h2>
         {subtext && <p className="text-gray-600 mt-2">{subtext}</p>}
         <div className="mt-4 flex justify-between">
