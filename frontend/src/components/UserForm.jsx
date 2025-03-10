@@ -9,6 +9,8 @@ import { z } from "zod";
 import useAuth from "../hooks/useAuth";
 import "react-datepicker/dist/react-datepicker.css";
 import { getAllPositions } from '../api/PositionApi';
+import { getAllLocations } from '../api/LocationApi';
+import { getAllDepartments } from '../api/DepartmentApi';
 import Status from "../models/Status";
 import { deleteUser, deactivateUser, reactivateUser } from "../api/UserApi";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -17,7 +19,7 @@ import ConfirmationModal from './ConfirmationModal';
 import { FaUserCheck, FaUserTimes, FaTrashAlt, FaSave, FaUserPlus, FaPlus } from 'react-icons/fa';
 
 export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
-  const [user, setUser] = useState({ ...DefaultNewUser, position: '' });
+  const [user, setUser] = useState({ ...DefaultNewUser, position: '', department: '' });
   const [actionType, setActionType] = useState(null); // Store whether it's deactivation, reactivation, or deletion
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [confirmDeactivate, setConfirmDeactivate] = useState(false);
@@ -25,6 +27,8 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
   const [availableInductions, setAvailableInductions] = useState([]);
   const [newAssignedInductions, setNewAssignedInductions] = useState([]);
   const [positions, setPositions] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [departments, setDepartments] = useState([]);
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,11 +37,13 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
   const isEditPage = location.pathname.includes('/edit');
   const isExistingUser = userData?.uid !== undefined; // Check if it's an existing user
 
+  // User schema for form validation
   const userSchema = z.object({
     firstName: z.string().min(1, "First name is required"),
     lastName: z.string().min(1, "Last name is required"),
     email: z.string().email("Invalid email format"),
     locations: z.array(z.string()).min(1, "At least one location is required"),
+    department: z.string().min(1, "Department is required"),
     newAssignedInductions: z
       .array(
         z.object({
@@ -92,15 +98,28 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
       }),
   });
 
+  // Form methods and state
   const methods = useForm({
     resolver: zodResolver(userSchema),
-    defaultValues: userData,
+    defaultValues: {
+      ...userData,
+    },
     mode: "onChange",
   });
 
   useEffect(() => {
-    setUser(userData);
-    methods.reset(userData);
+    //console.log("userData changed:", userData);
+    
+    // Initialize with properly structured data
+    setUser({
+      ...userData,
+    });
+    
+    // Reset form with proper values
+    methods.reset({
+      ...userData,
+    });
+    
     if (userData.uid) {
       methods.trigger();
     }
@@ -117,7 +136,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
     const fetchPositions = async () => {
       try {
         const positionsData = await getAllPositions();
-        // console.log("Positions data:", positionsData);
+        //console.log("Positions data:", positionsData);
         setPositions(positionsData);
       } catch (error) {
         console.error("Error fetching positions:", error);
@@ -127,40 +146,88 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
     fetchPositions();
   }, []);
 
+  useEffect(() => {
+    const fetchLocations = async () => {
+      try {
+        const locationsData = await getAllLocations();
+        //console.log("Location data:", locationsData);
+        setLocations(locationsData);
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+      }
+    };
+
+    fetchLocations();
+  }, []);
+
+  useEffect(() => {
+    const fetchDepartments = async () => {
+      try {
+        const departmentData = await getAllDepartments();
+        //console.log("Department data:", departmentData);
+        setDepartments(departmentData);
+      } catch (error) {
+        console.error("Error fetching departments:", error);
+      }
+    };
+
+    fetchDepartments();
+  }, []);
+
   // Handle form submission
   const handleSubmit = async (data) => {
-    setUser(data);
+    //console.log("Form data from methods:", data);
+    
+    // Update user state with form data
+    setUser(prevUser => ({
+      ...prevUser,
+      firstName: data.firstName,
+      lastName: data.lastName,
+      email: data.email
+    }));
+    
+    // Prepare data for submission
     const userToSubmit = {
-      ...user,
+      uid: userData.uid,
       email: data.email,
       firstName: data.firstName,
       lastName: data.lastName,
-      position: user.position,
+      position: user.position || "",
+      department: user.department || "",
       permission: user.permission,
-      locations: user.locations,
+      locations: Array.isArray(user.locations) ? user.locations : [],
+      assignedInductions: user.assignedInductions || []
     };
 
-    await onSubmit(userToSubmit);
+    //console.log("Submitting user data:", userToSubmit);
 
-    if (!userData.uid) {
-      methods.reset(DefaultNewUser);
-      setUser(DefaultNewUser);
-      setNewAssignedInductions([]);
-    } else {
-      setUser(userToSubmit);
-      methods.reset(user);
-      setNewAssignedInductions([]);
+    try {
+      await onSubmit(userToSubmit);  
+      if (!userData.uid) {
+        methods.reset(DefaultNewUser);
+        setUser(DefaultNewUser);
+        setNewAssignedInductions([]);
+      } else {
+        setUser(userToSubmit);
+        methods.reset(userToSubmit);
+        setNewAssignedInductions([]);
+      }
+    } catch (error) {
+      console.error("Submission error:", error);
+      toast.error(error.message || "Error saving user data");
     }
   };
 
   // Handle locations change
-  const handleLocationsChange = (selectedOptions) => {
+  const handleLocationsChange = (selectedOptions) => {    
     const selectedValues = selectedOptions
       ? selectedOptions.map((option) => option.value)
       : [];
 
+    // Update form validation state
     methods.setValue("locations", selectedValues, { shouldValidate: true });
 
+    // Update component state
     setUser((prevUser) => ({
       ...prevUser,
       locations: selectedValues,
@@ -263,26 +330,26 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
           <h1>User Details</h1>
           {/* Render action buttons for existing users for deleting and deactivating/reactivating */}
           {isEditPage && isExistingUser && (
-              <div className="flex space-x-2">
+              <div className="flex space-x-2 mb-2">
                 <button
-                  className={`text-white px-3 py-2 rounded-md ${user.disabled ? 'bg-green-600' : 'bg-gray-700'}`}
+                  className={`text-white px-3 py-2 text-xs sm:text-sm rounded-md ${user.disabled ? 'bg-green-600' : 'bg-gray-700'}`}
                   onClick={handleDeactivateOrReactivate}
                 >
                   {user.disabled ? (
                     <>
-                      <FaUserCheck className="inline mr-2" /> Reactivate User
+                      <FaUserCheck className="inline mr-2 mb-1" /> Reactivate User
                     </>
                   ) : (
                     <>
-                      <FaUserTimes className="inline mr-2" /> Deactivate User
+                      <FaUserTimes className="inline mr-2 mb-1" /> Deactivate User
                     </>
                   )}
                 </button>
                 <button
-                  className="text-white bg-red-700 hover:bg-red-900 px-3 py-2 rounded-md"
+                  className="text-white bg-red-700 hover:bg-red-900 px-2 py-1 text-xs sm:px-3 sm:py-2 sm:text-sm rounded-md"
                   onClick={handleDelete}
                 >
-                  <FaTrashAlt className="inline mr-2" />Delete User
+                  <FaTrashAlt className="inline mr-2 mb-1" />Delete User
                 </button>
               </div>
             )}
@@ -294,7 +361,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
               className="w-full"
             >
               {/* First Name and Last Name */}
-              <div className="flex flex-wrap -mx-3 mb-6">
+              <div className="flex flex-wrap -mx-3 mb-6 mt-6">
                 <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
                   <label
                     className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
@@ -379,9 +446,10 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                 </div>
               </div>
 
-              {/* Position dropdown */}
               <div className="flex flex-wrap -mx-3 mb-6">
-                <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
+              
+              {/* Position dropdown */}
+              <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
                   <label
                     className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
                     htmlFor="grid-position"
@@ -390,15 +458,15 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                   </label>
                   <select
                     className="block appearance-none w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
-                    value={user.position}
+                    value={user.position || ""}
                     onChange={(e) => setUser({ ...user, position: e.target.value })}
                   >
-                    <option value="" disabled>Select Position</option> {/* Default "Select Position" option */}
+                    <option value="" disabled>Select Position</option>
                     {positions.length === 0 ? (
                       <option className="text-gray-700">Loading positions...</option>
                     ) : (
                       positions.map((pos) => {
-                        const positionName = String(pos.name); // Convert to string if not already
+                        const positionName = String(pos.name);
                         return (
                           <option key={pos.id} value={positionName}>
                             {positionName.charAt(0).toUpperCase() + positionName.slice(1)}
@@ -410,7 +478,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                 </div>
 
                 {/* Location Multi-Select */}
-                <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
+                <div className="w-full md:w-1/2 px-3 mb-2 md:mb-0">
                   <label
                     className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
                     htmlFor="grid-location"
@@ -420,11 +488,12 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                   <Select
                     classNamePrefix="custom-select"
                     isMulti
-                    options={Object.values(Locations).map((loc) => ({
-                      value: loc,
-                      label: loc.charAt(0).toUpperCase() + loc.slice(1),
+                    name="locations"
+                    options={locations.map((loc) => ({
+                      value: loc.name, 
+                      label: loc.name.charAt(0).toUpperCase() + loc.name.slice(1),
                     }))}
-                    value={user.locations.map((loc) => ({
+                    value={(user.locations || []).map((loc) => ({
                       value: loc,
                       label: loc.charAt(0).toUpperCase() + loc.slice(1),
                     }))}
@@ -449,9 +518,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                       option: (provided, state) => ({
                         ...provided,
                         color: state.isSelected ? "white" : "rgb(55 65 81)",
-                        backgroundColor: state.isSelected
-                          ? "rgb(156 163 175)"
-                          : "white",
+                        backgroundColor: state.isSelected ? "rgb(156 163 175)" : "white",
                         "&:hover": {
                           backgroundColor: "rgb(229 231 235)",
                         },
@@ -464,21 +531,59 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
                     </p>
                   )}
                 </div>
+
+                {/* Department dropdown */}
+                <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0 mt-4 sm:mt-6">
+                  <label
+                    className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
+                    htmlFor="grid-department"
+                  >
+                    Department:
+                  </label>
+                  <select
+                    className="block appearance-none w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
+                    value={user.department || ""}
+                    {...methods.register("department")}
+                    onChange={(e) => {
+                      methods.setValue("department", e.target.value, { shouldValidate: true });
+                      setUser({ ...user, department: e.target.value });
+                    }}
+                  >
+                    <option value="" disabled>Select Department</option>
+                    {departments.length === 0 ? (
+                      <option className="text-gray-700">Loading departments...</option>
+                    ) : (
+                      departments.map((dept) => {
+                        const departmentName = String(dept.name);
+                        return (
+                          <option key={dept.id} value={departmentName}>
+                            {departmentName.charAt(0).toUpperCase() + departmentName.slice(1)}
+                          </option>
+                        );
+                      })
+                    )}
+                  </select>
+                  {methods.formState.errors.department && (
+                    <p className="text-red-500 text-xs italic">
+                      {methods.formState.errors.department.message}
+                    </p>
+                  )}
+                </div>
               </div>
 
               {/* Submit Button - "Save" for existing user, "Create" for new user */}
-              <div className="flex justify-center">
+              <div className="flex justify-center mt-6">
                 <button
-                  className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-2 rounded-md"
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-medium px-4 py-2 rounded-md w-full md:w-1/2 lg:w-1/4 flex items-center justify-center"
                   type="submit"
                 >
                   {userData.uid ? (
                     <>
-                      <FaSave className="inline mr-2" /> Save Changes
+                      <FaSave className="mr-2" /> Save Changes
                     </>
                   ) : (
                     <>
-                      <FaUserPlus className="inline mr-2" /> Create User
+                      <FaUserPlus className="mr-2" /> Create User
                     </>
                   )}
                 </button>

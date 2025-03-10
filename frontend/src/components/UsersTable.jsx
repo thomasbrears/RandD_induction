@@ -257,16 +257,18 @@ const UsersTable = () => {
               <div key={row.id} className="bg-white shadow-md rounded-lg p-4">
                 <h3 className="text-lg font-semibold">
                   <Link to={`/user/${row.original.uid}`} className="text-black hover:underline">
-                    {row.original.firstName} {row.original.lastName}
+                    {row.original.firstName} {row.original.lastName} 
                   </Link>
+                  
+                  <span className="text-xs ml-2 text-gray-500">
+                    ({row.original.permission})
+                  </span>
                 </h3>
-                <div className="text-sm text-gray-600 mt-2">
+                
+                <div className="text-sm text-black mt-2">
                   <p>
                     <span className="font-semibold">Email: </span> 
                     <a href={`mailto:${row.original.email}`} className="text-blue-500 hover:underline">{row.original.email}</a>
-                  </p>
-                  <p>
-                    <span className="font-semibold">Permission: </span> {row.original.permission}
                   </p>
                 </div>
 

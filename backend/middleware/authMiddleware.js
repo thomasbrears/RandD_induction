@@ -2,6 +2,16 @@ import admin from "firebase-admin";
 
 // Middleware to check authentication
 export const authMiddleware = async (req, res, next) => {
+  // Public routes that don't require authentication
+  const publicPaths = [
+    '/api/contact/submit'
+  ];
+  
+  // Skip authentication for public routes
+  if (publicPaths.includes(req.path)) {
+    return next();
+  }
+  
   const { authtoken } = req.headers;
 
   if (authtoken) {

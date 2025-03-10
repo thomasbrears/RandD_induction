@@ -28,6 +28,7 @@ const InductionCreate = () => {
   const [isEditingDepartment, setIsEditingDepartment] = useState(false);
   const [Departments, setDepartments] = useState([]);
   const [showResult, setShowResult] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
 
   // Functions for toggling edit/view modes for department and description
   const TOGGLE_EDIT_DEPARTMENT = () => setIsEditingDepartment((prev) => !prev);
@@ -112,6 +113,36 @@ const InductionCreate = () => {
     };
     getDepartments();
   }, []);
+
+  // Detect window resizing
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowWidth(window.innerWidth);
+    };
+    
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  // If screen width is smaller than 900px, show a warning page
+  if (windowWidth < 900) {
+    return (
+
+      <Result
+        status="info"
+        title="Sorry, this device is not supported for creating inductions"
+        subTitle="Sorry, our induction modual creation tool requires a desktop, laptop, or a large tablet in landscape orientation to work optimally. Please switch to a supported device and try again."
+        extra={[
+          <Button type="primary" key="home" onClick={() => window.location.href = "/management/dashboard"}>
+            Management Dashboard
+          </Button>,
+          <Button  key="home" onClick={() => window.location.href = "/management/inductions/view"}>
+            View all Inductions
+          </Button>
+        ]}
+      />
+    );
+  }
 
   return (
     <>

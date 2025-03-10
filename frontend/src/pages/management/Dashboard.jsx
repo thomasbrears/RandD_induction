@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
 import { FaUsers, FaClipboardList, FaChartBar, FaCog } from 'react-icons/fa';
+import { GrContact } from "react-icons/gr";
 import useAuth from '../../hooks/useAuth';
 
 const Dashboard = () => {
@@ -38,6 +39,14 @@ const Dashboard = () => {
       ]
     },
     {
+      icon: <GrContact className="inline mr-2" />,
+      title: "Contact Submissions",
+      description: "View & Manage contact/feedback submissions",
+      links: [
+        { text: "View Submissions", path: "/management/contact-submissions" }
+      ]  
+    },
+    {
       icon: <FaCog className="inline mr-2" />,
       title: "Settings",
       description: "Manage system settings",
@@ -58,12 +67,12 @@ const Dashboard = () => {
       {/* Main container */}
       <div className="flex px-4 md:px-0 bg-gray-50">
         {/* Management Sidebar */}
-        <div className="hidden md:flex">
+        <div className="">
           <ManagementSidebar />
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 ml-6 md:ml-8">
+        <div className="flex-1 mx-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-6">
             {sections.map((section, index) => (
               <div

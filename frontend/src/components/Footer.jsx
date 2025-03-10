@@ -30,12 +30,13 @@ const Footer = () => {
                   <Link to="/management/inductions/view" className="hover:text-blue-400">Manage Inductions</Link>
                   <Link to="/management/inductions/results" className="hover:text-blue-400">View Induction Results</Link>
                   <Link to="/management/users/view" className="hover:text-blue-400">Manage Users</Link>
+                  <Link to="/management/contact-submissions" className="hover:text-blue-400">Contact Submissions</Link>
                 </div>
               ) : (
                 <Link to="/inductions/my-inductions" className="hover:text-blue-400">My Inductions</Link>
               )}
 
-              <button onClick={signOut} className="hover:text-blue-400">Sign Out</button>
+              <button onClick={signOut} className="hover:text-blue-400">Sign out</button>
             </>
           )}
 

@@ -21,12 +21,9 @@ const AddUser = () => {
     if (user) {
       createNewUser(user, submittedUser)
         .then((createdUser) => {
-          toast.success("User created successfully!", {
-            position: "top-right",
-            autoClose: 3000,
-          });
+          toast.success("User created successfully!");
 
-          // ✅ Save the created user's info in state
+          // Save the created users info in state
           setCreatedUser({
             uid: createdUser.uid,
             firstName: submittedUser.firstName,
@@ -52,12 +49,12 @@ const AddUser = () => {
       <PageHeader title="Create User" subtext="Let's create and welcome a new user!" />
 
       <div className="flex px-4 md:px-0 bg-gray-50">
-        <div className="hidden md:flex">
+        <div className="">
           <ManagementSidebar />
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 ml-6 md:ml-8 p-6">
+        <div className="flex-1 mb-4">
           {/* Show success message if user is created or display the user form when creating a new user*/}
           {userCreated && createdUser ? (
             // Success Message screen with buttons

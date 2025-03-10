@@ -4,6 +4,8 @@ import { authMiddleware } from "./middleware/authMiddleware.js";
 import userRoutes from "./routes/userRoutes.js";
 import inductionRoutes from "./routes/inductionRoutes.js";
 import departmentRoutes from "./routes/departmentRoutes.js";
+import contactRoutes from "./routes/contactRoutes.js";
+import locationRoutes from "./routes/locationRoutes.js";
 import positionRoutes from "./routes/positionRoutes.js";
 
 const app = express();
@@ -28,6 +30,9 @@ app.use(authMiddleware);
 // Department Routes
 app.use("/api/departments", departmentRoutes);
 
+// Location Routes
+app.use("/api/locations", locationRoutes);
+
 // Position Routes
 app.use("/api/positions", positionRoutes);
 
@@ -36,6 +41,9 @@ app.use("/api/users", userRoutes);
 
 // Induction Routes
 app.use("/api/inductions", inductionRoutes);
+
+// Contact Routes
+app.use("/api/contact", contactRoutes);
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
