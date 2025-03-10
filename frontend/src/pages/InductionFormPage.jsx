@@ -1,10 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import useAuth from '../hooks/useAuth';
+import { getInduction } from '../api/InductionApi';
+import Loading from '../components/Loading';
 
 const InductionFormPage = () => {
   const { user } = useAuth();
+  const [searchParams] = useSearchParams();
+  // Support both assignmentID (preferred) and id (legacy) parameters
+  const assignmentID = searchParams.get('assignmentID');
+  const id = searchParams.get('id');
+  const idParam = assignmentID || id; // Use whichever is available
+  const navigate = useNavigate();
+  
+  const [induction, setInduction] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [started, setStarted] = useState(false);
   const [formData, setFormData] = useState({});
+  const [loadAttempts, setLoadAttempts] = useState(0);
+
+  useEffect(() => {
+    const fetchInduction = async () => {
+      try {
+        if (!idParam) {
+          toast.error('No induction specified');
+          navigate('/inductions/my-inductions');
+          return;
+        }
+        
+        setLoading(true);
+        setNotFound(false);
+        
+        const data = await getInduction(user, idParam);
+        
+        if (data) {
+          setInduction(data);
+          setLoading(false);
+        } else {
+          // Only set not found after a delay to prevent flash
+          setTimeout(() => {
+            if (loadAttempts < 3) { // Try up to 3 times
+              setLoadAttempts(prev => prev + 1);
+            } else {
+              setNotFound(true);
+              setLoading(false);
+            }
+          }, 1000);
+        }
+      } catch (error) {
+        console.error('Error fetching induction:', error);
+        
+        // Only show error toast and set not found after final attempt
+        if (loadAttempts >= 2) {
+          toast.error('Failed to load induction');
+          setNotFound(true);
+          setLoading(false);
+        } else {
+          // Try again if we haven't reached max attempts
+          setLoadAttempts(prev => prev + 1);
+        }
+      }
+    };
+
+    fetchInduction();
+  }, [idParam, user, navigate, loadAttempts]);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -16,12 +78,85 @@ const InductionFormPage = () => {
     console.log('Form submitted', formData);
   };
 
+  const handleStart = () => {
+    setStarted(true);
+  };
+
+  // Calculate estimated time (assumed 2 minutes per question as a default)
+  const estimatedTime = induction?.questions?.length ? induction.questions.length * 2 : 0;
+
+  if (loading) {
+    return <Loading />;
+  }
+
+  if (notFound) {
+    return (
+      <>
+        <Helmet><title>Induction Not Found | AUT Events Induction Portal</title></Helmet>
+        <div className="p-6 max-w-4xl mx-auto text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Induction Not Found</h1>
+          <p>Sorry, we couldn't find the requested induction.</p>
+          <button 
+            onClick={() => navigate('/inductions/my-inductions')}
+            className="mt-4 px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700"
+          >
+            Return to My Inductions
+          </button>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
-      <Helmet><title>Induction | AUT Events Induction Portal</title></Helmet>
-      <div className="p-6">
-        <h1>Main Induction Form Page</h1>
-        <p>Welcome, {user?.email}! Please complete the induction form below.</p>
+      <Helmet><title>{induction.name || 'Induction'} | AUT Events Induction Portal</title></Helmet>
+      <div className="p-6 max-w-4xl mx-auto">
+        {!started ? (
+          <div className="bg-white shadow-md rounded-lg p-6">
+            <h1 className="text-2xl font-bold text-gray-800 mb-4 break-words">{induction.name}</h1>
+            
+            <div className="mb-6 space-y-4">
+              <div className="p-4 bg-gray-50 rounded-md">
+                <div className="prose !max-w-none w-full break-words overflow-hidden">
+                  <p 
+                    className="text-gray-700"
+                    dangerouslySetInnerHTML={{ __html: induction.description || 'No description provided.' }}
+                  />
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-blue-50 p-4 rounded-md">
+                  <span className="block text-sm font-medium text-gray-600">Question Count</span>
+                  <span className="text-lg font-semibold">{induction.questions?.length || 0} questions</span>
+                </div>
+                
+                <div className="bg-green-50 p-4 rounded-md">
+                  <span className="block text-sm font-medium text-gray-600">Estimated Time</span>
+                  <span className="text-lg font-semibold">
+                    {estimatedTime} {estimatedTime === 1 ? 'minute' : 'minutes'}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            <button 
+              onClick={handleStart}
+              className="w-full md:w-auto px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors font-medium"
+            >
+              Start Induction
+            </button>
+          </div>
+        ) : (
+          <div>
+            <h1 className="text-2xl font-bold mb-4 break-words">{induction.name}</h1>
+            <p>Welcome, {user?.email}! Please complete the induction form below.</p>
+            {/* Actual induction form content would go here */}
+            <div className="mt-6">
+              <p>Induction questions would appear here...</p>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );

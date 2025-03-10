@@ -9,6 +9,7 @@ import {
   deactivateUser,
   reactivateUser,
   getAssignedInductions,
+  getAssignedInduction,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -23,5 +24,6 @@ router.delete("/delete-user", deleteUser);
 router.post("/deactivate-user", deactivateUser);
 router.post("/reactivate-user", reactivateUser);
 router.get("/get-assigned-inductions", getAssignedInductions);
+router.get("/get-assigned-induction", getAssignedInduction);
 
 export default router;

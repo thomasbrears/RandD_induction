@@ -338,3 +338,58 @@ export const getAssignedInductions = async (req, res) => {
     res.status(500).send(error);
   }
 };
+
+// Get a specific assigned induction by its assignmentID
+export const getAssignedInduction = async (req, res) => {
+  try {
+    const assignmentID = req.query.assignmentID;
+    
+    if (!assignmentID) {
+      return res.status(400).json({ message: "No assignment ID provided" });
+    }
+
+    // Find the user with this assignment
+    // First get all users (in a real app, you'd optimize this with an index/query)
+    const usersSnapshot = await db.collection("users").get();
+    
+    let foundInduction = null;
+
+    // Iterate through users to find the matching assignmentID
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = userDoc.data();
+      if (userData.assignedInductions) {
+        const foundAssignment = userData.assignedInductions.find(
+          assignment => assignment.assignmentID === assignmentID
+        );
+        
+        if (foundAssignment) {
+          // Now get the actual induction details
+          const inductionRef = db.collection("inductions").doc(foundAssignment.id);
+          const inductionDoc = await inductionRef.get();
+          
+          if (inductionDoc.exists) {
+            foundInduction = {
+              ...inductionDoc.data(),
+              id: inductionDoc.id,
+              assignmentID: assignmentID, // Include the assignmentID for reference
+              status: foundAssignment.status,
+              dueDate: foundAssignment.dueDate,
+              availableFrom: foundAssignment.availableFrom,
+              completionDate: foundAssignment.completionDate
+            };
+            break;
+          }
+        }
+      }
+    }
+
+    if (!foundInduction) {
+      return res.status(404).json({ message: "Assigned induction not found" });
+    }
+
+    res.json({ induction: foundInduction });
+  } catch (error) {
+    console.error("Error fetching assigned induction:", error);
+    res.status(500).send(error);
+  }
+};

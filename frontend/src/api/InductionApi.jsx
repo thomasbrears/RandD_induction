@@ -55,14 +55,32 @@ export const createNewInduction = async (user, inductionData) => {
   }
 };
 
-export const getInduction = async (user, id) => {
+export const getInduction = async (user, idParam) => {
   try {
-      const token = user?.token;
-      const headers = token ? {authtoken: token}: {};
-      const response = await axios.get(`${API_URL}/inductions/get-induction`,{
-          headers,
-          params: { id },
+    const token = user?.token;
+    const headers = token ? {authtoken: token}: {};
+    
+    // First attempt to get the induction from the assignment endpoint (new approach)
+    try {
+      const assignedResponse = await axios.get(`${API_URL}/users/get-assigned-induction`, {
+        headers,
+        params: { assignmentID: idParam },
       });
+      
+      if (assignedResponse.data?.induction) {
+        return assignedResponse.data.induction;
+      }
+    } catch (err) {
+      // If the endpoint doesn't exist or returns an error, we'll try the fallback
+      console.log("Assignment endpoint failed, trying fallback...");
+    }
+    
+    // Fallback to the direct induction endpoint (old approach)
+    const response = await axios.get(`${API_URL}/inductions/get-induction`, {
+      headers,
+      params: { id: idParam },
+    });
+    
     return response.data;
   } catch (error) {
     console.error("Error fetching induction:", error);
