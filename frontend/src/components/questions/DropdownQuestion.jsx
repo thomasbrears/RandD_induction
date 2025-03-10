@@ -82,6 +82,7 @@ const DropdownQuestion = ({ question, onChange, isExpanded }) => {
                 <Button
                   onClick={() => stopEditing("description", localValues.description)}
                   className="bg-gray-800 font-normal text-white px-2 py-1 rounded-md text-sm flex items-center"
+                  title="Save Changes"
                 >
                   <FaCheck className="inline mr-2" /> Update
                 </Button>
@@ -89,6 +90,7 @@ const DropdownQuestion = ({ question, onChange, isExpanded }) => {
                 <Button
                   onClick={() => handleCancel("description")}
                   className="bg-red-500 text-white px-2 py-1 rounded-md text-sm flex items-center h-8"
+                  title="Discard Changes"
                 >
                   <FaTimes className="mr-1 w-4 h-4" /> Cancel
                 </Button>
@@ -130,6 +132,7 @@ const DropdownQuestion = ({ question, onChange, isExpanded }) => {
             <Button
               onClick={handleAddOption}
               className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
+              title="Add Option"
             >
               Add Option
             </Button>
@@ -185,6 +188,7 @@ const DropdownQuestion = ({ question, onChange, isExpanded }) => {
                     <Button
                       onClick={() => stopEditing("options", localValues.options)}
                       className="bg-gray-800 text-white px-3 py-1 rounded-md text-sm flex items-center h-8"
+                      title="Save Changes"
                     >
                       <FaCheck className="mr-1 w-4 h-4" /> Update
                     </Button>
@@ -193,6 +197,7 @@ const DropdownQuestion = ({ question, onChange, isExpanded }) => {
                     <Button
                       onClick={() => handleCancel("options")}
                       className="bg-red-500 text-white px-3 py-1 rounded-md text-sm flex items-center h-8"
+                      title="Discard Changes"
                     >
                       <FaTimes className="mr-1 w-4 h-4" /> Cancel
                     </Button>
@@ -212,6 +217,7 @@ const DropdownQuestion = ({ question, onChange, isExpanded }) => {
               <Button
                 onClick={() => handleRemoveOption(index)}
                 className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md self-start"
+                title="Remove Option"
               >
                 Remove
               </Button>

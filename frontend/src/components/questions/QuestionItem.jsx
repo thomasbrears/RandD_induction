@@ -172,6 +172,7 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion }) => {
                                         <Button
                                             onClick={() => stopEditing("question", localValues.question)}
                                             className="bg-gray-800 text-white px-3 py-1 rounded-md text-sm flex items-center h-8"
+                                            title="Save Changes"
                                         >
                                             <FaCheck className="mr-1 w-4 h-4" /> Update
                                         </Button>
@@ -180,6 +181,7 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion }) => {
                                         <Button
                                             onClick={() => handleEditCancel("question")}
                                             className="bg-red-500 text-white px-3 py-1 rounded-md text-sm flex items-center h-8"
+                                            title="Discard Changes"
                                         >
                                             <FaTimes className="mr-1 w-4 h-4" /> Cancel
                                         </Button>
@@ -224,6 +226,7 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion }) => {
                         <Button
                             onClick={() => handleConfirmDelete()}
                             className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md flex items-center gap-2"
+                            title="Delete Question"
                         >
                             <Trash className="w-4 h-4" /> Delete Question
                         </Button>

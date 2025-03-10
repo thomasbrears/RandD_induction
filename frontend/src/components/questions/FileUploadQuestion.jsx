@@ -42,6 +42,7 @@ const FileUploadQuestion = ({ question, onChange, isExpanded }) => {
               <Button
                 onClick={() => stopEditing("description", localValues.description)}
                 className="bg-gray-800 font-normal text-white px-2 py-1 rounded-md text-sm flex items-center"
+                title="Save Changes"
               >
                 <FaCheck className="inline mr-2" /> Update
               </Button>
@@ -49,6 +50,7 @@ const FileUploadQuestion = ({ question, onChange, isExpanded }) => {
               <Button
                 onClick={() => handleCancel("description")}
                 className="bg-red-500 text-white px-2 py-1 rounded-md text-sm flex items-center h-8"
+                title="Discard Changes"
               >
                 <FaTimes className="mr-1 w-4 h-4" /> Cancel
               </Button>

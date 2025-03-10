@@ -24,9 +24,9 @@ const InductionFormContent = ({ induction, setInduction }) => {
     const startEditing = (field) => {
         if (editingField) {
             if (editingField === "department") {
-                handleDepartmentUpdate(); 
+                handleDepartmentUpdate();
             } else if (editingField === "description") {
-                handleDescriptionUpdate(); 
+                handleDescriptionUpdate();
             }
         }
         setEditingField(field);
@@ -120,6 +120,7 @@ const InductionFormContent = ({ induction, setInduction }) => {
                                     type="button"
                                     onClick={handleDepartmentUpdate}
                                     className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
+                                    title="Save Changes"
                                 >
                                     <FaCheck className="inline mr-2" /> Update
                                 </button>
@@ -127,6 +128,7 @@ const InductionFormContent = ({ induction, setInduction }) => {
                                     type="button"
                                     onClick={() => { cancelEditing("department") }}
                                     className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
+                                    title="Discard Changes"
                                 >
                                     <FaCheck className="inline mr-2" /> Cancel
                                 </button>
@@ -135,23 +137,25 @@ const InductionFormContent = ({ induction, setInduction }) => {
                     </label>
                     {editingField === "department" ? (
                         <div className="flex items-center space-x-2">
-                        <select
-                            id="department"
-                            name="department"
-                            value={localDepartment}
-                            onChange={(e) => handleLocalChange("department", e.target.value)}
-                            className="border border-gray-300 rounded-lg p-2 focus:ring-gray-800 focus:border-gray-800"
-                        >
-                            <option value="">Select a department</option>
-                            {Departments.map((dept) => (
-                                <option key={dept.id} value={dept.name}>
-                                    {dept.name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
+                            <select
+                                id="department"
+                                name="department"
+                                value={localDepartment}
+                                onChange={(e) => handleLocalChange("department", e.target.value)}
+                                className="border border-gray-300 rounded-lg p-1 focus:ring-gray-800 focus:border-gray-800 text-sm"
+                            >
+                                <option value="">Select a department</option>
+                                {Departments.map((dept) => (
+                                    <option key={dept.id} value={dept.name}>
+                                        {dept.name}
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
                     ) : (
-                        <span className="text-base">{induction.department || "Select a department"}</span>
+                        <div className="flex items-center mt-1">
+                            <span className="text-base">{induction.department || "Select a department"}</span>
+                        </div>
                     )}
                 </div>
 
@@ -174,6 +178,7 @@ const InductionFormContent = ({ induction, setInduction }) => {
                                     type="button"
                                     onClick={handleDescriptionUpdate}
                                     className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
+                                    title="Save Changes"
                                 >
                                     <FaCheck className="inline mr-2" /> Update
                                 </button>
@@ -181,6 +186,7 @@ const InductionFormContent = ({ induction, setInduction }) => {
                                     type="button"
                                     onClick={() => { cancelEditing("description") }}
                                     className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
+                                    title="Discard Changes"
                                 >
                                     <FaCheck className="inline mr-2" /> Cancel
                                 </button>
@@ -218,6 +224,7 @@ const InductionFormContent = ({ induction, setInduction }) => {
                         className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
                         type="button"
                         onClick={handleAddQuestion}
+                        title="Add Question"
                     >
                         Add Question
                     </button>
@@ -234,6 +241,7 @@ const InductionFormContent = ({ induction, setInduction }) => {
                             className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
                             type="button"
                             onClick={handleAddQuestion}
+                            title="Add Question"
                         >
                             Add Question
                         </button>

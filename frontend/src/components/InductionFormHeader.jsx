@@ -42,20 +42,22 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduct
                 </button>
               ) : (
                 <div className="flex gap-2">
-                  <Button
+                  <button
                     type="button"
                     onClick={()=> handleUpdateName()}
                     className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
+                    title="Save Changes"
                   >
                     <FaCheck className="inline mr-2" /> Update
-                  </Button>
+                  </button>
                   {/* Cancel Button */}
-                  <Button
+                  <button
                     onClick={() => handleCancel()}
                     className="bg-red-500 text-white px-2 py-1 rounded-md text-sm flex items-center h-8"
+                    title="Discard Changes"
                   >
                     <FaTimes className="mr-1 w-4 h-4" /> Cancel
-                  </Button>
+                  </button>
                 </div>
               )}
             </label>
@@ -84,6 +86,7 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduct
             type="button"
             onClick={handleSubmit}
             className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
+            title="Save Induction"
           >
             <FaSave className="inline mr-2" /> {isCreatingInduction ? "Create" : "Save"} Induction
           </button>
