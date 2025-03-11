@@ -10,7 +10,7 @@ const DropdownQuestion = ({ question, onChange, isExpanded, saveAllFields, updat
   const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
-    if ((saveAllFields)||(!isExpanded && editingField)) {
+    if (editingField && (saveAllFields || !isExpanded)) {
       if (editingField.startsWith("option-")) {
         stopEditing("options", localValues.options);
       } else {
@@ -18,6 +18,8 @@ const DropdownQuestion = ({ question, onChange, isExpanded, saveAllFields, updat
       }
       setEditingField(null);
     }
+    updateFieldsBeingEdited(`${question.id}_content`, editingField);
+    
   }, [isExpanded, editingField, saveAllFields]);
 
   const startEditing = (field) => {
@@ -57,16 +59,20 @@ const DropdownQuestion = ({ question, onChange, isExpanded, saveAllFields, updat
   const handleRemoveOption = (index) => {
     const newOptions = [...localValues.options];
     newOptions.splice(index, 1);
-
+  
     const newAnswers =
       Array.isArray(localValues.answers) && localValues.answers.length > 0
         ? localValues.answers
-          .map((answerIndex) => (answerIndex > index ? answerIndex - 1 : answerIndex))
-          .filter((answerIndex) => answerIndex !== index)
+            .filter((answerIndex) => answerIndex !== index) 
+            .map((answerIndex) => (answerIndex > index ? answerIndex - 1 : answerIndex)) 
         : [];
-
+  
     handleChange("options", newOptions);
     handleChange("answers", newAnswers);
+  
+    if (`option-${index}` === editingField) {
+      setEditingField(null);
+    }
   };
 
   const handleAnswerSelect = (index) => {

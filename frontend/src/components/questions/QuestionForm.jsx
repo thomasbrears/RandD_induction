@@ -3,6 +3,7 @@ import { Modal, Select, Input, Button, Upload, Checkbox } from "antd";
 import QuestionTypes from "../../models/QuestionTypes";
 import { Check, X } from "lucide-react";
 import ReactQuill from "react-quill";
+import { MODULES, FORMATS } from "../../models/QuillConfig";
 
 const QuestionForm = ({ visible, onClose, onSave }) => {
     const [questionType, setQuestionType] = useState("");
@@ -15,13 +16,6 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
 
     const [showImageUpload, setShowImageUpload] = useState(false);
     const [imageFile, setImageFile] = useState(null); {/*figure out how this works later */ }
-
-    // Define the toolbar options
-    const MODULES = {
-        toolbar: [["bold", "italic", "underline"]],
-    };
-
-    const FORMATS = ["bold", "italic", "underline"];
 
     const handleQuestionTypeChange = (value) => {
         setQuestionType(value);

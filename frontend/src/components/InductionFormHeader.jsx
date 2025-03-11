@@ -10,6 +10,18 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduct
 
   const toggleEditName = () => setIsEditingName((prev) => !prev);
 
+  useEffect(() => {
+    if (saveAllFields && isEditingName) {
+      handleUpdateName();
+      setIsEditingName(false);
+    }
+    if (isEditingName) {
+      updateFieldsBeingEdited("induction_header", "inductionName");
+    }else{
+      updateFieldsBeingEdited("induction_header", null);
+    }
+  }, [saveAllFields, isEditingName]);
+
   const handleCancel = () => {
     setLocalInductionName(induction.name);
     setIsEditingName(false);

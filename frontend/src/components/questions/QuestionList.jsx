@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import {
   DndContext,
   closestCenter,
@@ -44,6 +44,8 @@ const QuestionList = ({ questions = [], setQuestions, saveAllFields, updateField
 
   const handleQuestionDelete = (id) => {
     setQuestions((prevQuestions) => prevQuestions.filter((q) => q.id !== id));
+    updateFieldsBeingEdited(`${id}_header`, null);
+    updateFieldsBeingEdited(`${id}_content`, null);
   };
 
   return (
@@ -51,12 +53,12 @@ const QuestionList = ({ questions = [], setQuestions, saveAllFields, updateField
       <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
         <ul className="space-y-2">
           {questions.map((question) => (
-            <QuestionItem  key={question.id} 
-            question={question} 
-            onChange={handleQuestionChange} 
-            onDeleteQuestion={handleQuestionDelete}
-            saveAllFields={saveAllFields}
-            updateFieldsBeingEdited={updateFieldsBeingEdited}
+            <QuestionItem key={question.id}
+              question={question}
+              onChange={handleQuestionChange}
+              onDeleteQuestion={handleQuestionDelete}
+              saveAllFields={saveAllFields}
+              updateFieldsBeingEdited={updateFieldsBeingEdited}
             />
           ))}
         </ul>

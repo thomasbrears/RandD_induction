@@ -12,6 +12,7 @@ import { FaSave } from 'react-icons/fa';
 import Loading from "../../components/Loading";
 import "react-quill/dist/quill.snow.css";
 import InductionFormContent from "../../components/InductionFormContent";
+import ConfirmationModal from "../../components/ConfirmationModal";
 
 const InductionEdit = () => {
   const { user, loading: authLoading } = useAuth();
@@ -23,9 +24,19 @@ const InductionEdit = () => {
   const id = location.state?.id;
   const [fieldsBeingEdited, setFieldsBeingEdited] = useState({});
   const [saveAllFields, setSaveAllFields] = useState(false);
+  const [confirmAction, setConfirmAction] = useState(false);
+  const [actionType, setActionType] = useState(null);
 
   const updateFieldsBeingEdited = (field, state) => {
+    setFieldsBeingEdited((prev) => {
+      if (state === null) {
+        const updatedFields = { ...prev };
+        delete updatedFields[field];
+        return updatedFields;
+      }
 
+      return { ...prev, [field]: state };
+    });
   };
 
   useEffect(() => {
@@ -49,13 +60,57 @@ const InductionEdit = () => {
     }
   }, [id, user, authLoading, navigate]);
 
-  // Function to handle form submission, validate inputs and call API
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  useEffect(() => {
+    console.log(fieldsBeingEdited);
+  }, [fieldsBeingEdited]);
 
-    // Check if any required fields are missing and show warning if so
+  const handleSubmitButton = () => {
     const missingFields = checkForMissingFields();
-    //more required fields (for each question, no empty options, at least 1 answer, no empty question)
+    if (missingFields.length === 0) {
+      if (Object.keys(fieldsBeingEdited).length === 0) {
+        setActionType("submit"); //All filled, no editing. 
+      } else {
+        setActionType("unsaved"); //All filled, some editing
+      }
+    } else {
+      if (Object.keys(fieldsBeingEdited).length === 0) {
+        setActionType("prompt"); //Some empty, no editing
+      } else {
+        setActionType("unfinished");//Some empty, some editing
+      }
+    }
+    setConfirmAction(true);
+  };
+
+  const cancelActionHandler = () => {
+    if ((actionType === 'submit') || (actionType === 'prompt')||(actionType === 'unfinished')) {
+      setConfirmAction(false);
+    } else {
+      //save changes and re-check fields todo
+      setSaveAllFields(true);
+      console.log("save changes and re-check fields todo");
+    }
+
+  };
+
+  const confirmActionHandler = () => {
+    if (actionType === 'submit') {
+      handleSubmit();
+    } else if (actionType === 'unsaved') {
+      handleSubmit();
+    }else if(actionType === 'unfinished') {
+      //save changes and re-check fields todo
+      setSaveAllFields(true);
+      console.log("save changes and re-check fields todo");
+    }
+    setConfirmAction(false);
+  };
+
+  // Function to handle form submission, validate inputs and call API
+  const handleSubmit = async () => {
+
+    // Double check if any required fields are missing and show warning if so
+    const missingFields = checkForMissingFields();
 
     if (missingFields.length > 0) {
       toast.warn(`Please fill in the following fields: ${missingFields.join(", ")}`);
@@ -170,12 +225,56 @@ const InductionEdit = () => {
           <Loading message={loadingMessage} />
         ) : (
           <>
+            <ConfirmationModal
+              isOpen={confirmAction}
+              message={
+                actionType === 'submit'
+                  ? "Are you sure you want to submit this induction?"
+                  : actionType === 'prompt'
+                    ? "The following fields can't be empty, please go back to fill them."
+                    : actionType === 'unfinished'
+                      ? "You seem to have some unsaved fields and some empty fields."
+                      : actionType === 'unsaved'
+                        ? "Are you sure you want to submit this induction?"
+                        : ""
+              }
+              subtext={
+                  (actionType === 'prompt')||(actionType === 'unfinished')
+                  ? `Empty fields: ${checkForMissingFields().join(", ")}`
+                  : actionType === 'unsaved'
+                  ? "This will discard any unsaved changes you have made."
+                  : ""
+              }
+              onCancel={cancelActionHandler}
+              onConfirm={confirmActionHandler}
+              actionLabel={
+                actionType === 'submit'
+                  ? "Submit"
+                  : actionType === 'unfinished'
+                  ? "Save changes and check fields"
+                  : actionType === 'unsaved'
+                  ? "Discard changes and Submit"
+                  : actionType === 'prompt'
+                  ? "Continue Editing"
+                  : ""
+              }
+              cancelLabel={
+                actionType === 'submit'
+                  ? "Cancel"
+                  : actionType === 'unfinished'
+                  ? "Continue Editing"
+                  : actionType === 'unsaved'
+                  ? "Save changes and check fields"
+                  : ""
+              }
+            />
+
             <div className="flex-1">
               {/* Induction Form Component */}
               <InductionFormHeader
                 induction={induction}
                 setInduction={setInduction}
-                handleSubmit={handleSubmit}
+                handleSubmit={handleSubmitButton}
                 isCreatingInduction={false}
                 saveAllFields={saveAllFields}
                 updateFieldsBeingEdited={updateFieldsBeingEdited}
@@ -195,7 +294,7 @@ const InductionEdit = () => {
                 <div className="flex justify-center mt-6">
                   <button
                     type="button"
-                    onClick={handleSubmit}
+                    onClick={handleSubmitButton}
                     className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
                     title="Save Induction"
                   >
@@ -203,7 +302,7 @@ const InductionEdit = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={()=>{setSaveAllFields(true); }}
+                    onClick={() => { setSaveAllFields(true) }}
                     className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
                     title="Save All"
                   >

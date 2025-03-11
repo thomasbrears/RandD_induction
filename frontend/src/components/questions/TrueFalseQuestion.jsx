@@ -2,17 +2,19 @@ import { useState, useEffect } from "react";
 import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 import { Button } from "antd";
 import ReactQuill from "react-quill";
-import {MODULES, FORMATS} from "../../models/QuillConfig";
+import { MODULES, FORMATS } from "../../models/QuillConfig";
 
 const TrueFalseQuestion = ({ question, onChange, isExpanded, saveAllFields, updateFieldsBeingEdited }) => {
   const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
 
   useEffect(() => {
-    if ((saveAllFields)||(!isExpanded && editingField)) {
+    if (editingField && (saveAllFields || !isExpanded)) {
       stopEditing(editingField, localValues[editingField]);
       setEditingField(null);
     }
+    updateFieldsBeingEdited(`${question.id}_content`, editingField);
+    
   }, [isExpanded, editingField, saveAllFields]);
 
   const startEditing = (field) => setEditingField(field);

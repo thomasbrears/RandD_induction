@@ -6,7 +6,7 @@ import ReactQuill from 'react-quill';
 import QuestionList from "../components/questions/QuestionList";
 import QuestionForm from "../components/questions/QuestionForm";
 
-const InductionFormContent = ({ induction, setInduction , saveAllFields, updateFieldsBeingEdited}) => {
+const InductionFormContent = ({ induction, setInduction, saveAllFields, updateFieldsBeingEdited }) => {
     const [localDepartment, setLocalDepartment] = useState(induction.department);
     const [localDescription, setLocalDescription] = useState(induction.description);
     const [editingField, setEditingField] = useState(null);
@@ -21,6 +21,19 @@ const InductionFormContent = ({ induction, setInduction , saveAllFields, updateF
         };
         getDepartments();
     }, []);
+
+    useEffect(() => {
+        if (saveAllFields && editingField) {
+            if (editingField === "department") {
+                handleDepartmentUpdate();
+            } else if (editingField === "description") {
+                handleDescriptionUpdate();
+            }
+            setEditingField(null);
+        }
+        updateFieldsBeingEdited("induction_content", editingField);
+
+    }, [saveAllFields, editingField]);
 
     const startEditing = (field) => {
         if (editingField) {
@@ -104,7 +117,7 @@ const InductionFormContent = ({ induction, setInduction , saveAllFields, updateF
         }
         if (induction.department === "Select a department" || !induction.department) {
             errors.department = "Induction must have a department";
-          }
+        }
 
         setValidationErrors(errors);
         return Object.keys(errors).length === 0;
@@ -124,8 +137,6 @@ const InductionFormContent = ({ induction, setInduction , saveAllFields, updateF
                 visible={showQuestionModal}
                 onClose={handleCloseModal}
                 onSave={handleSaveQuestion}
-                saveAllFields={saveAllFields}
-                updateFieldsBeingEdited={updateFieldsBeingEdited}
             />
 
             <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
@@ -262,7 +273,12 @@ const InductionFormContent = ({ induction, setInduction , saveAllFields, updateF
 
                 {/* Question List*/}
                 <div className="mt-4">
-                    <QuestionList questions={induction.questions} setQuestions={handleUpdateQuestions} />
+                    <QuestionList
+                        questions={induction.questions}
+                        setQuestions={handleUpdateQuestions}
+                        saveAllFields={saveAllFields}
+                        updateFieldsBeingEdited={updateFieldsBeingEdited}
+                    />
                 </div>
 
                 {induction.questions.length > 0 && (

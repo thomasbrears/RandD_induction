@@ -10,17 +10,16 @@ const MultichoiceQuestion = ({ question, onChange, isExpanded, saveAllFields, up
   const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
-    if ((saveAllFields)||(!isExpanded && editingField)) {
+    if (editingField && (saveAllFields || !isExpanded)) {
       if (editingField.startsWith("option-")) {
         stopEditing("options", localValues.options);
       } else {
         stopEditing(editingField, localValues[editingField]);
       }
       setEditingField(null);
-      if(saveAllFields){
-        console.log(saveAllFields);
-      }
     }
+    updateFieldsBeingEdited(`${question.id}_content`, editingField);
+    
   }, [isExpanded, editingField, saveAllFields]);
 
   const startEditing = (field) => {
@@ -60,16 +59,28 @@ const MultichoiceQuestion = ({ question, onChange, isExpanded, saveAllFields, up
   const handleRemoveOption = (index) => {
     const newOptions = [...localValues.options];
     newOptions.splice(index, 1);
-
+  
     const newAnswers =
       Array.isArray(localValues.answers) && localValues.answers.length > 0
         ? localValues.answers
-          .map((answerIndex) => (answerIndex > index ? answerIndex - 1 : answerIndex))
-          .filter((answerIndex) => answerIndex !== index)
+            .filter((answerIndex) => answerIndex !== index) 
+            .map((answerIndex) => (answerIndex > index ? answerIndex - 1 : answerIndex)) 
         : [];
-
+  
     handleChange("options", newOptions);
     handleChange("answers", newAnswers);
+  
+    if (editingField) {
+      const match = editingField.match(/^option-(\d+)$/);
+      if (match) {
+        const optionIndex = parseInt(match[1], 10);
+        if (optionIndex === index) {
+          setEditingField(null); 
+        } else if (optionIndex > index) {
+          setEditingField(`option-${optionIndex - 1}`);
+        }
+      }
+    }
   };
 
   const handleAnswerSelect = (index) => {

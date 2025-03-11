@@ -27,10 +27,12 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, upd
 
     useEffect(() => {
         if (saveAllFields) {
-          stopEditing(editingField, localValues[editingField]);
-          setEditingField(null);
+            stopEditing(editingField, localValues[editingField]);
+            setEditingField(null);
         }
-      }, [saveAllFields]);
+        updateFieldsBeingEdited(`${question.id}_header`, editingField);
+        
+    }, [saveAllFields, editingField]);
 
     const startEditing = (field) => setEditingField(field);
     const stopEditing = (field, value) => {
