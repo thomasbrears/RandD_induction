@@ -1,4 +1,4 @@
-import React, { useState, useEffect} from "react";
+import React, { useState, useEffect } from "react";
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import InductionFormHeader from "../../components/InductionFormHeader";
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -8,7 +8,7 @@ import { DefaultNewInduction } from "../../models/Inductions";
 import { updateInduction, getInduction } from "../../api/InductionApi";
 import PageHeader from "../../components/PageHeader";
 import ManagementSidebar from "../../components/ManagementSidebar";
-import { FaSave} from 'react-icons/fa';
+import { FaSave } from 'react-icons/fa';
 import Loading from "../../components/Loading";
 import "react-quill/dist/quill.snow.css";
 import InductionFormContent from "../../components/InductionFormContent";
@@ -21,7 +21,13 @@ const InductionEdit = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const id = location.state?.id;
-  
+  const [fieldsBeingEdited, setFieldsBeingEdited] = useState({});
+  const [saveAllFields, setSaveAllFields] = useState(false);
+
+  const updateFieldsBeingEdited = (field, state) => {
+
+  };
+
   useEffect(() => {
     if (id && !authLoading) {
       const fetchInduction = async () => {
@@ -69,12 +75,12 @@ const InductionEdit = () => {
   //Make output pretty
   const checkForMissingFields = () => {
     const missingFields = [];
-  
+
     const isContentEmpty = (content) => {
       const strippedContent = content.replace(/<[^>]+>/g, '').trim();
       return strippedContent === '';
     };
-  
+
     if (!induction.name || induction.name.trim() === "") {
       missingFields.push("Induction name");
     }
@@ -84,7 +90,7 @@ const InductionEdit = () => {
     if (induction.department === "Select a department" || !induction.department) {
       missingFields.push("Department");
     }
-  
+
     // Check if there is at least one question
     if (!induction.questions || induction.questions.length === 0) {
       missingFields.push("At least one question");
@@ -95,20 +101,20 @@ const InductionEdit = () => {
       let questionsMissingType = 0;
       let questionsMissingOptions = 0;
       let optionsMissingText = 0;
-    
+
       induction.questions.forEach((question, index) => {
         if (!question.question || question.question.trim() === "") {
           questionsMissingText++;
         }
-    
+
         if (!question.type || question.type.trim() === "") {
           questionsMissingType++;
         }
-    
+
         if (!question.answers || question.answers.length === 0) {
           questionsMissingAnswer++;
         }
-    
+
         if (!question.options || question.options.length === 0) {
           questionsMissingOptions++;
         } else {
@@ -119,25 +125,25 @@ const InductionEdit = () => {
           });
         }
       });
-    
+
       // Summarize missing fields for questions
       if (questionsMissingAnswer > 0) {
-        missingFields.push(`${questionsMissingAnswer} question${questionsMissingAnswer > 1 ? "s":""} need at least one answer`);
+        missingFields.push(`${questionsMissingAnswer} question${questionsMissingAnswer > 1 ? "s" : ""} need at least one answer`);
       }
       if (questionsMissingText > 0) {
-        missingFields.push(`${questionsMissingText} question${questionsMissingText > 1 ? "s":""} need text`);
+        missingFields.push(`${questionsMissingText} question${questionsMissingText > 1 ? "s" : ""} need text`);
       }
       if (questionsMissingType > 0) {
-        missingFields.push(`${questionsMissingType} question${questionsMissingType > 1 ? "s":""} need a type`);
+        missingFields.push(`${questionsMissingType} question${questionsMissingType > 1 ? "s" : ""} need a type`);
       }
       if (questionsMissingOptions > 0) {
-        missingFields.push(`${questionsMissingOptions} question${questionsMissingOptions > 1 ? "s":""} need options`);
+        missingFields.push(`${questionsMissingOptions} question${questionsMissingOptions > 1 ? "s" : ""} need options`);
       }
       if (optionsMissingText > 0) {
-        missingFields.push(`${optionsMissingText} option${optionsMissingText > 1 ? "s":""} are missing text`);
+        missingFields.push(`${optionsMissingText} option${optionsMissingText > 1 ? "s" : ""} are missing text`);
       }
     }
-  
+
     return missingFields;
   };
 
@@ -171,17 +177,18 @@ const InductionEdit = () => {
                 setInduction={setInduction}
                 handleSubmit={handleSubmit}
                 isCreatingInduction={false}
+                saveAllFields={saveAllFields}
+                updateFieldsBeingEdited={updateFieldsBeingEdited}
               />
 
               {/* Main content for managing induction details */}
               <div className="p-4 mx-auto max-w-5xl space-y-6">
 
                 <InductionFormContent
-                 induction={induction}
-                 setInduction={setInduction}
-                 //validateAll
-                 //saveAll
-                 //setEditingField???
+                  induction={induction}
+                  setInduction={setInduction}
+                  saveAllFields={saveAllFields}
+                  updateFieldsBeingEdited={updateFieldsBeingEdited}
                 />
 
                 {/* Save Button */}
@@ -193,6 +200,14 @@ const InductionEdit = () => {
                     title="Save Induction"
                   >
                     <FaSave className="inline mr-2" /> Save Induction
+                  </button>
+                  <button
+                    type="button"
+                    onClick={()=>{setSaveAllFields(true); }}
+                    className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
+                    title="Save All"
+                  >
+                    <FaSave className="inline mr-2" /> Save All
                   </button>
                 </div>
               </div>

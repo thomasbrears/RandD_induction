@@ -2,24 +2,38 @@ import { useState, useEffect } from "react";
 import { Input, Button } from "antd";
 import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 import ReactQuill from "react-quill";
-import {MODULES, FORMATS} from "../../models/QuillConfig";
+import { MODULES, FORMATS } from "../../models/QuillConfig";
 
-const MultichoiceQuestion = ({ question, onChange, isExpanded}) => {
+const MultichoiceQuestion = ({ question, onChange, isExpanded, saveAllFields, updateFieldsBeingEdited }) => {
   const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
+  const [validationErrors, setValidationErrors] = useState({});
 
   useEffect(() => {
-    if (!isExpanded && editingField) {
+    if ((saveAllFields)||(!isExpanded && editingField)) {
       if (editingField.startsWith("option-")) {
         stopEditing("options", localValues.options);
       } else {
         stopEditing(editingField, localValues[editingField]);
       }
       setEditingField(null);
+      if(saveAllFields){
+        console.log(saveAllFields);
+      }
     }
-  }, [isExpanded, editingField]);
+  }, [isExpanded, editingField, saveAllFields]);
 
-  const startEditing = (field) => setEditingField(field);
+  const startEditing = (field) => {
+    if (editingField) {
+      if (editingField.startsWith("option-")) {
+        stopEditing("options", localValues.options);
+      } else {
+        stopEditing(editingField, localValues[editingField]);
+      }
+    }
+    setEditingField(field);
+  };
+
   const stopEditing = (field, value) => {
     onChange(question.id, field, value);
     setEditingField(null);
@@ -70,12 +84,35 @@ const MultichoiceQuestion = ({ question, onChange, isExpanded}) => {
     handleChange("answers", newAnswers);
   };
 
+  const validateForm = () => {
+    const errors = {};
+
+    if (question.options.length === 0) {
+      errors.options = "At least one option is required";
+    }
+    if (question.answers.length === 0) {
+      errors.answers = "At least one answer must be selected";
+    }
+    if (question.options.some(option => option.trim() === "")) {
+      errors.options = "Options text cannot be empty";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  useEffect(() => {
+    setValidationErrors({});
+    validateForm();
+
+  }, [question]);
+
   return (
     <div className="p-4 rounded-md bg-white">
       {/* Description */}
       <div className="mb-2">
         <div className="flex items-center">
-        <p className="font-semibold mr-2">Description: <span className="font-normal text-gray-500">(optional)</span></p>
+          <p className="font-semibold mr-2">Description: <span className="font-normal text-gray-500">(optional)</span></p>
           {editingField === "description" ? (
             <div className="flex gap-2">
               {/* Update Button */}
@@ -137,6 +174,8 @@ const MultichoiceQuestion = ({ question, onChange, isExpanded}) => {
             Add Option
           </Button>
         </div>
+        {validationErrors.options && <p className="text-red-500 text-sm">{validationErrors.options}</p>}
+        {validationErrors.answers && <p className="text-red-500 text-sm">{validationErrors.answers}</p>}
 
         {localValues.options.map((option, index) => (
           <div

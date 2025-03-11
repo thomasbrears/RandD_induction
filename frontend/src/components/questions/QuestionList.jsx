@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/sortable";
 import QuestionItem from "./QuestionItem";
 
-const QuestionList = ({ questions = [], setQuestions }) => {
+const QuestionList = ({ questions = [], setQuestions, saveAllFields, updateFieldsBeingEdited }) => {
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -51,7 +51,13 @@ const QuestionList = ({ questions = [], setQuestions }) => {
       <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
         <ul className="space-y-2">
           {questions.map((question) => (
-            <QuestionItem  key={question.id} question={question} onChange={handleQuestionChange} onDeleteQuestion={handleQuestionDelete}/>
+            <QuestionItem  key={question.id} 
+            question={question} 
+            onChange={handleQuestionChange} 
+            onDeleteQuestion={handleQuestionDelete}
+            saveAllFields={saveAllFields}
+            updateFieldsBeingEdited={updateFieldsBeingEdited}
+            />
           ))}
         </ul>
       </SortableContext>

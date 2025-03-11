@@ -13,7 +13,7 @@ import QuestionTypes from "../../models/QuestionTypes";
 import ConfirmationModal from "../ConfirmationModal";
 import { Trash } from "lucide-react";
 
-const QuestionItem = ({ question, onChange, onDeleteQuestion }) => {
+const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, updateFieldsBeingEdited }) => {
     const [hasExpandedBefore, setHasExpandedBefore] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [editingField, setEditingField] = useState(null);
@@ -23,6 +23,14 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion }) => {
     const [isAnimating, setIsAnimating] = useState(false);
     const [confirmAction, setConfirmAction] = useState(false);
     const [actionType, setActionType] = useState(null);
+    const [validationErrors, setValidationErrors] = useState({});
+
+    useEffect(() => {
+        if (saveAllFields) {
+          stopEditing(editingField, localValues[editingField]);
+          setEditingField(null);
+        }
+      }, [saveAllFields]);
 
     const startEditing = (field) => setEditingField(field);
     const stopEditing = (field, value) => {
@@ -92,13 +100,37 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion }) => {
     const renderQuestion = () => {
         switch (question.type) {
             case QuestionTypes.TRUE_FALSE:
-                return <TrueFalseQuestion question={question} onChange={onChange} isExpanded={isExpanded} />;
+                return <TrueFalseQuestion
+                    question={question}
+                    onChange={onChange}
+                    isExpanded={isExpanded}
+                    saveAllFields={saveAllFields}
+                    updateFieldsBeingEdited={updateFieldsBeingEdited}
+                />;
             case QuestionTypes.MULTICHOICE:
-                return <MultichoiceQuestion question={question} onChange={onChange} isExpanded={isExpanded} />;
+                return <MultichoiceQuestion
+                    question={question}
+                    onChange={onChange}
+                    isExpanded={isExpanded}
+                    saveAllFields={saveAllFields}
+                    updateFieldsBeingEdited={updateFieldsBeingEdited}
+                />;
             case QuestionTypes.DROPDOWN:
-                return <DropdownQuestion question={question} onChange={onChange} isExpanded={isExpanded} />;
+                return <DropdownQuestion
+                    question={question}
+                    onChange={onChange}
+                    isExpanded={isExpanded}
+                    saveAllFields={saveAllFields}
+                    updateFieldsBeingEdited={updateFieldsBeingEdited}
+                />;
             case QuestionTypes.FILE_UPLOAD:
-                return <FileUploadQuestion question={question} onChange={onChange} isExpanded={isExpanded} />;
+                return <FileUploadQuestion
+                    question={question}
+                    onChange={onChange}
+                    isExpanded={isExpanded}
+                    saveAllFields={saveAllFields}
+                    updateFieldsBeingEdited={updateFieldsBeingEdited}
+                />;
             default:
                 return <span>{question.question}</span>;
         }
@@ -129,6 +161,23 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion }) => {
         }
         setConfirmAction(false);
     };
+
+    const validateForm = () => {
+        const errors = {};
+
+        if (!question.question.trim()) {
+            errors.questionText = "Question text cannot be empty";
+        }
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    useEffect(() => {
+        setValidationErrors({});
+        validateForm();
+
+    }, [question]);
 
     return (
         <>
@@ -167,6 +216,8 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion }) => {
                                         showCount={true}
                                     />
 
+                                    {validationErrors.questionText && <p className="text-red-500 text-sm">{validationErrors.questionText}</p>}
+
                                     <div className="flex gap-2 w-full mt-2">
                                         {/* Update Button */}
                                         <Button
@@ -189,12 +240,18 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion }) => {
                                 </div>
                             </>
                         ) : (
-                            <div
-                                className="cursor-pointer text-gray-600 flex-1 break-words min-w-0 text-base"
-                                onClick={() => startEditing("question")}
-                                title="Edit Question"
-                            >
-                                {question.question} <FaEdit className="inline-block ml-2 text-gray-500" />
+                            <div className="flex-1 min-w-0">
+                                <div
+                                    className="cursor-pointer text-gray-600 break-words text-base"
+                                    onClick={() => startEditing("question")}
+                                    title="Edit Question"
+                                >
+                                    {question.question} <FaEdit className="inline-block ml-2 text-gray-500" />
+                                </div>
+
+                                {validationErrors.questionText && (
+                                    <p className="text-red-500 text-sm mt-1">{validationErrors.questionText}</p>
+                                )}
                             </div>
                         )}
                     </div>

@@ -4,16 +4,16 @@ import { Button } from "antd";
 import ReactQuill from "react-quill";
 import {MODULES, FORMATS} from "../../models/QuillConfig";
 
-const TrueFalseQuestion = ({ question, onChange, isExpanded }) => {
+const TrueFalseQuestion = ({ question, onChange, isExpanded, saveAllFields, updateFieldsBeingEdited }) => {
   const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
 
   useEffect(() => {
-    if (!isExpanded && editingField) {
+    if ((saveAllFields)||(!isExpanded && editingField)) {
       stopEditing(editingField, localValues[editingField]);
       setEditingField(null);
     }
-  }, [isExpanded, editingField]);
+  }, [isExpanded, editingField, saveAllFields]);
 
   const startEditing = (field) => setEditingField(field);
   const stopEditing = (field, value) => {

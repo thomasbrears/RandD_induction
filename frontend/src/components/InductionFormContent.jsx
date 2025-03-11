@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { MODULES, FORMATS } from "../models/QuillConfig";
-import { FaEdit, FaCheck } from "react-icons/fa";
+import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 import { getAllDepartments } from "../api/DepartmentApi";
 import ReactQuill from 'react-quill';
 import QuestionList from "../components/questions/QuestionList";
 import QuestionForm from "../components/questions/QuestionForm";
 
-const InductionFormContent = ({ induction, setInduction }) => {
+const InductionFormContent = ({ induction, setInduction , saveAllFields, updateFieldsBeingEdited}) => {
     const [localDepartment, setLocalDepartment] = useState(induction.department);
     const [localDescription, setLocalDescription] = useState(induction.description);
     const [editingField, setEditingField] = useState(null);
     const [Departments, setDepartments] = useState([]);
     const [showQuestionModal, setShowQuestionModal] = useState(false);
+    const [validationErrors, setValidationErrors] = useState({});
 
     useEffect(() => {
         const getDepartments = async () => {
@@ -52,7 +53,7 @@ const InductionFormContent = ({ induction, setInduction }) => {
     const handleDepartmentUpdate = () => {
         setInduction({
             ...induction,
-            department: localDepartment,
+            department: localDepartment.trim(),
         });
         setEditingField(null);
     };
@@ -60,7 +61,7 @@ const InductionFormContent = ({ induction, setInduction }) => {
     const handleDescriptionUpdate = () => {
         setInduction({
             ...induction,
-            description: localDescription,
+            description: localDescription.trim(),
         });
         setEditingField(null);
     };
@@ -90,6 +91,31 @@ const InductionFormContent = ({ induction, setInduction }) => {
         }));
     };
 
+    const validateForm = () => {
+        const errors = {};
+
+        const isContentEmpty = (content) => {
+            const strippedContent = content.replace(/<[^>]+>/g, '').trim();
+            return strippedContent === '';
+        };
+
+        if (!induction.description || isContentEmpty(induction.description)) {
+            errors.description = "Induction must have a description";
+        }
+        if (induction.department === "Select a department" || !induction.department) {
+            errors.department = "Induction must have a department";
+          }
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
+    };
+
+    useEffect(() => {
+        setValidationErrors({});
+        validateForm();
+
+    }, [induction]);
+
     return (
         <>
             <hr />
@@ -98,6 +124,8 @@ const InductionFormContent = ({ induction, setInduction }) => {
                 visible={showQuestionModal}
                 onClose={handleCloseModal}
                 onSave={handleSaveQuestion}
+                saveAllFields={saveAllFields}
+                updateFieldsBeingEdited={updateFieldsBeingEdited}
             />
 
             <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
@@ -127,14 +155,15 @@ const InductionFormContent = ({ induction, setInduction }) => {
                                 <button
                                     type="button"
                                     onClick={() => { cancelEditing("department") }}
-                                    className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
+                                    className="bg-red-500 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
                                     title="Discard Changes"
                                 >
-                                    <FaCheck className="inline mr-2" /> Cancel
+                                    <FaTimes className="inline mr-2" /> Cancel
                                 </button>
                             </div>
                         )}
                     </label>
+                    {validationErrors.department && <p className="text-red-500 text-sm">{validationErrors.department}</p>}
                     {editingField === "department" ? (
                         <div className="flex items-center space-x-2">
                             <select
@@ -185,14 +214,15 @@ const InductionFormContent = ({ induction, setInduction }) => {
                                 <button
                                     type="button"
                                     onClick={() => { cancelEditing("description") }}
-                                    className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
+                                    className="bg-red-500 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
                                     title="Discard Changes"
                                 >
-                                    <FaCheck className="inline mr-2" /> Cancel
+                                    <FaTimes className="inline mr-2" /> Cancel
                                 </button>
                             </div>
                         )}
                     </label>
+                    {validationErrors.description && <p className="text-red-500 text-sm">{validationErrors.description}</p>}
 
                     {editingField === "description" ? (
                         <div className="prose !max-w-none w-full">

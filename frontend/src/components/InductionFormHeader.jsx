@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { FaEdit, FaSave, FaCheck, FaTimes } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { Input, Button } from 'antd';
 
-const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduction }) => {
+const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduction, saveAllFields, updateFieldsBeingEdited }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [localInductionName, setLocalInductionName] = useState(induction.name || '');
+  const [validationErrors, setValidationErrors] = useState({});
 
   const toggleEditName = () => setIsEditingName((prev) => !prev);
 
@@ -19,9 +20,26 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduct
   };
 
   const handleUpdateName = () => {
-    setInduction({ ...induction, name: localInductionName });
+    setInduction({ ...induction, name: localInductionName.trim() });
     setIsEditingName(false);
   };
+
+  const validateForm = () => {
+    const errors = {};
+
+    if (!induction.name || induction.name.trim() === "") {
+      errors.inductionName = "Induction must have a name";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  useEffect(() => {
+    setValidationErrors({});
+    validateForm();
+
+  }, [induction]);
 
   return (
     <div className="bg-white shadow-md sticky top-0 z-10">
@@ -32,35 +50,41 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduct
             <label htmlFor="name" className="text-sm font-bold text-gray-700 flex items-center">
               Induction Name:
               {!isEditingName ? (
-                <button
-                  type="button"
-                  onClick={toggleEditName}
-                  className="ml-2 text-gray-600 hover:text-gray-800"
-                  title="Edit Induction Name"
-                >
-                  <FaEdit />
-                </button>
-              ) : (
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={()=> handleUpdateName()}
+                    onClick={toggleEditName}
+                    className="ml-2 text-gray-600 hover:text-gray-800"
+                    title="Edit Induction Name"
+                  >
+                    <FaEdit />
+                  </button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    onClick={() => handleUpdateName()}
                     className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
                     title="Save Changes"
                   >
                     <FaCheck className="inline mr-2" /> Update
-                  </button>
+                  </Button>
                   {/* Cancel Button */}
-                  <button
+                  <Button
                     onClick={() => handleCancel()}
                     className="bg-red-500 text-white px-2 py-1 rounded-md text-sm flex items-center h-8"
                     title="Discard Changes"
                   >
                     <FaTimes className="mr-1 w-4 h-4" /> Cancel
-                  </button>
+                  </Button>
                 </div>
               )}
             </label>
+
+            {validationErrors.inductionName && (
+              <p className="text-red-500 text-sm">{validationErrors.inductionName}</p>
+            )}
             {isEditingName ? (
               <Input.TextArea
                 id="name"
