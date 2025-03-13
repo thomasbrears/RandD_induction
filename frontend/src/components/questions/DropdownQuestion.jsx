@@ -4,7 +4,7 @@ import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 import ReactQuill from "react-quill";
 import { MODULES, FORMATS } from "../../models/QuillConfig";
 
-const DropdownQuestion = ({ question, onChange, isExpanded, saveAllFields, updateFieldsBeingEdited }) => {
+const DropdownQuestion = ({ question, onChange, isExpanded, setIsExpanded, expandOnError, saveAllFields, updateFieldsBeingEdited }) => {
   const [editingField, setEditingField] = useState(null);
   const [localValues, setLocalValues] = useState({ ...question });
   const [validationErrors, setValidationErrors] = useState({});
@@ -19,8 +19,12 @@ const DropdownQuestion = ({ question, onChange, isExpanded, saveAllFields, updat
       setEditingField(null);
     }
     updateFieldsBeingEdited(`${question.id}_content`, editingField);
-    
-  }, [isExpanded, editingField, saveAllFields]);
+
+    if (expandOnError && !(Object.keys(validationErrors).length === 0)) {
+      setIsExpanded(true);
+    }
+
+  }, [isExpanded, editingField, saveAllFields, expandOnError]);
 
   const startEditing = (field) => {
     if (editingField) {
@@ -59,17 +63,17 @@ const DropdownQuestion = ({ question, onChange, isExpanded, saveAllFields, updat
   const handleRemoveOption = (index) => {
     const newOptions = [...localValues.options];
     newOptions.splice(index, 1);
-  
+
     const newAnswers =
       Array.isArray(localValues.answers) && localValues.answers.length > 0
         ? localValues.answers
-            .filter((answerIndex) => answerIndex !== index) 
-            .map((answerIndex) => (answerIndex > index ? answerIndex - 1 : answerIndex)) 
+          .filter((answerIndex) => answerIndex !== index)
+          .map((answerIndex) => (answerIndex > index ? answerIndex - 1 : answerIndex))
         : [];
-  
+
     handleChange("options", newOptions);
     handleChange("answers", newAnswers);
-  
+
     if (`option-${index}` === editingField) {
       setEditingField(null);
     }

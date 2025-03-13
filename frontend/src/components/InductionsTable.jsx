@@ -53,7 +53,7 @@ const InductionsTable = () => {
   const columns = [
     columnHelper.accessor("name", {
       cell: (info) => (
-        <div className="break-words text-sm ">{info.getValue()}</div>
+        <div className="break-words text-base font-heliaCoreBook text-gray-500">{info.getValue()}</div>
       ),
       header: () => (
         <span className="flex items-center">
@@ -63,7 +63,7 @@ const InductionsTable = () => {
     }),
 
     columnHelper.accessor("department", {
-      cell: (info) => <span className="whitespace-nowrap">{info.getValue()}</span>,
+      cell: (info) => <span className="whitespace-nowrap text-base font-heliaCoreBook text-gray-500">{info.getValue()}</span>,
       header: () => (
         <span className="flex items-center">
           <List className="mr-2" size={16} /> Department
@@ -73,7 +73,7 @@ const InductionsTable = () => {
 
     columnHelper.accessor("description", {
       cell: (info) => (
-        <div className="prose !max-w-xs break-words text-base text-sm font-heliaCoreBook text-gray-500">
+        <div className="prose !max-w-xs break-words text-base font-heliaCoreBook text-gray-500">
           <div dangerouslySetInnerHTML={{ __html: info.getValue() }} />
         </div>
       ),
@@ -226,7 +226,7 @@ const InductionsTable = () => {
                       {row.getVisibleCells().map((cell) => (
                         <td
                           key={cell.id}
-                          className={`px-6 py-4 text-sm text-gray-500 ${cell.column.id === "actions" ? "w-[250px]" : "max-w-[200px] md:max-w-[250px]"
+                          className={`px-4 py-2 text-sm text-gray-500 ${cell.column.id === "actions" ? "w-[250px]" : "max-w-[200px] md:max-w-[250px]"
                             }`}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}

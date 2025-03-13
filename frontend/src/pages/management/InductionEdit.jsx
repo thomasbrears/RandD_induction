@@ -12,7 +12,7 @@ import { FaSave } from 'react-icons/fa';
 import Loading from "../../components/Loading";
 import "react-quill/dist/quill.snow.css";
 import InductionFormContent from "../../components/InductionFormContent";
-import ConfirmationModal from "../../components/ConfirmationModal";
+import { Modal, Button } from "antd";
 
 const InductionEdit = () => {
   const { user, loading: authLoading } = useAuth();
@@ -24,8 +24,10 @@ const InductionEdit = () => {
   const id = location.state?.id;
   const [fieldsBeingEdited, setFieldsBeingEdited] = useState({});
   const [saveAllFields, setSaveAllFields] = useState(false);
-  const [confirmAction, setConfirmAction] = useState(false);
   const [actionType, setActionType] = useState(null);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [expandOnError, setExpandOnError] = useState(false);
+  const [savingInProgress, setSavingInProgress] = useState(false);
 
   const updateFieldsBeingEdited = (field, state) => {
     setFieldsBeingEdited((prev) => {
@@ -60,51 +62,74 @@ const InductionEdit = () => {
     }
   }, [id, user, authLoading, navigate]);
 
-  useEffect(() => {
-    console.log(fieldsBeingEdited);
-  }, [fieldsBeingEdited]);
-
   const handleSubmitButton = () => {
     const missingFields = checkForMissingFields();
+    const hasEdits = Object.keys(fieldsBeingEdited).length > 0;
+
     if (missingFields.length === 0) {
-      if (Object.keys(fieldsBeingEdited).length === 0) {
-        setActionType("submit"); //All filled, no editing. 
-      } else {
-        setActionType("unsaved"); //All filled, some editing
-      }
+      setActionType(hasEdits ? "unsaved" : "submit");
     } else {
-      if (Object.keys(fieldsBeingEdited).length === 0) {
-        setActionType("prompt"); //Some empty, no editing
+      setActionType(hasEdits ? "unfinished" : "prompt");
+    }
+
+    setModalVisible(true);
+  };
+
+  const confirmSubmitActionHandler = () => {
+    if (actionType === "submit" || actionType === "unsaved") {
+      handleSubmit();
+      setModalVisible(false);
+      return;
+    }
+  };
+
+  const handleSaveAndCheck = () => {
+    if (actionType === "unsaved" || actionType === "unfinished") {
+      if (savingInProgress) return;
+      setSaveAllFields(true);
+      setSavingInProgress(true);
+      setTimeout(handleFailedSave, 5000);
+    } else {
+      setModalVisible(false);
+    }
+  };
+
+  const handleFailedSave = () => {
+    if (savingInProgress) return;
+    setSavingInProgress(false);
+    setSaveAllFields(false);
+    setActionType("failedSave");
+  };
+
+  useEffect(() => {
+    console.log(expandOnError);
+    setExpandOnError(false)
+  }, [expandOnError]);
+
+  const handleCancel = () => {
+    setModalVisible(false);
+    if (checkForMissingFields().length > 0 || Object.keys(fieldsBeingEdited).length > 0) {
+      setExpandOnError(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!savingInProgress) return;
+
+    const updatedMissingFields = checkForMissingFields();
+    const hasEditsAfterSaving = Object.keys(fieldsBeingEdited).length > 0;
+
+    if (!hasEditsAfterSaving) {
+      setSavingInProgress(false);
+      setSaveAllFields(false);
+      if (updatedMissingFields.length === 0) {
+        setActionType("submit");
       } else {
-        setActionType("unfinished");//Some empty, some editing
+        setActionType("prompt");
       }
     }
-    setConfirmAction(true);
-  };
 
-  const cancelActionHandler = () => {
-    if ((actionType === 'submit') || (actionType === 'prompt')||(actionType === 'unfinished')) {
-      setConfirmAction(false);
-    } else {
-      //save changes and re-check fields todo
-      setSaveAllFields(true);
-      console.log("save changes and re-check fields todo");
-    }
-
-  };
-
-  const confirmActionHandler = () => {
-    if (actionType === 'submit') {
-      handleSubmit();
-    } else if (actionType === 'unsaved') {
-      handleSubmit();
-    }else if(actionType === 'unfinished') {
-      //save changes and re-check fields todo
-      setSaveAllFields(true);
-      console.log("save changes and re-check fields todo");
-    }
-    setConfirmAction(false);
-  };
+  }, [savingInProgress, fieldsBeingEdited])
 
   // Function to handle form submission, validate inputs and call API
   const handleSubmit = async () => {
@@ -117,7 +142,6 @@ const InductionEdit = () => {
       console.log(missingFields);
       return;
     }
-    console.log(induction.description);
 
     // user exists, send api request to update induction
     if (user) {
@@ -127,7 +151,6 @@ const InductionEdit = () => {
     }
   };
 
-  //Make output pretty
   const checkForMissingFields = () => {
     const missingFields = [];
 
@@ -137,27 +160,26 @@ const InductionEdit = () => {
     };
 
     if (!induction.name || induction.name.trim() === "") {
-      missingFields.push("Induction name");
+      missingFields.push("Induction needs a name.");
     }
     if (!induction.description || isContentEmpty(induction.description)) {
-      missingFields.push("Induction description");
+      missingFields.push("Induction needs a description.");
     }
     if (induction.department === "Select a department" || !induction.department) {
-      missingFields.push("Department");
+      missingFields.push("Please select a department.");
     }
 
     // Check if there is at least one question
     if (!induction.questions || induction.questions.length === 0) {
-      missingFields.push("At least one question");
+      missingFields.push("Add at least one question.");
     } else {
-
       let questionsMissingAnswer = 0;
       let questionsMissingText = 0;
       let questionsMissingType = 0;
       let questionsMissingOptions = 0;
       let optionsMissingText = 0;
 
-      induction.questions.forEach((question, index) => {
+      induction.questions.forEach((question) => {
         if (!question.question || question.question.trim() === "") {
           questionsMissingText++;
         }
@@ -173,7 +195,7 @@ const InductionEdit = () => {
         if (!question.options || question.options.length === 0) {
           questionsMissingOptions++;
         } else {
-          question.options.forEach((option, optionIndex) => {
+          question.options.forEach((option) => {
             if (!option.trim()) {
               optionsMissingText++;
             }
@@ -182,20 +204,20 @@ const InductionEdit = () => {
       });
 
       // Summarize missing fields for questions
-      if (questionsMissingAnswer > 0) {
-        missingFields.push(`${questionsMissingAnswer} question${questionsMissingAnswer > 1 ? "s" : ""} need at least one answer`);
-      }
       if (questionsMissingText > 0) {
-        missingFields.push(`${questionsMissingText} question${questionsMissingText > 1 ? "s" : ""} need text`);
+        missingFields.push(`${questionsMissingText} question${questionsMissingText > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} text.`);
       }
       if (questionsMissingType > 0) {
-        missingFields.push(`${questionsMissingType} question${questionsMissingType > 1 ? "s" : ""} need a type`);
+        missingFields.push(`${questionsMissingType} question${questionsMissingType > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} a type.`);
+      }
+      if (questionsMissingAnswer > 0) {
+        missingFields.push(`${questionsMissingAnswer} question${questionsMissingAnswer > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} at least one answer.`);
       }
       if (questionsMissingOptions > 0) {
-        missingFields.push(`${questionsMissingOptions} question${questionsMissingOptions > 1 ? "s" : ""} need options`);
+        missingFields.push(`${questionsMissingOptions} question${questionsMissingOptions > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} options.`);
       }
       if (optionsMissingText > 0) {
-        missingFields.push(`${optionsMissingText} option${optionsMissingText > 1 ? "s" : ""} are missing text`);
+        missingFields.push(`${optionsMissingText} option${optionsMissingText > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} text.`);
       }
     }
 
@@ -225,51 +247,72 @@ const InductionEdit = () => {
           <Loading message={loadingMessage} />
         ) : (
           <>
-            <ConfirmationModal
-              isOpen={confirmAction}
-              message={
-                actionType === 'submit'
-                  ? "Are you sure you want to submit this induction?"
-                  : actionType === 'prompt'
-                    ? "The following fields can't be empty, please go back to fill them."
-                    : actionType === 'unfinished'
-                      ? "You seem to have some unsaved fields and some empty fields."
-                      : actionType === 'unsaved'
-                        ? "Are you sure you want to submit this induction?"
-                        : ""
+            <Modal
+              title="Confirm Action"
+              open={modalVisible}
+              onCancel={handleCancel}
+              footer={
+                <div className="flex flex-wrap justify-end gap-2 sm:flex-nowrap">
+                  {actionType === "submit" && (
+                    <Button key="submitConfirm" type="primary" className="w-auto min-w-0 text-sm" onClick={confirmSubmitActionHandler}>
+                      Submit
+                    </Button>
+                  )}
+                  {actionType === "unsaved" && (
+                    <Button key="unsavedConfirm" type="primary" danger className="w-auto min-w-0 text-sm" onClick={confirmSubmitActionHandler}>
+                      Discard & Submit
+                    </Button>
+                  )}
+                  {(actionType === "prompt" || actionType === "unfinished" || actionType === "failedSave") && (
+                    <Button key="continueEditing" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
+                      Continue Editing
+                    </Button>
+                  )}
+                  {(actionType === "unsaved" || actionType === "unfinished") && (
+                    <Button key="saveAndCheck" type="primary" className="w-auto min-w-0 text-sm" onClick={handleSaveAndCheck} disabled={savingInProgress}>
+                      Save & Check
+                    </Button>
+                  )}
+                  <Button key="cancel" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
+                    Cancel
+                  </Button>
+                </div>
               }
-              subtext={
-                  (actionType === 'prompt')||(actionType === 'unfinished')
-                  ? `Empty fields: ${checkForMissingFields().join(", ")}`
-                  : actionType === 'unsaved'
-                  ? "This will discard any unsaved changes you have made."
-                  : ""
-              }
-              onCancel={cancelActionHandler}
-              onConfirm={confirmActionHandler}
-              actionLabel={
-                actionType === 'submit'
-                  ? "Submit"
-                  : actionType === 'unfinished'
-                  ? "Save changes and check fields"
-                  : actionType === 'unsaved'
-                  ? "Discard changes and Submit"
-                  : actionType === 'prompt'
-                  ? "Continue Editing"
-                  : ""
-              }
-              cancelLabel={
-                actionType === 'submit'
-                  ? "Cancel"
-                  : actionType === 'unfinished'
-                  ? "Continue Editing"
-                  : actionType === 'unsaved'
-                  ? "Save changes and check fields"
-                  : ""
-              }
-            />
+            >
+              {savingInProgress ? (
+                <div className="flex justify-center items-center">
+                  <Loading message="Saving changes..." />
+                </div>
+              ) : (
+                <>
+                  {actionType === "submit" && <p>Are you sure you want to submit this induction?</p>}
+                  {actionType === "unsaved" && <p>You have unsaved changes. Are you sure you want to discard them and submit?</p>}
+                  {actionType === "prompt" && (
+                    <>
+                      <p>Some details are missing. Please review the list below and try again.</p>
+                      <hr />
+                      <p>Issues that need attention:</p>
+                      <ul>{checkForMissingFields().map((field) => <li key={field}>{field}</li>)}</ul>
+                    </>
+                  )}
+                  {actionType === "unfinished" && <p>You have unsaved and missing fields. Would you like to save first?</p>}
+                  {actionType === "failedSave" && (
+                    <>
+                      <p>Some fields couldn't be saved. Please check the details and try again.</p>
+                      {checkForMissingFields().length > 0 && (
+                        <>
+                          <hr />
+                          <p>Issues that need attention:</p>
+                          <ul>{checkForMissingFields().map((field) => <li key={field}>{field}</li>)}</ul>
+                        </>
+                      )}
+                    </>
+                  )}
+                </>
+              )}
+            </Modal>
 
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               {/* Induction Form Component */}
               <InductionFormHeader
                 induction={induction}
@@ -281,33 +324,26 @@ const InductionEdit = () => {
               />
 
               {/* Main content for managing induction details */}
-              <div className="p-4 mx-auto max-w-5xl space-y-6">
+              <div className="p-4 mx-auto w-full max-w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl space-y-6">
 
                 <InductionFormContent
                   induction={induction}
                   setInduction={setInduction}
                   saveAllFields={saveAllFields}
+                  expandOnError={expandOnError}
                   updateFieldsBeingEdited={updateFieldsBeingEdited}
                 />
 
                 {/* Save Button */}
                 <div className="flex justify-center mt-6">
-                  <button
-                    type="button"
+                  <Button
+                    type="primary"
                     onClick={handleSubmitButton}
-                    className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
+                    className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-5 text-base rounded-md"
                     title="Save Induction"
                   >
                     <FaSave className="inline mr-2" /> Save Induction
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => { setSaveAllFields(true) }}
-                    className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
-                    title="Save All"
-                  >
-                    <FaSave className="inline mr-2" /> Save All
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>

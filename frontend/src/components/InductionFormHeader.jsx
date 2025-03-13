@@ -17,7 +17,7 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduct
     }
     if (isEditingName) {
       updateFieldsBeingEdited("induction_header", "inductionName");
-    }else{
+    } else {
       updateFieldsBeingEdited("induction_header", null);
     }
   }, [saveAllFields, isEditingName]);
@@ -56,7 +56,7 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduct
   return (
     <div className="bg-white shadow-md sticky top-0 z-10">
       <div className="flex flex-col sm:flex-row items-start justify-between p-4 mx-auto max-w-6xl bg-gray-50">
-        <div className="flex-1 w-full mb-4 sm:mb-0yy max-w-full">
+        <div className="flex-1 min-w-0 w-full mb-4 sm:mb-0 max-w-full">
           {/* Induction Name Section */}
           <div className="space-y-2">
             <label htmlFor="name" className="text-sm font-bold text-gray-700 flex items-center">

@@ -13,7 +13,7 @@ import QuestionTypes from "../../models/QuestionTypes";
 import ConfirmationModal from "../ConfirmationModal";
 import { Trash } from "lucide-react";
 
-const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, updateFieldsBeingEdited }) => {
+const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, expandOnError, updateFieldsBeingEdited }) => {
     const [hasExpandedBefore, setHasExpandedBefore] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [editingField, setEditingField] = useState(null);
@@ -114,7 +114,9 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, upd
                     question={question}
                     onChange={onChange}
                     isExpanded={isExpanded}
+                    setIsExpanded={setIsExpanded}
                     saveAllFields={saveAllFields}
+                    expandOnError={expandOnError}
                     updateFieldsBeingEdited={updateFieldsBeingEdited}
                 />;
             case QuestionTypes.DROPDOWN:
@@ -122,7 +124,9 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, upd
                     question={question}
                     onChange={onChange}
                     isExpanded={isExpanded}
+                    setIsExpanded={setIsExpanded}
                     saveAllFields={saveAllFields}
+                    expandOnError={expandOnError}
                     updateFieldsBeingEdited={updateFieldsBeingEdited}
                 />;
             case QuestionTypes.FILE_UPLOAD:

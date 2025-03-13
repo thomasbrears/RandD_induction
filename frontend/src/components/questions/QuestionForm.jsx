@@ -13,11 +13,16 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
     const [showDescription, setShowDescription] = useState(false);
     const [description, setDescription] = useState("");
     const [validationErrors, setValidationErrors] = useState({});
+    const [validateAll, setValidateAll] = useState(false);
 
     const [showImageUpload, setShowImageUpload] = useState(false);
     const [imageFile, setImageFile] = useState(null); {/*figure out how this works later */ }
 
     const handleQuestionTypeChange = (value) => {
+        if (validateAll) {//Reset validation if form changes
+            setValidateAll(false);
+            setValidationErrors({});
+        }
         setQuestionType(value);
         switch (value) {
             case QuestionTypes.TRUE_FALSE:
@@ -78,6 +83,8 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
         setAnswers([]);
         setShowDescription(false);
         setDescription("");
+        setValidateAll(false);
+        setValidationErrors({});
     };
 
     const validateForm = () => {
@@ -96,7 +103,7 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
             errors.answers = "At least one answer must be selected";
         }
         if (options.some(option => option.trim() === "")) {
-            errors.options = "Options cannot be empty";
+            errors.options = "All options must have text";
         }
 
         setValidationErrors(errors);
@@ -104,26 +111,15 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
     };
 
     useEffect(() => {
-        setValidationErrors((prevErrors) => {
-            const errors = { ...prevErrors };
+        if (validateAll) {
+            setValidationErrors({});
+            validateForm();
+        }
 
-            if (questionType) delete errors.questionType;
-            if (questionText.trim()) delete errors.questionText;
-            if ((questionType === QuestionTypes.MULTICHOICE || questionType === QuestionTypes.DROPDOWN) && options.length > 0) {
-                delete errors.options;
-            }
-            if ((questionType === QuestionTypes.MULTICHOICE || questionType === QuestionTypes.DROPDOWN) && answers.length > 0) {
-                delete errors.answers;
-            }
-            if (!options.some(option => option.trim() === "")) {
-                delete errors.options;
-            }
-
-            return errors;
-        });
-    }, [questionType, questionText, options, answers]);
+    }, [questionType, questionText, options, answers, validateAll]);
 
     const handleSubmit = () => {
+        setValidateAll(true);
         if (!validateForm()) return;
 
         const newQuestion = {
@@ -140,11 +136,16 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
         onClose();
     };
 
+    const handleCancel = () => {
+        resetForm();
+        onClose();
+    };
+
     return (
-        <Modal open={visible} title="Add Question" onCancel={onClose} footer={null}>
+        <Modal open={visible} title="Add Question" onCancel={handleCancel} footer={null}>
             {/*Question Type Dropdown */}
             <div>
-                <label>Question Type:</label>
+                <label className="font-semibold">Question Type:</label>
                 <Select
                     className="w-full"
                     value={questionType}
@@ -163,13 +164,13 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                 <>
                     {/*Question Text Input*/}
                     <div className="mt-4">
-                        <label>Question:</label>
+                        <label className="block mb-0 font-semibold">Question:</label>
+                        {validationErrors.questionText && <p className="text-red-500 text-sm mb-1">{validationErrors.questionText}</p>}
                         <Input
                             value={questionText}
                             onChange={(e) => setQuestionText(e.target.value)}
                             placeholder="Enter your question"
                         />
-                        {validationErrors.questionText && <p className="text-red-500 text-sm">{validationErrors.questionText}</p>}
                     </div>
 
                     <div className="mt-4">
@@ -231,7 +232,7 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
             {(questionType === QuestionTypes.MULTICHOICE || questionType === QuestionTypes.DROPDOWN) && (
                 <div className="mt-4">
                     <div className="flex justify-between items-center">
-                        <label>Options:</label>
+                        <label className="font-semibold">Options:</label>
                         <Button
                             onClick={handleAddOption}
                             className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
@@ -291,7 +292,7 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
             {questionType === QuestionTypes.TRUE_FALSE && (
                 <div className="mt-4">
                     <div className="flex justify-between items-center">
-                        <label>Options:</label>
+                        <label className="font-semibold">Options:</label>
                         <p className="text-sm text-gray-500">Choose correct answer.</p>
                     </div>
 
@@ -319,7 +320,7 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
 
             {/*Save button */}
             <div className="mt-6 flex justify-end">
-                <Button onClick={onClose} className="mr-2">Cancel</Button>
+                <Button onClick={handleCancel} className="mr-2">Cancel</Button>
                 <Button type="primary" onClick={handleSubmit} disabled={Object.keys(validationErrors).length > 0}>
                     Save
                 </Button>

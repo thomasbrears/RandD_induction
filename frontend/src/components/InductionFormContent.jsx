@@ -6,7 +6,7 @@ import ReactQuill from 'react-quill';
 import QuestionList from "../components/questions/QuestionList";
 import QuestionForm from "../components/questions/QuestionForm";
 
-const InductionFormContent = ({ induction, setInduction, saveAllFields, updateFieldsBeingEdited }) => {
+const InductionFormContent = ({ induction, setInduction, saveAllFields, expandOnError, updateFieldsBeingEdited }) => {
     const [localDepartment, setLocalDepartment] = useState(induction.department);
     const [localDescription, setLocalDescription] = useState(induction.description);
     const [editingField, setEditingField] = useState(null);
@@ -142,7 +142,7 @@ const InductionFormContent = ({ induction, setInduction, saveAllFields, updateFi
             <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
                 {/* Department Section */}
                 <div className="space-y-2">
-                    <label htmlFor="department" className="text-sm font-bold text-gray-700 flex items-center">
+                    <label htmlFor="department" className="text-base font-semibold flex items-center">
                         Department:
                         {editingField !== "department" ? (
                             <button
@@ -184,7 +184,9 @@ const InductionFormContent = ({ induction, setInduction, saveAllFields, updateFi
                                 onChange={(e) => handleLocalChange("department", e.target.value)}
                                 className="border border-gray-300 rounded-lg p-1 focus:ring-gray-800 focus:border-gray-800 text-sm"
                             >
-                                <option value="">Select a department</option>
+                                <option value="" disabled>
+                                    Select a department
+                                </option>
                                 {Departments.map((dept) => (
                                     <option key={dept.id} value={dept.name}>
                                         {dept.name}
@@ -201,7 +203,7 @@ const InductionFormContent = ({ induction, setInduction, saveAllFields, updateFi
 
                 {/* Description Section */}
                 <div className="space-y-2 w-full">
-                    <label htmlFor="description" className="text-sm font-bold text-gray-700 flex items-center">
+                    <label htmlFor="description" className="text-base font-semibold flex items-center">
                         Description:
                         {editingField !== "description" ? (
                             <button
@@ -277,6 +279,7 @@ const InductionFormContent = ({ induction, setInduction, saveAllFields, updateFi
                         questions={induction.questions}
                         setQuestions={handleUpdateQuestions}
                         saveAllFields={saveAllFields}
+                        expandOnError={expandOnError}
                         updateFieldsBeingEdited={updateFieldsBeingEdited}
                     />
                 </div>
