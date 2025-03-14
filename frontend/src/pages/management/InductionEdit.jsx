@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import InductionFormHeader from "../../components/InductionFormHeader";
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate} from 'react-router-dom';
 import { toast } from 'react-toastify';
 import useAuth from "../../hooks/useAuth";
 import { DefaultNewInduction } from "../../models/Inductions";
@@ -25,7 +25,7 @@ const InductionEdit = () => {
   const [fieldsBeingEdited, setFieldsBeingEdited] = useState({});
   const [saveAllFields, setSaveAllFields] = useState(false);
   const [actionType, setActionType] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [expandOnError, setExpandOnError] = useState(false);
   const [savingInProgress, setSavingInProgress] = useState(false);
 
@@ -72,13 +72,13 @@ const InductionEdit = () => {
       setActionType(hasEdits ? "unfinished" : "prompt");
     }
 
-    setModalVisible(true);
+    setConfirmModalVisible(true);
   };
 
   const confirmSubmitActionHandler = () => {
     if (actionType === "submit" || actionType === "unsaved") {
       handleSubmit();
-      setModalVisible(false);
+      setConfirmModalVisible(false);
       return;
     }
   };
@@ -90,7 +90,7 @@ const InductionEdit = () => {
       setSavingInProgress(true);
       setTimeout(handleFailedSave, 5000);
     } else {
-      setModalVisible(false);
+      setConfirmModalVisible(false);
     }
   };
 
@@ -102,12 +102,11 @@ const InductionEdit = () => {
   };
 
   useEffect(() => {
-    console.log(expandOnError);
     setExpandOnError(false)
   }, [expandOnError]);
 
   const handleCancel = () => {
-    setModalVisible(false);
+    setConfirmModalVisible(false);
     if (checkForMissingFields().length > 0 || Object.keys(fieldsBeingEdited).length > 0) {
       setExpandOnError(true);
     }
@@ -249,7 +248,7 @@ const InductionEdit = () => {
           <>
             <Modal
               title="Confirm Action"
-              open={modalVisible}
+              open={confirmModalVisible}
               onCancel={handleCancel}
               footer={
                 <div className="flex flex-wrap justify-end gap-2 sm:flex-nowrap">
