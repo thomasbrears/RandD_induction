@@ -207,7 +207,7 @@ export const updateUser = async (req, res) => {
     });
 
     // Set custom user claims
-    admin.auth().setCustomUserClaims(uid, { role: permission });
+    await admin.auth().setCustomUserClaims(uid, { role: permission });
 
     // Update Firestore
     await userRef.update({
@@ -220,50 +220,76 @@ export const updateUser = async (req, res) => {
     });
 
     // Send emails for newly assigned inductions
+    const emailResults = [];
     for (const induction of newInductions) {
-      const formattedAvailableFrom = induction.availableFrom
-        ? format(new Date(induction.availableFrom), "d MMMM yyyy")
-        : "Unavailable";
-      const formattedDueDate = induction.dueDate
-        ? format(new Date(induction.dueDate), "d MMMM yyyy")
-        : "Unavailable";
-      const description = induction.description || "No description available.";
+      try {
+        const formattedAvailableFrom = induction.availableFrom
+          ? format(new Date(induction.availableFrom), "d MMMM yyyy")
+          : "Unavailable";
+        const formattedDueDate = induction.dueDate
+          ? format(new Date(induction.dueDate), "d MMMM yyyy")
+          : "Unavailable";
+        const description = induction.description || "No description available.";
 
-      const emailSubject = `You have a new induction to complete: ${induction.name || "Unnamed Induction"}`;
-      const emailBody = `
-        <h1>Kia ora ${firstName} ${lastName}!</h1>
-        <p>You have been assigned a new induction module to complete.</p>
-        <br>
+        // Log values for debugging
+        console.log(`Preparing email for ${email} about induction: ${induction.name || "Unnamed"}`);
+        console.log(`Environment URL: ${process.env.REACT_APP_VERCEL_DEPLOYMENT}`);
+
+        const emailSubject = `You have a new induction to complete: ${induction.name || "Unnamed Induction"}`;
+        const emailBody = `
+          <h1>Kia ora ${firstName} ${lastName}!</h1>
+          <p>You have been assigned a new induction module to complete.</p>
+          <br>
+          
+          <h3>Here are the details:</h3>
+          <p><strong>Induction Name:</strong> ${induction.name || "Unnamed Induction"}</p>
+          <p><strong>Available from:</strong> ${formattedAvailableFrom}</p>
+          <p><strong>Due Date:</strong> ${formattedDueDate}</p>
+
+          <br>
+          <h3>How to complete the induction?</h3>
+          <p>Simply head to our induction portal website (${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://your-portal-url.com'}) and log in using this email address. Navigate to the "My Inductions" tab, find this induction, and click "Start".</p>
+          <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://your-portal-url.com'}/inductions/my-inductions" class="button">AUT Events Induction Portal</a>
+
+          <p>If you have any questions, please feel free to reach out to your manager or reply to this email.</p>
+
+          <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
+        `;
+
+        const replyToEmail = "autevents@brears.xyz";
+        const ccEmails = ["manager@brears.xyz"];
+
+        // Attempt to send email and capture result
+        const emailResult = await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
+        emailResults.push({
+          induction: induction.name || "Unnamed Induction",
+          result: emailResult,
+          success: true
+        });
         
-        <h3>Here are the details:</h3>
-        <p><strong>Induction Name:</strong> ${induction.name || "Unnamed Induction"}</p>
-        <p><strong>Available from:</strong> ${formattedAvailableFrom}</p>
-        <p><strong>Due Date:</strong> ${formattedDueDate}</p>
-
-        <br>
-        <h3>How to complete the induction?</h3>
-        <p>Simply head to our induction portal website (${process.env.REACT_APP_VERCEL_DEPLOYMENT}) and log in using this email address. Navigate to the "My Inductions" tab, find this induction, and click "Start".</p>
-        <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}/inductions/my-inductions" class="button">AUT Events Induction Portal</a>
-
-        <p>If you have any questions, please feel free to reach out to your manager or reply to this email.</p>
-
-        <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
-      `;
-
-      const replyToEmail = "autevents@brears.xyz";
-      //const ccEmails = ["manager@brears.xyz"];
-
-      //await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
-      await sendEmail(email, emailSubject, emailBody, replyToEmail);
+        console.log(`Email sent for induction "${induction.name || "Unnamed"}" to ${email}`);
+      } catch (emailError) {
+        console.error(`Failed to send email for induction "${induction.name || "Unnamed"}":`, emailError);
+        emailResults.push({
+          induction: induction.name || "Unnamed Induction",
+          error: emailError.message || "Unknown error",
+          success: false
+        });
+        // Continue the loop to try sending other emails even if one fails
+      }
     }
 
     res.json({
       data: userResult,
       message: "User updated successfully",
+      emailResults: emailResults
     });
   } catch (error) {
     console.error("Error updating user:", error);
-    res.status(500).send(error);
+    res.status(500).json({
+      error: error.message || "Unknown error occurred",
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 

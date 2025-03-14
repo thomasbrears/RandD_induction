@@ -2,10 +2,28 @@ import mailjet from 'node-mailjet';
 import 'dotenv/config';
 
 // Initialize Mailjet API connection
-const MailJetConnection = mailjet.apiConnect(
-  process.env.MJ_APIKEY_PUBLIC,
-  process.env.MJ_APIKEY_PRIVATE
-);
+const initializeMailjet = () => {
+  try {
+    console.log("Initializing Mailjet with keys:", {
+      publicKeyPrefix: process.env.MJ_APIKEY_PUBLIC ? process.env.MJ_APIKEY_PUBLIC.substring(0, 4) + '...' : 'undefined',
+      privateKeySet: process.env.MJ_APIKEY_PRIVATE ? 'set' : 'undefined'
+    });
+    
+    if (!process.env.MJ_APIKEY_PUBLIC || !process.env.MJ_APIKEY_PRIVATE) {
+      console.error("WARNING: Mailjet API keys are not properly set in environment variables!");
+    }
+    
+    return mailjet.apiConnect(
+      process.env.MJ_APIKEY_PUBLIC,
+      process.env.MJ_APIKEY_PRIVATE
+    );
+  } catch (error) {
+    console.error("Failed to initialize Mailjet client:", error);
+    throw new Error(`Mailjet initialization error: ${error.message}`);
+  }
+};
+
+const MailJetConnection = initializeMailjet();
 
 // Helper function for generating the default email template
 export const generateDefaultEmailTemplate = (bodyContent, { 
@@ -83,7 +101,15 @@ export const generateDefaultEmailTemplate = (bodyContent, {
 
 // Function to send email
 export const sendEmail = async (toEmail, subject, bodyContent, replyToEmail = null, ccEmails = [], options = {}) => {
+  console.log(`Sending email to: ${toEmail}`);
+  console.log(`Subject: ${subject}`);
+  console.log(`CC Emails: ${ccEmails.join(', ') || 'None'}`);
+  
   try {
+    if (!toEmail) {
+      throw new Error('Recipient email address is required');
+    }
+    
     // Use the default email template for the content with optional customization
     const htmlContent = generateDefaultEmailTemplate(bodyContent, options);
     
@@ -99,6 +125,8 @@ export const sendEmail = async (toEmail, subject, bodyContent, replyToEmail = nu
       ],
       Subject: subject,
       HTMLPart: htmlContent,
+      // Add text alternative for better deliverability
+      TextPart: bodyContent.replace(/<[^>]*>/g, ''),
     };
 
     // Add Reply-To if provided
@@ -109,18 +137,54 @@ export const sendEmail = async (toEmail, subject, bodyContent, replyToEmail = nu
     }
 
     // Add CC emails if provided
-    if (ccEmails.length > 0) {
+    if (ccEmails && ccEmails.length > 0) {
       messageData.Cc = ccEmails.map(email => ({ Email: email }));
     }
 
-    const request = MailJetConnection.post('send', { version: 'v3.1' }).request({
+    console.log('Preparing to send email via Mailjet API...');
+    
+    const requestPayload = {
       Messages: [messageData],
-    });
+    };
+    
+    // Log a simplified version of the request for debugging
+    console.log('Mail request payload:', JSON.stringify({
+      to: toEmail,
+      subject: subject,
+      cc: ccEmails,
+      replyTo: replyToEmail,
+    }));
 
-    const result = await request;
-    console.log('Email sent successfully:', result.body);
+    try {
+      const request = await MailJetConnection.post('send', { version: 'v3.1' }).request(requestPayload);
+      
+      console.log('Mailjet API Response Status:', request.response?.status);
+      console.log('Mailjet response body:', JSON.stringify(request.body));
+      
+      // Check if response contains errors
+      if (request.body && request.body.Messages && request.body.Messages[0]) {
+        const messageStatus = request.body.Messages[0].Status;
+        if (messageStatus !== 'success') {
+          console.error('Message was not successful:', messageStatus);
+          throw new Error(`Mailjet message status: ${messageStatus}`);
+        }
+      }
+      
+      return request.body;
+    } catch (apiError) {
+      console.error('Mailjet API error:', apiError);
+      console.error('Error details:', apiError.response?.body || 'No response body');
+      
+      // Try to extract useful error information
+      const errorMessage = apiError.response?.body?.ErrorMessage || 
+                          apiError.response?.body?.ErrorInfo || 
+                          apiError.message || 
+                          'Unknown Mailjet API error';
+      
+      throw new Error(`Mailjet API error: ${errorMessage}`);
+    }
   } catch (error) {
-    console.error('Error sending email:', error);
+    console.error('Error in sendEmail function:', error);
     throw error; // Re-throw to allow caller to handle the error
   }
 };
