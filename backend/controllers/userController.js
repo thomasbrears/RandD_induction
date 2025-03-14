@@ -231,10 +231,6 @@ export const updateUser = async (req, res) => {
           : "Unavailable";
         const description = induction.description || "No description available.";
 
-        // Log values for debugging
-        console.log(`Preparing email for ${email} about induction: ${induction.name || "Unnamed"}`);
-        console.log(`Environment URL: ${process.env.REACT_APP_VERCEL_DEPLOYMENT}`);
-
         const emailSubject = `You have a new induction to complete: ${induction.name || "Unnamed Induction"}`;
         const emailBody = `
           <h1>Kia ora ${firstName} ${lastName}!</h1>
@@ -267,7 +263,6 @@ export const updateUser = async (req, res) => {
           success: true
         });
         
-        console.log(`Email sent for induction "${induction.name || "Unnamed"}" to ${email}`);
       } catch (emailError) {
         console.error(`Failed to send email for induction "${induction.name || "Unnamed"}":`, emailError);
         emailResults.push({

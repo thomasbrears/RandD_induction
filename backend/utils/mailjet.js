@@ -4,11 +4,6 @@ import 'dotenv/config';
 // Initialize Mailjet API connection
 const initializeMailjet = () => {
   try {
-    console.log("Initializing Mailjet with keys:", {
-      publicKeyPrefix: process.env.MJ_APIKEY_PUBLIC ? process.env.MJ_APIKEY_PUBLIC.substring(0, 4) + '...' : 'undefined',
-      privateKeySet: process.env.MJ_APIKEY_PRIVATE ? 'set' : 'undefined'
-    });
-    
     if (!process.env.MJ_APIKEY_PUBLIC || !process.env.MJ_APIKEY_PRIVATE) {
       console.error("WARNING: Mailjet API keys are not properly set in environment variables!");
     }
@@ -102,8 +97,6 @@ export const generateDefaultEmailTemplate = (bodyContent, {
 // Function to send email
 export const sendEmail = async (toEmail, subject, bodyContent, replyToEmail = null, ccEmails = [], options = {}) => {
   console.log(`Sending email to: ${toEmail}`);
-  console.log(`Subject: ${subject}`);
-  console.log(`CC Emails: ${ccEmails.join(', ') || 'None'}`);
   
   try {
     if (!toEmail) {
@@ -125,7 +118,6 @@ export const sendEmail = async (toEmail, subject, bodyContent, replyToEmail = nu
       ],
       Subject: subject,
       HTMLPart: htmlContent,
-      // Add text alternative for better deliverability
       TextPart: bodyContent.replace(/<[^>]*>/g, ''),
     };
 
@@ -140,27 +132,14 @@ export const sendEmail = async (toEmail, subject, bodyContent, replyToEmail = nu
     if (ccEmails && ccEmails.length > 0) {
       messageData.Cc = ccEmails.map(email => ({ Email: email }));
     }
-
-    console.log('Preparing to send email via Mailjet API...');
     
     const requestPayload = {
       Messages: [messageData],
     };
-    
-    // Log a simplified version of the request for debugging
-    console.log('Mail request payload:', JSON.stringify({
-      to: toEmail,
-      subject: subject,
-      cc: ccEmails,
-      replyTo: replyToEmail,
-    }));
 
     try {
       const request = await MailJetConnection.post('send', { version: 'v3.1' }).request(requestPayload);
-      
-      console.log('Mailjet API Response Status:', request.response?.status);
-      console.log('Mailjet response body:', JSON.stringify(request.body));
-      
+        
       // Check if response contains errors
       if (request.body && request.body.Messages && request.body.Messages[0]) {
         const messageStatus = request.body.Messages[0].Status;
