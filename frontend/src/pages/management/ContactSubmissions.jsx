@@ -21,10 +21,10 @@ import {
   Layout,
   Popconfirm,
   List,
-  Avatar,
+  Statistic,
   Empty
 } from 'antd';
-import { toast, ToastContainer } from 'react-toastify';
+import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { 
   EyeOutlined, 
@@ -154,16 +154,27 @@ const ContactSubmissions = () => {
       const fullName = String(submission.fullName || '').toLowerCase();
       const subject = String(submission.subject || '').toLowerCase();
       const message = String(submission.message || '').toLowerCase();
+      const formType = String(submission.formType || 'contact').toLowerCase();
       
       // Check if any of these fields contains the search text
       const matches = 
         fullName.includes(searchLower) ||
         subject.includes(searchLower) ||
-        message.includes(searchLower);
+        message.includes(searchLower) ||
+        formType.includes(searchLower);
       
       return matches;
     });
     return filtered;
+  };
+
+  // Helper functions to get counts by form type
+  const getFeedbackCount = () => {
+    return submissions.filter(item => item.formType === 'feedback').length;
+  };
+
+  const getContactFormCount = () => {
+    return submissions.filter(item => !item.formType || item.formType === 'contact').length;
   };
 
   // Reset search
@@ -234,7 +245,29 @@ const ContactSubmissions = () => {
       title: 'Email',
       dataIndex: 'email',
       key: 'email',
-      responsive: ['lg'],
+      responsive: ['md'],
+    },
+    {
+      title: 'Type',
+      dataIndex: 'formType',
+      key: 'formType',
+      render: (formType) => {
+        if (formType === 'feedback') {
+          return <Tag color="purple">Feedback</Tag>;
+        }
+        return <Tag color="cyan">Contact</Tag>;
+      },
+      filters: [
+        { text: 'Contact Form', value: 'contact' },
+        { text: 'Induction Feedback', value: 'feedback' },
+      ],
+      onFilter: (value, record) => {
+        // If formType is undefined, treat it as a contact form
+        const type = record.formType || 'contact';
+        return type === value;
+      },
+      responsive: ['sm'],
+      width: 100, 
     },
     {
       title: 'Department',
@@ -246,7 +279,8 @@ const ContactSubmissions = () => {
       },
       filters: departments.map(dept => ({ text: dept.name, value: dept.id })),
       onFilter: (value, record) => record.contactType === value,
-      responsive: ['md'],
+      responsive: ['sm'],
+      width: 130, 
     },
     {
       title: 'Subject',
@@ -365,13 +399,19 @@ const ContactSubmissions = () => {
                     <CalendarOutlined style={{ marginRight: 4 }} />
                     {moment(item.createdAt).format('DD/MM/YYYY h:mm A')}
                   </div>
+                  <div>
+                  {item.formType === 'feedback' ? (
+                    <Tag color="purple" size="small">Feedback</Tag>
+                  ) : (
+                    <Tag color="cyan" size="small">Contact</Tag>
+                  )}
                   {item.contactType && (
-                    <div>
-                      <InfoCircleOutlined style={{ marginRight: 4 }} />
+                    <span style={{ marginLeft: 4 }}>
                       Dept: {departmentMap[item.contactType] || item.contactType}
-                    </div>
+                    </span>
                   )}
                 </div>
+              </div>
               }
             />
           </Card>
@@ -419,85 +459,188 @@ const ContactSubmissions = () => {
           minHeight: 280,
           padding: isMobile ? '12px' : '16px 24px',
         }}>
-          {/* Table section with search */}
-          <Card bordered={false}>
-            <div style={{ marginBottom: 16 }}>
-              <Row gutter={[16, 16]} align="middle">
-                <Col xs={24} md={16}>
-                  <Input 
-                    placeholder={isMobile ? "Search submissions..." : "Search by senders name, message subject, or message content"} 
-                    value={searchText}
-                    onChange={e => {
-                      setSearchText(e.target.value);
-                    }}
-                    onPressEnter={() => {
+
+        {/* Table section with search and statistics */}
+        <Card bordered={false}>
+          {/* Statistics Row */}
+          <div style={{ marginBottom: 20 }}>
+            <Row gutter={[16, 16]}>
+              {/* Total Submissions */}
+              <Col xs={24} sm={8}>
+                <Card 
+                  size="small" 
+                  className="stat-card"
+                  style={{ 
+                    textAlign: 'center',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    height: '100%' 
+                  }}
+                >
+                  <Statistic
+                    title={<span style={{ fontSize: '14px' }}>Total Submissions</span>}
+                    value={submissions.length}
+                    valueStyle={{ color: '#1890ff', fontSize: isMobile ? '24px' : '28px' }}
+                  />
+                </Card>
+              </Col>
+              
+              {/* Contact Forms */}
+              <Col xs={12} sm={8}>
+                <Card 
+                  size="small" 
+                  className="stat-card"
+                  style={{ 
+                    textAlign: 'center',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    height: '100%' 
+                  }}
+                >
+                  <Statistic
+                    title={<span style={{ fontSize: '14px' }}>Contact Forms</span>}
+                    value={getContactFormCount()}
+                    valueStyle={{ color: '#13c2c2', fontSize: isMobile ? '22px' : '28px' }}
+                    suffix={
+                      <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
+                        ({Math.round((getContactFormCount() / (submissions.length || 1)) * 100)}%)
+                      </span>
+                    }
+                  />
+                </Card>
+              </Col>
+              
+              {/* Feedback Submissions */}
+              <Col xs={12} sm={8}>
+                <Card 
+                  size="small" 
+                  className="stat-card"
+                  style={{ 
+                    textAlign: 'center',
+                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                    height: '100%' 
+                  }}
+                >
+                  <Statistic
+                    title={<span style={{ fontSize: '14px' }}>Feedback Submissions</span>}
+                    value={getFeedbackCount()}
+                    valueStyle={{ color: '#722ed1', fontSize: isMobile ? '22px' : '28px' }}
+                    suffix={
+                      <span style={{ fontSize: '12px', color: '#8c8c8c' }}>
+                        ({Math.round((getFeedbackCount() / (submissions.length || 1)) * 100)}%)
+                      </span>
+                    }
+                  />
+                </Card>
+              </Col>
+            </Row>
+          </div>
+          
+          {/* Search Row */}
+          <div style={{ marginBottom: 16 }}>
+            <Row gutter={[16, 16]} align="middle">
+              <Col xs={24} md={16}>
+                <Input 
+                  placeholder={isMobile ? "Search submissions..." : "Search by name, subject, message content, or type"} 
+                  value={searchText}
+                  onChange={e => {
+                    setSearchText(e.target.value);
+                  }}
+                  onPressEnter={() => {
+                    // Force a re-render
+                    setSubmissions([...submissions]);
+                  }}
+                  prefix={<SearchOutlined />}
+                  allowClear
+                  size={isMobile ? "middle" : "large"}
+                  style={{ width: '100%' }}
+                />
+              </Col>
+              
+              <Col xs={24} md={8}>
+                <div style={{ display: 'flex', justifyContent: isMobile ? 'flex-start' : 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Button 
+                    onClick={() => {
+                      resetSearch();
                       // Force a re-render
                       setSubmissions([...submissions]);
                     }}
-                    prefix={<SearchOutlined />}
-                    allowClear
-                    size={isMobile ? "middle" : "large"}
-                  />
-                </Col>
-                
-                <Col xs={24} md={8}>
-                  <Space>
-                    <Button 
-                      onClick={() => {
-                        resetSearch();
-                        // Force a re-render
-                        setSubmissions([...submissions]);
-                      }}
-                      icon={<ReloadOutlined />}
-                    >
-                      Clear
-                    </Button>
-                    <Text type="secondary">
-                      {getFilteredSubmissions().length} of {submissions.length} submissions
-                    </Text>
-                  </Space>
-                </Col>
-              </Row>
-            </div>
-  
-            {loading ? (
-              renderSkeleton()
-            ) : (
-              <>
-                {/* Display search text */}
-                {searchText.trim() && (
-                  <div style={{ marginBottom: 8, padding: 8, background: '#f0f8ff', borderRadius: 4 }}>
-                    <Text strong>
-                      Search results for: "{searchText}"
-                    </Text>
-                  </div>
-                )}
-                
-                {/* Switch between table and card view based on screen size */}
-                {isMobile ? (
-                  renderMobileCardView()
-                ) : (
-                  <Table 
-                    columns={columns} 
-                    dataSource={getFilteredSubmissions()} 
-                    rowKey="id"
-                    pagination={{ 
-                      pageSize: 10,
-                      showSizeChanger: true,
-                      pageSizeOptions: ['10', '20', '50', '100']
+                    icon={<ReloadOutlined />}
+                    style={{ marginRight: 10, marginBottom: isMobile ? 8 : 0 }}
+                  >
+                    Clear
+                  </Button>
+                  
+                  <Text type="secondary">
+                    {getFilteredSubmissions().length} of {submissions.length} submissions
+                  </Text>
+                </div>
+              </Col>
+            </Row>
+          </div>
+
+          {loading ? (
+            renderSkeleton()
+          ) : (
+            <>
+              {/* Display search text */}
+              {searchText.trim() && (
+                <div style={{ 
+                  marginBottom: 16, 
+                  padding: '8px 12px', 
+                  background: '#f0f8ff', 
+                  borderRadius: 4,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}>
+                  <Text strong>
+                    <SearchOutlined style={{ marginRight: 8 }} />
+                    Search results for: "{searchText}"
+                  </Text>
+                  
+                  <Button 
+                    type="text" 
+                    size="small" 
+                    onClick={() => {
+                      resetSearch();
+                      setSubmissions([...submissions]);
                     }}
-                    scroll={{ x: isTablet ? 700 : undefined }}
-                  />
-                )}
-              </>
-            )}
-          </Card>
+                    icon={<ReloadOutlined />}
+                  >
+                    Clear
+                  </Button>
+                </div>
+              )}
+              
+              {/* Switch between table and card view based on screen size */}
+              {isMobile ? (
+                renderMobileCardView()
+              ) : (
+                <Table 
+                  columns={columns} 
+                  dataSource={getFilteredSubmissions()} 
+                  rowKey="id"
+                  pagination={{ 
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    pageSizeOptions: ['10', '20', '50', '100']
+                  }}
+                  scroll={{ x: 900 }}
+                  size="middle"
+                />
+              )}
+            </>
+          )}
+        </Card>
   
           {/* Submission detail modal */}
           <Modal
             title={
               <div>
-                <Text strong style={{ fontSize: 18 }}>Submission Details</Text>
+                {currentSubmission.formType === 'feedback' ? (
+                  <Text strong style={{ fontSize: 18 }}>Induction Feedback Details</Text> 
+                  ) : (
+                  <Text strong style={{ fontSize: 18 }}>Submission Details</Text> 
+                )}
               </div>
             }
             open={modalVisible}

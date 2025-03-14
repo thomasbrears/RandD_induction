@@ -27,6 +27,7 @@ import EditUser from './pages/management/EditUser';
 import Settings from './pages/management/Settings';
 import ContactSubmissions from './pages/management/ContactSubmissions.jsx';
 import ManageAccount from './pages/ManageAccountPage';
+import FeedbackTestPage from './pages/FeedbackTestPage.jsx';
 
 // Auth hook and components
 import useAuth from './hooks/useAuth';
@@ -38,7 +39,7 @@ import Permissions from './models/Permissions';
 // Global style sheet
 import './style/Global.css'; 
 
-// Private Route for authentication and role-based access
+// PrivateRoute for protecting routes based on roles and authentication
 const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
   const { user, loading } = useAuth();
   const location = useLocation();
@@ -47,12 +48,14 @@ const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
     return <Loading />;
   }
 
+
   if (!user) {
+    // If the user is not logged in store the current URL and redirect to login
     sessionStorage.setItem('previousUrl', location.pathname);
     return <Navigate to="/auth/signin" />;
   }
-
-  // Role-based access control
+  
+  // Check role if required
   const hasPermission = roleRequired
     ? Array.isArray(roleRequired)
       ? roleRequired.includes(user.role)
@@ -60,66 +63,76 @@ const PrivateRoute = ({ component: Component, roleRequired, ...rest }) => {
     : true;
   
   if (!hasPermission) {
-    return <Navigate to="/" />;
+    return <Navigate to="/" />; // Redirect to homepage if user does not have the required role
   }
 
+  // If authenticated and role matches, render the component
   return <Component {...rest} />;
 };
 
 const App = () => {
   return (
     <HelmetProvider>
-      <div className="App flex flex-col min-h-screen">
-        {/* Toast notifications */}
+      <div className="App flex flex-col min-h-screen ">
+        {/* Toastify message container with default actions*/}
         <ToastContainer
-          theme="light"
-          position="top-center"
-          draggable={true}
-          closeOnClick={true}
-          autoClose={5000}
-          hideProgressBar={false}
-          pauseOnHover={true}
-          pauseOnFocusLoss={false}
+          theme="light" // Set light theme
+          position="top-center" // Set default position
+          draggable={true} // Allow toasts to be draggable
+          closeOnClick={true} // Close toast on click
+          autoClose={5000} // Auto close after 5 seconds
+          hideProgressBar={false} // Show progress bar
+          pauseOnHover={true} // Pause on hover
+          pauseOnFocusLoss={false} // Keep toast running even when focus is lost
         />
-
         <Router>
-          <Navbar />
+          <Navbar/>
+          <ToastContainer/>
           <div className="flex-grow">
             <Routes>
-              {/* Redirects */}
+              
+              {/* Link redirects on main breadcrumb / link to pages */}
+              {/* Redirect /management to /management/dashboard */}
               <Route path="/management" element={<Navigate to="/management/dashboard" />} />
+              {/* Redirect /admin to /admin/settings */}
               <Route path="/admin" element={<Navigate to="/admin/settings" />} />
+              {/* Redirect /inductions to /inductions/my-inductions */}
               <Route path="/inductions" element={<Navigate to="/inductions/my-inductions" />} />
+              {/* Redirect /auth to /auth/signin */}
               <Route path="/auth" element={<Navigate to="/auth/signin" />} />
+              {/* Redirect /account to /account/manage */}
               <Route path="/account" element={<Navigate to="/account/manage" />} />
+              {/* Redirect /management/users to /management/users/view */}
               <Route path="/management/users" element={<Navigate to="/management/users/view" />} />
+              {/* Redirect /management/inductions to /management/inductions/view */}
               <Route path="/management/inductions" element={<Navigate to="/management/inductions/view" />} />
               
-              {/* Public Routes */}
+              {/* Public routes */}
               <Route path="/" element={<HomePage />} />
               <Route path="/contact" element={<ContactPage />} />
               <Route path="/auth/signin" element={<SignInPage />} />
               <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
               <Route path="/auth/complete-signin" element={<CompleteSignInPage />} />
               <Route path="*" element={<NotFoundPage />} />
+              <Route path="/feedback" element={<FeedbackTestPage />} />
 
-              {/* Protected Routes */}
+              {/* Restricted to logged-in users */}
               <Route path="/inductions/my-inductions" element={<PrivateRoute component={FormListPage} />} />
               <Route path="/induction/take" element={<PrivateRoute component={InductionFormPage} />} />
               <Route path="/account/manage" element={<PrivateRoute component={ManageAccount} />} />
 
-              {/* Management Routes (Restricted) */}
-              <Route path="/admin/settings" element={<PrivateRoute component={Settings} roleRequired={[Permissions.ADMIN]} />} />
-              <Route path="/management/dashboard" element={<PrivateRoute component={Dashboard} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              {/* Management restricted routes for admin and/or mananger */}
+              <Route path="/admin/settings" element={<PrivateRoute component={Settings} roleRequired = {[Permissions.ADMIN]} />} />
+              <Route path="/management/contact-submissions" element={<PrivateRoute component={ContactSubmissions} roleRequired = {[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              <Route path="/management/dashboard" element={<PrivateRoute component={Dashboard} roleRequired = {[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/management/users/view" element={<PrivateRoute component={ViewUsers} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
-              <Route path="/management/users/add" element={<PrivateRoute component={UserForm} roleRequired={[Permissions.ADMIN]} />} />
-              <Route path="/management/users/edit/:id" element={<PrivateRoute component={EditUser} roleRequired={[Permissions.ADMIN]} />} />
+              <Route path="/management/users/edit" element={<PrivateRoute component={EditUser} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              <Route path="/management/users/create" element={<PrivateRoute component={UserForm} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              <Route path="/management/users/inductions" element={<PrivateRoute component={ManageUserInductionsPage} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/management/inductions/view" element={<PrivateRoute component={InductionList} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
-              <Route path="/management/inductions/edit/:id" element={<PrivateRoute component={InductionEdit} roleRequired={[Permissions.ADMIN]} />} />
-              <Route path="/management/inductions/create" element={<PrivateRoute component={InductionCreate} roleRequired={[Permissions.ADMIN]} />} />
-              <Route path="/management/inductions/results/:id" element={<PrivateRoute component={InductionResults} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
-              <Route path="/management/users/inductions/:id" element={<PrivateRoute component={ManageUserInductionsPage} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
-              <Route path="/management/contact-submissions" element={<PrivateRoute component={ContactSubmissions} roleRequired={[Permissions.ADMIN]} />} />
+              <Route path="/management/inductions/edit" element={<PrivateRoute component={InductionEdit} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              <Route path="/management/inductions/create" element={<PrivateRoute component={InductionCreate} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+              <Route path="/management/inductions/results" element={<PrivateRoute component={InductionResults} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
             </Routes>
           </div>
           <Footer />
