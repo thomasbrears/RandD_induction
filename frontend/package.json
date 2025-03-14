@@ -30,7 +30,7 @@
     "react-toastify": "^10.0.5",
     "util": "^0.12.5",
     "web-vitals": "^2.1.4",
-    "zod": "^3.23.8"
+    "zod": "^3.24.2"
   },
   "scripts": {
     "start": "react-scripts start",
