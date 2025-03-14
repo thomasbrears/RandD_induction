@@ -11,18 +11,8 @@
       "config": { "distDir": "build" }
     }
   ],
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/backend/index.js"
-    },
-    {
-      "src": "/(.*\\.(js|json|css|ico|png|jpg|jpeg|svg|webp|woff|woff2|ttf|eot))",
-      "dest": "/frontend/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/frontend/index.html"
-    }
+  "rewrites": [
+    { "source": "/api/:path*", "destination": "/backend/index.js" },
+    { "source": "/(.*)", "destination": "/frontend/index.html" }
   ]
 }
