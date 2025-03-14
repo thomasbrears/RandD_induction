@@ -5,7 +5,6 @@
 
 Created by Thomas Brears, Project Manager 
 
-
 ### **1. General Guidelines**
 - Use ESLint to enforce code style and standards. Follow the Airbnb JavaScript Style Guide with project-specific adjustments (e.g., semicolon preference, JSX rules).
 - Organize code into modules and follow the Single Responsibility Principle to ensure each function or class has one clear responsibility.
