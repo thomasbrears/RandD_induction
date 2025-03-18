@@ -67,6 +67,7 @@ const Navbar = () => {
                       <Link to="/management/users/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Manage Users</Link>
                       <Link to="/management/inductions/results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
                       <Link to="/management/inductions/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Inductions</Link>
+                      <Link to="/management/contact-submissions" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Contact Submissions</Link>
                       <Link to="/admin/settings" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Settings</Link>
                     </div>
                   )}
@@ -88,6 +89,7 @@ const Navbar = () => {
                       <Link to="/management/users/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Manage Users</Link>
                       <Link to="/management/inductions/results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
                       <Link to="/management/inductions/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Inductions</Link>
+                      <Link to="/management/contact-submissions" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Contact Submissions</Link>
                       </div>
                   )}
                 </div>

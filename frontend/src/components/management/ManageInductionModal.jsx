@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { Modal, Button, Input, DatePicker, Select, Popconfirm } from "antd";
-import moment from "moment";
+import dayjs from "dayjs";
 
 const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionData }) => {
-  const [dueDate, setDueDate] = useState(inductionData.dueDate ? moment(inductionData.dueDate) : null);
+  const [dueDate, setDueDate] = useState(inductionData.dueDate ? dayjs(inductionData.dueDate) : null);
   const [status, setStatus] = useState(inductionData.status);
-  const [completionDate, setCompletionDate] = useState(inductionData.completionDate ? moment(inductionData.completionDate) : null);
+  const [completionDate, setCompletionDate] = useState(inductionData.completionDate ? dayjs(inductionData.completionDate) : null);
   //const [notes, setNotes] = useState(inductionData.notes || "");
 
   const handleStatusChange = (value) => {
@@ -13,7 +13,7 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
     if (value === "Complete") {
       // If status is 'Complete', show the completion date
       if (!completionDate) {
-        setCompletionDate(moment()); // Set current date as default
+        setCompletionDate(dayjs()); // Set current date as default
       }
     } else {
       setCompletionDate(null); // Reset completion date if status is not 'Complete'
@@ -43,24 +43,20 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
 
   const handleCancel = () => {
     // Reset to original data if cancelled
-    setDueDate(inductionData.dueDate ? moment(inductionData.dueDate) : null);
+    setDueDate(inductionData.dueDate ? dayjs(inductionData.dueDate) : null);
     setStatus(inductionData.status);
-    setCompletionDate(inductionData.completionDate ? moment(inductionData.completionDate) : null);
+    setCompletionDate(inductionData.completionDate ? dayjs(inductionData.completionDate) : null);
     //setNotes(inductionData.notes || "");
     onCancel();
   };
 
-  // Clear due date when clicked to allow a new selection
-  const handleDueDateClick = () => {
-    setDueDate(null);
-  };
-
-  const handleCompletionDateClick = () => {
-    setCompletionDate(null);
-  };
-
   const handleCompletionDateChange = (date) => setCompletionDate(date);
   const handleDueDateChange = (date) => setDueDate(date);
+
+  // Disable past dates for dueDate
+  const disablePastDates = (current) => {
+    return current && current.isBefore(dayjs(), "day"); // Disable past dates
+  };
 
   return (
     <Modal
@@ -81,9 +77,9 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
         <DatePicker
           value={dueDate}
           onChange={handleDueDateChange}
-          onClick={handleDueDateClick} // Clear the date when clicked
           style={{ width: "100%" }}
           format="DD-MM-YYYY"
+          disabledDate={disablePastDates} // Disable past dates
         />
 
         <h4 className="mt-4">Change Status</h4>
@@ -100,7 +96,6 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
             <DatePicker
               value={completionDate}
               onChange={handleCompletionDateChange}
-              onClick={handleCompletionDateClick}
               style={{ width: "100%" }}
               format="DD-MM-YYYY"
             />

@@ -80,14 +80,14 @@ const ManageUserInductionPage = () => {
       />
 
       {/* Main container */}
-      <div className="flex px-4 md:px-0 bg-gray-50">
+      <div className="flex bg-gray-50">
         {/* Management Sidebar */}
-        <div className="hidden md:flex">
+        <div>
           <ManagementSidebar />
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 ml-6 md:ml-8 p-6">
+        <div className="flex-1 ">
           {loading ? (
             <Loading message={loadingMessage} />
           ) : (

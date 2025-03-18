@@ -49,7 +49,8 @@ export const getUser = async (req, res) => {
       permission: userResult.customClaims
         ? userResult.customClaims.role
         : Permissions.USER,
-      position: userDoc.exists ? userDoc.data().position : Positions.TEAM,
+      position: userDoc.exists ? userDoc.data().position : "",
+      department: userDoc.exists ? userDoc.data().department : "",
       locations: userDoc.exists ? userDoc.data().locations : [],
       disabled: userResult.disabled,
       assignedInductions: userDoc.exists
@@ -73,6 +74,7 @@ export const createUser = async (req, res) => {
       email,
       permission,
       position,
+      department,
       locations,
       assignedInductions,
     } = req.body;
@@ -101,6 +103,7 @@ export const createUser = async (req, res) => {
         userLastName: lastName,
         permission: permission,
         position: position,
+        department: department,
         locations: Array.isArray(locations) ? locations : [],
         assignedInductions: Array.isArray(assignedInductions)
           ? assignedInductions
@@ -161,6 +164,7 @@ export const updateUser = async (req, res) => {
       email,
       permission,
       position,
+      department,
       locations,
       assignedInductions = [],
     } = req.body;
@@ -203,62 +207,84 @@ export const updateUser = async (req, res) => {
     });
 
     // Set custom user claims
-    admin.auth().setCustomUserClaims(uid, { role: permission });
+    await admin.auth().setCustomUserClaims(uid, { role: permission });
 
     // Update Firestore
     await userRef.update({
       usersName: `${firstName} ${lastName}`,
       permission: permission,
       position: position,
+      department: department,
       locations: Array.isArray(locations) ? locations : [],
       assignedInductions: updatedInductions,
     });
 
     // Send emails for newly assigned inductions
+    const emailResults = [];
     for (const induction of newInductions) {
-      const formattedAvailableFrom = induction.availableFrom
-        ? format(new Date(induction.availableFrom), "d MMMM yyyy")
-        : "Unavailable";
-      const formattedDueDate = induction.dueDate
-        ? format(new Date(induction.dueDate), "d MMMM yyyy")
-        : "Unavailable";
-      const description = induction.description || "No description available.";
+      try {
+        const formattedAvailableFrom = induction.availableFrom
+          ? format(new Date(induction.availableFrom), "d MMMM yyyy")
+          : "Unavailable";
+        const formattedDueDate = induction.dueDate
+          ? format(new Date(induction.dueDate), "d MMMM yyyy")
+          : "Unavailable";
+        const description = induction.description || "No description available.";
 
-      const emailSubject = `You have a new induction to complete: ${induction.name || "Unnamed Induction"}`;
-      const emailBody = `
-        <h1>Kia ora ${firstName} ${lastName}!</h1>
-        <p>You have been assigned a new induction module to complete.</p>
-        <br>
+        const emailSubject = `You have a new induction to complete: ${induction.name || "Unnamed Induction"}`;
+        const emailBody = `
+          <h1>Kia ora ${firstName} ${lastName}!</h1>
+          <p>You have been assigned a new induction module to complete.</p>
+          <br>
+          
+          <h3>Here are the details:</h3>
+          <p><strong>Induction Name:</strong> ${induction.name || "Unnamed Induction"}</p>
+          <p><strong>Available from:</strong> ${formattedAvailableFrom}</p>
+          <p><strong>Due Date:</strong> ${formattedDueDate}</p>
+
+          <br>
+          <h3>How to complete the induction?</h3>
+          <p>Simply head to our induction portal website (${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://your-portal-url.com'}) and log in using this email address. Navigate to the "My Inductions" tab, find this induction, and click "Start".</p>
+          <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://your-portal-url.com'}/inductions/my-inductions" class="button">AUT Events Induction Portal</a>
+
+          <p>If you have any questions, please feel free to reach out to your manager or reply to this email.</p>
+
+          <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
+        `;
+
+        const replyToEmail = "autevents@brears.xyz";
+        const ccEmails = ["manager@brears.xyz"];
+
+        // Attempt to send email and capture result
+        const emailResult = await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
+        emailResults.push({
+          induction: induction.name || "Unnamed Induction",
+          result: emailResult,
+          success: true
+        });
         
-        <h3>Here are the details:</h3>
-        <p><strong>Induction Name:</strong> ${induction.name || "Unnamed Induction"}</p>
-        <p><strong>Available from:</strong> ${formattedAvailableFrom}</p>
-        <p><strong>Due Date:</strong> ${formattedDueDate}</p>
-
-        <br>
-        <h3>How to complete the induction?</h3>
-        <p>Simply head to our induction portal website (${process.env.REACT_APP_VERCEL_DEPLOYMENT}) and log in using this email address. Navigate to the "My Inductions" tab, find this induction, and click "Start".</p>
-        <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}/inductions/my-inductions" class="button">AUT Events Induction Portal</a>
-
-        <p>If you have any questions, please feel free to reach out to your manager or reply to this email.</p>
-
-        <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
-      `;
-
-      const replyToEmail = "autevents@brears.xyz";
-      //const ccEmails = ["manager@brears.xyz"];
-
-      //await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
-      await sendEmail(email, emailSubject, emailBody, replyToEmail);
+      } catch (emailError) {
+        console.error(`Failed to send email for induction "${induction.name || "Unnamed"}":`, emailError);
+        emailResults.push({
+          induction: induction.name || "Unnamed Induction",
+          error: emailError.message || "Unknown error",
+          success: false
+        });
+        // Continue the loop to try sending other emails even if one fails
+      }
     }
 
     res.json({
       data: userResult,
       message: "User updated successfully",
+      emailResults: emailResults
     });
   } catch (error) {
     console.error("Error updating user:", error);
-    res.status(500).send(error);
+    res.status(500).json({
+      error: error.message || "Unknown error occurred",
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+    });
   }
 };
 
@@ -330,6 +356,61 @@ export const getAssignedInductions = async (req, res) => {
     res.json(userData);
   } catch (error) {
     console.error("Error fetching assigned inductions:", error);
+    res.status(500).send(error);
+  }
+};
+
+// Get a specific assigned induction by its assignmentID
+export const getAssignedInduction = async (req, res) => {
+  try {
+    const assignmentID = req.query.assignmentID;
+    
+    if (!assignmentID) {
+      return res.status(400).json({ message: "No assignment ID provided" });
+    }
+
+    // Find the user with this assignment
+    // First get all users (in a real app, you'd optimize this with an index/query)
+    const usersSnapshot = await db.collection("users").get();
+    
+    let foundInduction = null;
+
+    // Iterate through users to find the matching assignmentID
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = userDoc.data();
+      if (userData.assignedInductions) {
+        const foundAssignment = userData.assignedInductions.find(
+          assignment => assignment.assignmentID === assignmentID
+        );
+        
+        if (foundAssignment) {
+          // Now get the actual induction details
+          const inductionRef = db.collection("inductions").doc(foundAssignment.id);
+          const inductionDoc = await inductionRef.get();
+          
+          if (inductionDoc.exists) {
+            foundInduction = {
+              ...inductionDoc.data(),
+              id: inductionDoc.id,
+              assignmentID: assignmentID, // Include the assignmentID for reference
+              status: foundAssignment.status,
+              dueDate: foundAssignment.dueDate,
+              availableFrom: foundAssignment.availableFrom,
+              completionDate: foundAssignment.completionDate
+            };
+            break;
+          }
+        }
+      }
+    }
+
+    if (!foundInduction) {
+      return res.status(404).json({ message: "Assigned induction not found" });
+    }
+
+    res.json({ induction: foundInduction });
+  } catch (error) {
+    console.error("Error fetching assigned induction:", error);
     res.status(500).send(error);
   }
 };

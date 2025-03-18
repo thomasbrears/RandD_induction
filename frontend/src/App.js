@@ -26,6 +26,7 @@ import InductionResults from './pages/management/InductionResults';
 import InductionViewResults from './pages/management/InductionViewResults.jsx';
 import EditUser from './pages/management/EditUser';
 import Settings from './pages/management/Settings';
+import ContactSubmissions from './pages/management/ContactSubmissions.jsx';
 import ManageAccount from './pages/ManageAccountPage';
 
 // Auth hook and components
@@ -121,6 +122,7 @@ const App = () => {
 
               {/* Management restricted routes for admin and/or mananger */}
               <Route path="/admin/settings" element={<PrivateRoute component={Settings} roleRequired = {[Permissions.ADMIN]} />} />
+              <Route path="/management/contact-submissions" element={<PrivateRoute component={ContactSubmissions} roleRequired = {[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/management/dashboard" element={<PrivateRoute component={Dashboard} roleRequired = {[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/management/users/view" element={<PrivateRoute component={ViewUsers} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
               <Route path="/management/users/edit" element={<PrivateRoute component={EditUser} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
