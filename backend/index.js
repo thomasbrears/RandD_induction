@@ -12,9 +12,30 @@ const app = express();
 
 // dynamic cors options
 const corsOptions = {
-  origin: process.env.NODE_ENV === 'production' 
-    ? 'https://dev-aut-events-induction.vercel.app' 
-    : true,  // Allow all origins in development
+  origin: (origin, callback) => {
+    // List of allowed origins
+    const allowedOrigins = [
+      'https://dev-aut-events-induction.vercel.app',
+      'https://aut-events-induction.vercel.app'
+    ];
+    
+    // Check for thomasbrears-projects pattern matching
+    const isThomaseProject = origin && 
+      (origin.startsWith('https://thomasbrears-projects.vercel.app') || 
+       origin.includes('-thomasbrears-projects.vercel.app'));
+    
+    // In production, check against allowed list or pattern
+    if (process.env.NODE_ENV === 'production') {
+      if (allowedOrigins.includes(origin) || isThomaseProject) {
+        callback(null, true);
+      } else {
+        callback(new Error('Not allowed by CORS'));
+      }
+    } else {
+      // In development, allow all origins
+      callback(null, true);
+    }
+  },
   methods: 'GET,POST,PUT,DELETE,OPTIONS',
   credentials: true
 };
