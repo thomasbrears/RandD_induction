@@ -37,6 +37,7 @@ const InductionCreate = () => {
   const [savingInProgress, setSavingInProgress] = useState(false);
   const [Departments, setDepartments] = useState([]);
   const navigate = useNavigate();
+  const [saveTimeoutId, setSaveTimeoutId] = useState(null);
 
   useEffect(() => {
     const getDepartments = async () => {
@@ -88,7 +89,9 @@ const InductionCreate = () => {
       if (savingInProgress) return;
       setSaveAllFields(true);
       setSavingInProgress(true);
-      setTimeout(handleFailedSave, 5000);
+  
+      const timeoutId = setTimeout(handleFailedSave, 5000);
+      setSaveTimeoutId(timeoutId);
     } else {
       setConfirmModalVisible(false);
     }
@@ -121,6 +124,11 @@ const InductionCreate = () => {
     if (!hasEditsAfterSaving) {
       setSavingInProgress(false);
       setSaveAllFields(false);
+      if (saveTimeoutId) {
+        clearTimeout(saveTimeoutId);
+        setSaveTimeoutId(null);
+      }
+
       if (updatedMissingFields.length === 0) {
         setActionType("submit");
       } else {
