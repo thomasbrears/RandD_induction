@@ -28,6 +28,7 @@ const InductionEdit = () => {
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [expandOnError, setExpandOnError] = useState(false);
   const [savingInProgress, setSavingInProgress] = useState(false);
+  const [saveTimeoutId, setSaveTimeoutId] = useState(null);
 
   const updateFieldsBeingEdited = (field, state) => {
     setFieldsBeingEdited((prev) => {
@@ -88,14 +89,16 @@ const InductionEdit = () => {
       if (savingInProgress) return;
       setSaveAllFields(true);
       setSavingInProgress(true);
-      setTimeout(handleFailedSave, 5000);
+  
+      const timeoutId = setTimeout(handleFailedSave, 5000);
+      setSaveTimeoutId(timeoutId);
     } else {
       setConfirmModalVisible(false);
     }
   };
 
   const handleFailedSave = () => {
-    if (savingInProgress) return;
+    if (!savingInProgress && (actionType === "submit" || actionType === "prompt")) return;
     setSavingInProgress(false);
     setSaveAllFields(false);
     setActionType("failedSave");
@@ -121,6 +124,11 @@ const InductionEdit = () => {
     if (!hasEditsAfterSaving) {
       setSavingInProgress(false);
       setSaveAllFields(false);
+      if (saveTimeoutId) {
+        clearTimeout(saveTimeoutId);
+        setSaveTimeoutId(null);
+      }
+
       if (updatedMissingFields.length === 0) {
         setActionType("submit");
       } else {
