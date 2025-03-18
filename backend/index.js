@@ -10,7 +10,7 @@ import positionRoutes from "./routes/positionRoutes.js";
 
 const app = express();
 
-// dynamic cors options
+// dynamic cors (v2.1)
 const corsOptions = {
   origin: (origin, callback) => {
     // List of allowed origins
@@ -23,12 +23,17 @@ const corsOptions = {
     const isThomaseProject = origin && 
       (origin.startsWith('https://thomasbrears-projects.vercel.app') || 
        origin.includes('-thomasbrears-projects.vercel.app'));
+
+    // Debug logging for troubleshooting
+    console.log(`CORS request from: ${origin}`);
     
     // In production, check against allowed list or pattern
     if (process.env.NODE_ENV === 'production') {
-      if (allowedOrigins.includes(origin) || isThomaseProject) {
+      // Check if origin is allowed or matches Thomasbrears pattern
+      if (!origin || allowedOrigins.includes(origin) || isThomaseProject) {
         callback(null, true);
       } else {
+        console.log(`CORS rejected: ${origin}`);
         callback(new Error('Not allowed by CORS'));
       }
     } else {
