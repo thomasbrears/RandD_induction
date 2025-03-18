@@ -2,6 +2,7 @@ import React from 'react';
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
+import InductionsTable from '../../components/InductionsTable';
 
 const InductionList = () => {
   return (
@@ -22,8 +23,8 @@ const InductionList = () => {
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 ml-6 md:ml-8 p-6">
-          <p>List of inductions will be here</p>
+        <div className="flex-1 ml-6 md:ml-8 p-6 max-w-full overflow-hidden">
+          <InductionsTable />
         </div>
       </div>
     </>

@@ -1,17 +1,21 @@
 import React, { useState, useEffect } from "react";
-import { Helmet } from 'react-helmet-async'; 
-import { createNewInduction } from "../../api/InductionApi";
+import { Helmet } from 'react-helmet-async';
 import { toast } from 'react-toastify';
 import PageHeader from "../../components/PageHeader";
 import ManagementSidebar from "../../components/ManagementSidebar";
-import InductionForm from "../../components/InductionForm";
 import { DefaultNewInduction } from "../../models/Inductions";
 import useAuth from "../../hooks/useAuth";
-import { getAllDepartments } from "../../api/DepartmentApi";
-import { FaEdit, FaSave, FaCheck } from 'react-icons/fa';
+import { FaSave } from 'react-icons/fa';
 import { Modal, Result, Button } from 'antd';
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css'; // import styles
+import InductionFormHeader from "../../components/InductionFormHeader";
+import InductionFormContent from "../../components/InductionFormContent";
+import { getAllDepartments } from "../../api/DepartmentApi";
+import Loading from "../../components/Loading";
+import { MODULES, FORMATS } from "../../models/QuillConfig";
+import { createNewInduction } from "../../api/InductionApi";
+import { useNavigate } from "react-router-dom";
 
 const InductionCreate = () => {
   const { user } = useAuth(); // Get the user object from the useAuth hook
@@ -21,90 +25,19 @@ const InductionCreate = () => {
     ...DefaultNewInduction,
     department: "",
   });
-  const [showModal, setShowModal] = useState(false);
-  const [isSubmitDisabled, setIsSubmitDisabled] = useState(true);
+
+  const [showModal, setShowModal] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
-  const [isEditingDescription, setIsEditingDescription] = useState(false);
-  const [isEditingDepartment, setIsEditingDepartment] = useState(false);
-  const [Departments, setDepartments] = useState([]);
   const [showResult, setShowResult] = useState(false);
-  const [windowWidth, setWindowWidth] = useState(window.innerWidth);
-
-  // Functions for toggling edit/view modes for department and description
-  const TOGGLE_EDIT_DEPARTMENT = () => setIsEditingDepartment((prev) => !prev);
-  const TOGGLE_EDIT_DESCRIPTION = () => setIsEditingDescription((prev) => !prev);
-
-  // Define the toolbar options
-  const MODULES = {
-    toolbar: [["bold", "italic", "underline"]],
-  };
-
-  const FORMATS = ["bold", "italic", "underline"];
-
-  // Function to handle form submission, validate inputs and call API
-  const HANDLE_SUBMIT = async (e) => {
-    e.preventDefault();
-
-    // Check if any required fields are missing and show warning if so
-    const missingFields = [];
-    if (!induction.name) missingFields.push("Induction name");
-    if (!induction.department) missingFields.push("Department");
-    if (!induction.description) missingFields.push("Description");
-
-    if (missingFields.length > 0) {
-      toast.warn(`Please fill in the following fields: ${missingFields.join(", ")}`);
-      return;
-    }
-
-    // user exists, send api request to create new induction
-    if (user) {
-      const result = await createNewInduction(user, induction);
-      console.log(result);
-      //toast.success("Induction created successfully!");
-
-      // Set the showResult state to true to display the success screen
-      setShowResult(true);
-    }
-  };
-
-  // Function to update description as the user types
-  const HANDLE_DESCRIPTION_CHANGE = (e) => {
-    setInduction({
-      ...induction,
-      description: e.target.value,
-    });
-  };
-
-    // Function to update department as the user types
-  const HANDLE_DEPARTMENT_CHANGE = (e) => {
-    setInduction({
-      ...induction,
-      department: e.target.value,
-    });
-  };
-
-  // check if all fields are filled before enabling submit button
-  useEffect(() => {
-    if (!induction.name) {
-      setShowModal(true);
-    }
-
-    const isFormComplete = induction.name && induction.department && induction.description;
-    setIsSubmitDisabled(!isFormComplete);
-  }, [induction]);
-
-  // Handle closing modal
-  const HANDLE_CLOSE_MODAL = () => {
-    if (induction.name && induction.department && induction.description) {
-      setShowModal(false);
-    } else {
-      toast.warn("Please complete all required fields before continuing.");
-    }
-  };
-  
-  // Step navigation functions for modal
-  const HANDLE_NEXT_STEP = () => setCurrentStep((prevStep) => prevStep + 1);
-  const HANDLE_PREVIOUS_STEP = () => setCurrentStep((prevStep) => prevStep - 1);
+  const [fieldsBeingEdited, setFieldsBeingEdited] = useState({});
+  const [saveAllFields, setSaveAllFields] = useState(false);
+  const [actionType, setActionType] = useState(null);
+  const [confirmModalVisible, setConfirmModalVisible] = useState(false);
+  const [expandOnError, setExpandOnError] = useState(false);
+  const [savingInProgress, setSavingInProgress] = useState(false);
+  const [Departments, setDepartments] = useState([]);
+  const navigate = useNavigate();
+  const [saveTimeoutId, setSaveTimeoutId] = useState(null);
 
   useEffect(() => {
     const getDepartments = async () => {
@@ -114,44 +47,212 @@ const InductionCreate = () => {
     getDepartments();
   }, []);
 
-  // Detect window resizing
+  const updateFieldsBeingEdited = (field, state) => {
+    setFieldsBeingEdited((prev) => {
+      if (state === null) {
+        const updatedFields = { ...prev };
+        delete updatedFields[field];
+        return updatedFields;
+      }
+
+      return { ...prev, [field]: state };
+    });
+  };
+
+  const handleCancelAndReturnButton =() =>{
+    navigate(-1); 
+  };
+
+  const handleSubmitButton = () => {
+    const missingFields = checkForMissingFields();
+    const hasEdits = Object.keys(fieldsBeingEdited).length > 0;
+
+    if (missingFields.length === 0) {
+      setActionType(hasEdits ? "unsaved" : "submit");
+    } else {
+      setActionType(hasEdits ? "unfinished" : "prompt");
+    }
+
+    setConfirmModalVisible(true);
+  };
+
+  const confirmSubmitActionHandler = () => {
+    if (actionType === "submit" || actionType === "unsaved") {
+      handleSubmit();
+      setConfirmModalVisible(false);
+      return;
+    }
+  };
+
+  const handleSaveAndCheck = () => {
+    if (actionType === "unsaved" || actionType === "unfinished") {
+      if (savingInProgress) return;
+      setSaveAllFields(true);
+      setSavingInProgress(true);
+  
+      const timeoutId = setTimeout(handleFailedSave, 5000);
+      setSaveTimeoutId(timeoutId);
+    } else {
+      setConfirmModalVisible(false);
+    }
+  };
+
+  const handleFailedSave = () => {
+    if (savingInProgress) return;
+    setSavingInProgress(false);
+    setSaveAllFields(false);
+    setActionType("failedSave");
+  };
+
   useEffect(() => {
-    const handleResize = () => {
-      setWindowWidth(window.innerWidth);
+    setExpandOnError(false)
+  }, [expandOnError]);
+
+  const handleCancel = () => {
+    setConfirmModalVisible(false);
+    if (checkForMissingFields().length > 0 || Object.keys(fieldsBeingEdited).length > 0) {
+      setExpandOnError(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!savingInProgress) return;
+
+    const updatedMissingFields = checkForMissingFields();
+    const hasEditsAfterSaving = Object.keys(fieldsBeingEdited).length > 0;
+
+    if (!hasEditsAfterSaving) {
+      setSavingInProgress(false);
+      setSaveAllFields(false);
+      if (saveTimeoutId) {
+        clearTimeout(saveTimeoutId);
+        setSaveTimeoutId(null);
+      }
+
+      if (updatedMissingFields.length === 0) {
+        setActionType("submit");
+      } else {
+        setActionType("prompt");
+      }
+    }
+
+  }, [savingInProgress, fieldsBeingEdited])
+
+  // Function to handle form submission, validate inputs and call API
+  const handleSubmit = async () => {
+
+    // Double check if any required fields are missing and show warning if so
+    const missingFields = checkForMissingFields();
+
+    if (missingFields.length > 0) {
+      toast.warn(`Please fill in the following fields: ${missingFields.join(", ")}`);
+      console.log(missingFields);
+      return;
+    }
+
+    // user exists, send api request to update induction
+    if (user) {
+      const result = await createNewInduction(user, induction);
+      console.log(result);
+      toast.success("Induction updated successfully!");
+    }
+    setShowResult(true);
+  };
+
+  const checkForMissingFields = () => {
+    const missingFields = [];
+
+    const isContentEmpty = (content) => {
+      const strippedContent = content.replace(/<[^>]+>/g, '').trim();
+      return strippedContent === '';
     };
-    
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
 
-  // If screen width is smaller than 900px, show a warning page
-  if (windowWidth < 900) {
-    return (
+    if (!induction.name || induction.name.trim() === "") {
+      missingFields.push("Induction needs a name.");
+    }
+    if (!induction.description || isContentEmpty(induction.description)) {
+      missingFields.push("Induction needs a description.");
+    }
+    if (induction.department === "Select a department" || !induction.department) {
+      missingFields.push("Please select a department.");
+    }
 
-      <Result
-        status="info"
-        title="Sorry, this device is not supported for creating inductions"
-        subTitle="Sorry, our induction modual creation tool requires a desktop, laptop, or a large tablet in landscape orientation to work optimally. Please switch to a supported device and try again."
-        extra={[
-          <Button type="primary" key="home" onClick={() => window.location.href = "/management/dashboard"}>
-            Management Dashboard
-          </Button>,
-          <Button  key="home" onClick={() => window.location.href = "/management/inductions/view"}>
-            View all Inductions
-          </Button>
-        ]}
-      />
-    );
-  }
+    // Check if there is at least one question
+    if (!induction.questions || induction.questions.length === 0) {
+      missingFields.push("Add at least one question.");
+    } else {
+      let questionsMissingAnswer = 0;
+      let questionsMissingText = 0;
+      let questionsMissingType = 0;
+      let questionsMissingOptions = 0;
+      let optionsMissingText = 0;
+
+      induction.questions.forEach((question) => {
+        if (!question.question || question.question.trim() === "") {
+          questionsMissingText++;
+        }
+
+        if (!question.type || question.type.trim() === "") {
+          questionsMissingType++;
+        }
+
+        if (!question.answers || question.answers.length === 0) {
+          questionsMissingAnswer++;
+        }
+
+        if (!question.options || question.options.length === 0) {
+          questionsMissingOptions++;
+        } else {
+          question.options.forEach((option) => {
+            if (!option.trim()) {
+              optionsMissingText++;
+            }
+          });
+        }
+      });
+
+      // Summarize missing fields for questions
+      if (questionsMissingText > 0) {
+        missingFields.push(`${questionsMissingText} question${questionsMissingText > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} text.`);
+      }
+      if (questionsMissingType > 0) {
+        missingFields.push(`${questionsMissingType} question${questionsMissingType > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} a type.`);
+      }
+      if (questionsMissingAnswer > 0) {
+        missingFields.push(`${questionsMissingAnswer} question${questionsMissingAnswer > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} at least one answer.`);
+      }
+      if (questionsMissingOptions > 0) {
+        missingFields.push(`${questionsMissingOptions} question${questionsMissingOptions > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} options.`);
+      }
+      if (optionsMissingText > 0) {
+        missingFields.push(`${optionsMissingText} option${optionsMissingText > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} text.`);
+      }
+    }
+
+    return missingFields;
+  };
+
+  // Handle closing modal
+  const HANDLE_CLOSE_MODAL = () => {
+    if (induction.name && induction.department && induction.description) {
+      setShowModal(false);
+    } else {
+      toast.warn("Please complete all required fields before continuing.");
+    }
+  };
+
+  // Step navigation functions for modal
+  const HANDLE_NEXT_STEP = () => setCurrentStep((prevStep) => prevStep + 1);
+  const HANDLE_PREVIOUS_STEP = () => setCurrentStep((prevStep) => prevStep - 1);
 
   return (
     <>
       {/* Helmet for setting page metadata */}
       <Helmet><title>Create Induction | AUT Events Induction Portal</title></Helmet>
-  
+
       {/* Page Header */}
       <PageHeader title="Create Induction" subtext="Create new induction module" />
-  
+
       {/* Confirmation Result Screen */}
       {showResult ? (
         <Result
@@ -180,19 +281,19 @@ const InductionCreate = () => {
             <Modal
               visible={showModal}
               title={currentStep === 0
-                ? "Welcome, Let's create your induction module."
+                ? "Welcome, let's create your induction module."
                 : currentStep === 1
-                ? "Name"
-                : currentStep === 2
-                ? "Department"
-                : "Description"}
+                  ? "Name"
+                  : currentStep === 2
+                    ? "Department"
+                    : "Description"}
               onCancel={HANDLE_CLOSE_MODAL}
               footer={null}
-              width={600}  
+              width={600}
               closable={false} // Disable the close "X" button as all fields are required
               style={{
-                top: '50%',  
-                transform: 'translateY(-50%)',  
+                top: '50%',
+                transform: 'translateY(-50%)',
               }}
               responsive={{
                 xs: { width: '95%' }, // Full width on mobile
@@ -264,6 +365,9 @@ const InductionCreate = () => {
                     Back
                   </Button>
                 )}
+                <Button onClick={handleCancelAndReturnButton} type="default">
+                  Cancel and Return
+                </Button>
                 <Button
                   onClick={currentStep === 3 ? HANDLE_CLOSE_MODAL : HANDLE_NEXT_STEP}
                   type="primary"
@@ -278,139 +382,125 @@ const InductionCreate = () => {
               </div>
             </Modal>
           )}
-  
+
           {/* Main content area */}
           <div className="flex bg-gray-50">
             {/* Management Sidebar */}
             <div className="hidden md:flex">
               <ManagementSidebar />
             </div>
-  
-            <div className="flex-1">
-              {/* Induction Form Component */}
-              <InductionForm
-                induction={induction}
-                setInduction={setInduction}
-                handleSubmit={HANDLE_SUBMIT}
-                isSubmitDisabled={isSubmitDisabled}
-              />
-  
-              {/* Main content for managing induction details */}
-              <div className="p-4 mx-auto max-w-5xl space-y-6">
-                <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
-                  {/* Department Section */}
-                  <div className="space-y-2">
-                    <label htmlFor="department" className="text-sm font-bold text-gray-700 flex items-center">
-                      Department:
-                      {!isEditingDepartment ? (
-                        <button
-                          type="button"
-                          onClick={TOGGLE_EDIT_DEPARTMENT}
-                          className="ml-2 text-gray-600 hover:text-gray-800"
-                          title="Edit department"
-                        >
-                          <FaEdit />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={TOGGLE_EDIT_DEPARTMENT}
-                          className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
-                        >
-                          <FaCheck className="inline mr-2" /> Update
-                        </button>
-                      )}
-                    </label>
-                    {isEditingDepartment ? (
-                      <div className="flex items-center space-x-2">
-                        <select
-                          id="department"
-                          name="department"
-                          value={induction.department}
-                          onChange={HANDLE_DEPARTMENT_CHANGE}
-                          className="border border-gray-300 rounded-lg p-2 focus:ring-gray-800 focus:border-gray-800"
-                        >
-                          <option value="">Select a department</option>
-                          {Departments.map((dept) => (
-                            <option key={dept.id} value={dept.name}>
-                              {dept.name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    ) : (
-                      <span className="text-base">{induction.department || "Select a department"}</span>
-                    )}
-                  </div>
-  
-                  {/* Description Section */}
-                  <div className="space-y-2">
-                    <label htmlFor="description" className="text-sm font-bold text-gray-700 flex items-center">
-                      Description:
-                      {!isEditingDescription ? (
-                        <button
-                          type="button"
-                          onClick={TOGGLE_EDIT_DESCRIPTION}
-                          className="ml-2 text-gray-600 hover:text-gray-800"
-                          title="Edit description"
-                        >
-                          <FaEdit />
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={TOGGLE_EDIT_DESCRIPTION}
-                          className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
-                        >
-                          <FaCheck className="inline mr-2" /> Update
-                        </button>
-                      )}
-                    </label>
-                    {isEditingDescription ? (
-                      <ReactQuill
-                        value={induction.description}
-                        onChange={(value) => setInduction({ ...induction, description: value })}
-                        placeholder="Enter description"
-                        className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
-                        modules={MODULES}
-                        formats={FORMATS}
-                      />
-                      ) : (
-                      <p className="text-base" dangerouslySetInnerHTML={{ __html: induction.description || "No description added" }} />
-                    )}
-                  </div>
 
+            {!showModal && (
+              <>
+                <Modal
+                  title="Confirm Action"
+                  open={confirmModalVisible}
+                  onCancel={handleCancel}
+                  footer={
+                    <div className="flex flex-wrap justify-end gap-2 sm:flex-nowrap">
+                      {actionType === "submit" && (
+                        <Button key="submitConfirm" type="primary" className="w-auto min-w-0 text-sm" onClick={confirmSubmitActionHandler}>
+                          Submit
+                        </Button>
+                      )}
+                      {actionType === "unsaved" && (
+                        <Button key="unsavedConfirm" type="primary" danger className="w-auto min-w-0 text-sm" onClick={confirmSubmitActionHandler}>
+                          Discard & Submit
+                        </Button>
+                      )}
+                      {(actionType === "prompt" || actionType === "unfinished" || actionType === "failedSave") && (
+                        <Button key="continueEditing" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
+                          Continue Editing
+                        </Button>
+                      )}
+                      {(actionType === "unsaved" || actionType === "unfinished") && (
+                        <Button key="saveAndCheck" type="primary" className="w-auto min-w-0 text-sm" onClick={handleSaveAndCheck} disabled={savingInProgress}>
+                          Save & Check
+                        </Button>
+                      )}
+                      <Button key="cancel" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
+                        Cancel
+                      </Button>
+                    </div>
+                  }
+                >
+                  {savingInProgress ? (
+                    <div className="flex justify-center items-center">
+                      <Loading message="Saving changes..." />
+                    </div>
+                  ) : (
+                    <>
+                      {actionType === "submit" && <p>Are you sure you want to submit this induction?</p>}
+                      {actionType === "unsaved" && <p>You have unsaved changes. Are you sure you want to discard them and submit?</p>}
+                      {actionType === "prompt" && (
+                        <>
+                          <p>Some details are missing. Please review the list below and try again.</p>
+                          <hr />
+                          <p>Issues that need attention:</p>
+                          <ul>{checkForMissingFields().map((field) => <li key={field}>{field}</li>)}</ul>
+                        </>
+                      )}
+                      {actionType === "unfinished" && <p>You have unsaved and missing fields. Would you like to save first?</p>}
+                      {actionType === "failedSave" && (
+                        <>
+                          <p>Some fields couldn't be saved. Please check the details and try again.</p>
+                          {checkForMissingFields().length > 0 && (
+                            <>
+                              <hr />
+                              <p>Issues that need attention:</p>
+                              <ul>{checkForMissingFields().map((field) => <li key={field}>{field}</li>)}</ul>
+                            </>
+                          )}
+                        </>
+                      )}
+                    </>
+                  )}
+                </Modal>
+
+                <div className="flex-1 min-w-0">
+                  {/* Induction Form Component */}
+                  <InductionFormHeader
+                    induction={induction}
+                    setInduction={setInduction}
+                    handleSubmit={handleSubmitButton}
+                    isCreatingInduction={true}
+                    saveAllFields={saveAllFields}
+                    updateFieldsBeingEdited={updateFieldsBeingEdited}
+                  />
+
+                  {/* Main content for managing induction details */}
+                  <div className="p-4 mx-auto w-full max-w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl space-y-6">
+
+                    <InductionFormContent
+                      induction={induction}
+                      setInduction={setInduction}
+                      saveAllFields={saveAllFields}
+                      expandOnError={expandOnError}
+                      updateFieldsBeingEdited={updateFieldsBeingEdited}
+                    />
+
+                    {/* Save Button */}
+                    <div className="flex justify-center mt-6">
+                      <Button
+                        type="primary"
+                        onClick={handleSubmitButton}
+                        className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-5 text-base rounded-md"
+                        title="Save Induction"
+                      >
+                        <FaSave className="inline mr-2" /> Create Induction
+                      </Button>
+                    </div>
+                  </div>
                 </div>
-  
-                {/* Questions Section */}
-                <hr />
-                <div className="flex-1">
-                  <h2 className="text-xl font-semibold">Questions</h2>
-                  <p className="text-sm text-gray-500">Let's add some questions to the induction!</p>
-                </div>
-  
-                <div className="bg-white p-6 rounded-lg shadow-md">
-                  <p>Add question functionality in development</p>
-                </div>
-  
-                {/* Save/Create Button */}
-                <div className="flex justify-center mt-6">
-                  <button
-                    type="button"
-                    onClick={HANDLE_SUBMIT}
-                    className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
-                    disabled={isSubmitDisabled}
-                  >
-                    <FaSave className="inline mr-2" /> Create Induction
-                  </button>
-                </div>
-              </div>
-            </div>
+              </>
+            )}
+
+
           </div>
         </>
       )}
     </>
-  );  
+  );
 };
 
 export default InductionCreate;

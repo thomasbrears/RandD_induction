@@ -87,3 +87,21 @@ export const getInduction = async (user, idParam) => {
     throw error; 
   }
 };
+
+export const updateInduction = async (user, updatedInductionData) => {
+  try {
+    const token = user?.token;
+    const headers = token ? { authtoken: token } : {};
+
+    const response = await axios.put(
+      `${API_URL}/inductions/update-induction`, 
+      updatedInductionData,
+      { headers }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error updating induction:", error);
+    throw error; 
+  }
+};

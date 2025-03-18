@@ -10,6 +10,7 @@ import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
 import { MdManageAccounts } from 'react-icons/md';
 import { Result, Button } from 'antd';
+import Loading from "../../components/Loading";
 
 const EditUser = () => {
   const [viewedUser, setViewedUser] = useState(DefaultNewUser);
@@ -84,7 +85,7 @@ const EditUser = () => {
 
         <div className="flex-1">
           {loading ? (
-            <p className="text-gray-600">{loadingMessage}</p>
+            <Loading message={loadingMessage} />
           ) : userUpdated && updatedUser ? (
             // Success message screen with buttons
             <Result
