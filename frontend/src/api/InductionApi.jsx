@@ -56,19 +56,43 @@ export const createNewInduction = async (user, inductionData) => {
 };
 
 export const getInduction = async (user, idParam) => {
+  // Cancel any previous request if a new one starts
+  if (window.abortController) {
+    window.abortController.abort();
+  }
+  
+  // Create a new abort controller for this request
+  window.abortController = new AbortController();
+  
   try {
     const token = user?.token;
     const headers = token ? {authtoken: token}: {};
     
-      const assignedResponse = await axios.get(`${API_URL}/users/get-assigned-induction`, {
-        headers,
-        params: { assignmentID: idParam },
-      });
-      
-      if (assignedResponse.data?.induction) {
-        return assignedResponse.data.induction;
-      }
+    console.log("API: Starting induction request");
+    
+    // No artificial delay needed
+    const assignedResponse = await axios.get(`${API_URL}/users/get-assigned-induction`, {
+      headers,
+      params: { assignmentID: idParam },
+      signal: window.abortController.signal
+    });
+    
+    console.log("API: Got response", !!assignedResponse?.data?.induction);
+    
+    if (assignedResponse.data?.induction) {
+      return assignedResponse.data.induction;
+    }
+    
+    // Important: Return null if no induction found, but don't throw error
+    console.log("API: No induction found");
+    return null;
   } catch (error) {
+    // Don't log aborted requests as errors
+    if (error.name === 'AbortError' || error.name === 'CanceledError') {
+      console.log("API: Request aborted");
+      return null;
+    }
+    
     console.error("Error fetching induction:", error);
     throw error; 
   }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -6,6 +6,12 @@ import useAuth from '../hooks/useAuth';
 import { getInduction } from '../api/InductionApi';
 import Loading from '../components/Loading';
 import QuestionTypes from '../models/QuestionTypes';
+
+const STATES = {
+  LOADING: 'LOADING',
+  SUCCESS: 'SUCCESS',
+  ERROR: 'ERROR'
+};
 
 const InductionFormPage = () => {
   const { user } = useAuth();
@@ -16,90 +22,138 @@ const InductionFormPage = () => {
   const idParam = assignmentID || id; // Use whichever is available
   const navigate = useNavigate();
   
+  // Use refs to avoid intermediate state updates
+  const stateRef = useRef(STATES.LOADING);
+  const inducRef = useRef(null);
+  const errorMessageRef = useRef(null);
+  
+  // These states will ONLY be updated once we're certain of their final values
+  const [viewState, setViewState] = useState(STATES.LOADING);
   const [induction, setInduction] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  
+  // Other UI states
   const [started, setStarted] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [loadAttempts, setLoadAttempts] = useState(0);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Load induction data just once on mount
   useEffect(() => {
-    const fetchInduction = async () => {
+    let mounted = true;
+    let errorDisplayTimeout;
+    let hasErrorBeenShown = false;
+    
+    // Clean up function to handle unmounting
+    const cleanup = () => {
+      mounted = false;
+      clearTimeout(errorDisplayTimeout);
+    };
+    
+    // Redirect immediately if no ID
+    if (!idParam) {
+      toast.error('No induction specified');
+      navigate('/inductions/my-inductions');
+      return cleanup;
+    }
+    
+    // Fetch data and handle loading states
+    const fetchData = async () => {
       try {
-        if (!idParam) {
-          toast.error('No induction specified');
-          navigate('/inductions/my-inductions');
-          return;
-        }
-        
-        setLoading(true);
-        setNotFound(false);
-        
+        console.log("Starting fetch...");
         const data = await getInduction(user, idParam);
         
+        // If we got valid data, always show it immediately
         if (data) {
-          setInduction(data);
-          setLoading(false);
-        } else {
-          // Only set not found after a delay to prevent flash
-          setTimeout(() => {
-            if (loadAttempts < 3) { // Try up to 3 times
-              setLoadAttempts(prev => prev + 1);
-            } else {
-              setNotFound(true);
-              setLoading(false);
+          console.log("✅ Got valid data");
+          
+          // Update refs first (these never cause renders)
+          inducRef.current = data;
+          stateRef.current = STATES.SUCCESS;
+          
+          // Only update state if still mounted
+          if (mounted) {
+            // Use requestAnimationFrame to batch these updates together
+            window.requestAnimationFrame(() => {
+              setInduction(data);
+              setViewState(STATES.SUCCESS);
+            });
+          }
+        } 
+        // If we got null data and haven't changed state yet
+        else if (stateRef.current === STATES.LOADING) {
+          console.log("❌ Got null data");
+          
+          errorMessageRef.current = 'Induction not found';
+          
+          // IMPORTANT: Only show error after a delay, giving any successful
+          // request time to come back first
+          errorDisplayTimeout = setTimeout(() => {
+            // Only change state if we STILL haven't got valid data AND still mounted
+            if (stateRef.current === STATES.LOADING && mounted) {
+              console.log("⚠️ Showing error after delay");
+              
+              stateRef.current = STATES.ERROR;
+              setViewState(STATES.ERROR);
+              
+              if (!hasErrorBeenShown) {
+                toast.error(errorMessageRef.current);
+                hasErrorBeenShown = true;
+              }
+            }
+          }, 1000); // Wait 1 second before showing error
+        }
+      } catch (error) {
+        console.error("Error in fetch:", error);
+        
+        // Only handle error if still in loading state
+        if (stateRef.current === STATES.LOADING) {
+          errorMessageRef.current = 'Error loading induction';
+          
+          // Same delay approach for errors
+          errorDisplayTimeout = setTimeout(() => {
+            if (stateRef.current === STATES.LOADING && mounted) {
+              console.log("⚠️ Showing error after delay");
+              
+              stateRef.current = STATES.ERROR;
+              setViewState(STATES.ERROR);
+              
+              if (!hasErrorBeenShown) {
+                toast.error(errorMessageRef.current);
+                hasErrorBeenShown = true;
+              }
             }
           }, 1000);
         }
-      } catch (error) {
-        console.error('Error fetching induction:', error);
-        
-        // Only show error toast and set not found after final attempt
-        if (loadAttempts >= 2) {
-          toast.error('Failed to load induction');
-          setNotFound(true);
-          setLoading(false);
-        } else {
-          // Try again if we haven't reached max attempts
-          setLoadAttempts(prev => prev + 1);
-        }
       }
     };
-
-    fetchInduction();
-  }, [idParam, user, navigate, loadAttempts]);
-
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    setIsSubmitting(true);
     
-    // Prepare the submission data
-    const submissionData = {
-      inductionId: induction.id,
-      userId: user?.id,
-      answers: answers,
-      completedAt: new Date().toISOString()
+    // Set a timeout for stalled requests
+    const timeoutId = setTimeout(() => {
+      if (stateRef.current === STATES.LOADING && mounted) {
+        errorMessageRef.current = 'Request timed out';
+        
+        stateRef.current = STATES.ERROR;
+        setViewState(STATES.ERROR);
+        
+        if (!hasErrorBeenShown) {
+          toast.error(errorMessageRef.current);
+          hasErrorBeenShown = true;
+        }
+      }
+    }, 15000);
+    
+    // Start the fetch
+    fetchData();
+    
+    // Cleanup on unmount
+    return () => {
+      cleanup();
+      clearTimeout(timeoutId);
     };
-    
-    // TODO: Send the answers to the backend
-    console.log('Form submitted', submissionData);
-    
-    toast.success('Induction completed successfully!');
-    setTimeout(() => {
-      navigate('/inductions/my-inductions');
-    }, 2000);
-  };
+  }, [idParam, user, navigate]);
 
   const handleStart = () => {
     setStarted(true);
-    // Initialize answers with empty values for all questions
     const initialAnswers = {};
     induction.questions.forEach(question => {
       initialAnswers[question.id] = question.type === QuestionTypes.MULTICHOICE ? [] : '';
@@ -126,14 +180,34 @@ const InductionFormPage = () => {
     }
   };
 
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    const submissionData = {
+      inductionId: induction.id,
+      userId: user?.id,
+      answers: answers,
+      completedAt: new Date().toISOString()
+    };
+    
+    console.log('Form submitted', submissionData);
+    
+    toast.success('Induction completed successfully!');
+    setTimeout(() => {
+      navigate('/inductions/my-inductions');
+    }, 2000);
+  };
+
   // Calculate estimated time (assumed 2 minutes per question as a default)
   const estimatedTime = induction?.questions?.length ? induction.questions.length * 2 : 0;
 
-  if (loading) {
+  // Render based on view state
+  if (viewState === STATES.LOADING) {
     return <Loading />;
   }
 
-  if (notFound) {
+  if (viewState === STATES.ERROR) {
     return (
       <>
         <Helmet><title>Induction Not Found | AUT Events Induction Portal</title></Helmet>
