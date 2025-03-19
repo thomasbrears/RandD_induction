@@ -268,7 +268,6 @@ const InductionFormPage = () => {
         ) : (
           <div className="bg-white shadow-md rounded-lg p-6">
             <h1 className="text-2xl font-bold mb-4 break-words">{induction.name}</h1>
-            <p className="mb-6">Welcome, {user?.email}! Please complete the induction form below.</p>
             
             {induction.questions.length > 0 ? (
               <form onSubmit={handleSubmit} className="space-y-6">
