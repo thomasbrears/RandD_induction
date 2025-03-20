@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { notifyError } from '../utils/notificationService';
 import useAuth from '../hooks/useAuth';
 import { getInduction } from '../api/InductionApi';
 import Loading from '../components/Loading';
