@@ -14,7 +14,7 @@ import { getAllDepartments } from '../api/DepartmentApi';
 import Status from "../models/Status";
 import { deleteUser, deactivateUser, reactivateUser } from "../api/UserApi";
 import { useLocation, useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { notifyError, notifySuccess, notifyPromise } from "../utils/notificationService";
 import ConfirmationModal from './ConfirmationModal';
 import { FaUserCheck, FaUserTimes, FaTrashAlt, FaSave, FaUserPlus, FaPlus } from 'react-icons/fa';
 
@@ -214,7 +214,7 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
       }
     } catch (error) {
       console.error("Submission error:", error);
-      toast.error(error.message || "Error saving user data");
+      notifyError("Error saving user data", error.message || "An unexpected error occurred");
     }
   };
 
@@ -264,17 +264,20 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
         ? deactivateUser(currentUser, user.uid)
         : reactivateUser(currentUser, user.uid);
   
-    toast.promise(actionPromise, {
-      pending: actionType === 'deactivate'
-        ? "Deactivating user..."
-        : "Reactivating user...",
-      success: actionType === 'deactivate'
-        ? "User deactivated successfully!"
-        : "User reactivated successfully!",
-      error: actionType === 'deactivate'
-        ? "Failed to deactivate user."
-        : "Failed to reactivate user.",
-    });
+    notifyPromise(
+      actionPromise,
+      {
+        pending: actionType === 'deactivate'
+          ? "Deactivating user..."
+          : "Reactivating user...",
+        success: actionType === 'deactivate'
+          ? "User deactivated successfully!"
+          : "User reactivated successfully!",
+        error: actionType === 'deactivate'
+          ? "Failed to deactivate user."
+          : "Failed to reactivate user."
+      }
+    );
   
     actionPromise
       .then(() => {
@@ -296,17 +299,18 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
     if (currentUser && user) {
       const deletePromise = deleteUser(currentUser, user.uid);
   
-      toast.promise(deletePromise, {
-        pending: "Deleting user...",
-        success: "User deleted successfully!",
-        error: {
-          render({ data }) {
+      notifyPromise(
+        deletePromise, 
+        {
+          pending: "Deleting user...",
+          success: "User deleted successfully!",
+          error: (err) => {
             // Extract error message from the rejected promise
-            const errorMessage = data?.response?.data?.message || "An error occurred";
+            const errorMessage = err?.response?.data?.message || "An error occurred";
             return errorMessage;
-          },
-        },
-      });
+          }
+        }
+      );
   
       deletePromise
         .then(() => {

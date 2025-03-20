@@ -1,6 +1,5 @@
 import React from 'react';
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
-//import { toast } from 'react-toastify'; // Toastify success/error/info messages
 import PageHeader from '../components/PageHeader';
 import ContactForm from '../components/ContactForm';
 

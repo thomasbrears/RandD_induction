@@ -5,7 +5,7 @@ import { DefaultNewUser } from '../../models/User';
 import useAuth from '../../hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getUser, updateUser } from "../../api/UserApi";
-import { toast } from 'react-toastify';
+import { notifyError, notifySuccess } from '../../utils/notificationService';
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
 import { MdManageAccounts } from 'react-icons/md';
@@ -32,14 +32,14 @@ const EditUser = () => {
           const userData = await getUser(user, uid);
           setViewedUser(userData);
         } catch (err) {
-          toast.error(err.response?.data?.message || "An error occurred");
+          notifyError("Failed to load user details", err.response?.data?.message || "An error occurred");
         } finally {
           setLoading(false);
         }
       };
       fetchUser();
     } else if (!authLoading) {
-      toast.error("No user was selected. Please select a user to edit.");
+      notifyError("No user selected", "Please select a user to edit.");
       setTimeout(() => navigate("/management/users/view"), 1000);
     }
   }, [uid, user, authLoading, navigate]);
@@ -48,7 +48,7 @@ const EditUser = () => {
     if (user) {
       updateUser(user, userData)
         .then(() => {
-          toast.success("User updated successfully!");
+          notifySuccess("User updated successfully");
           setUpdatedUser({
             uid: userData.uid,
             firstName: userData.firstName,
@@ -58,7 +58,7 @@ const EditUser = () => {
           setUserUpdated(true);
         })
         .catch((err) => {
-          toast.error(err.response?.data?.message || "An error occurred");
+          notifyError("Update failed", err.response?.data?.message || "An error occurred");
         });
     }
   };

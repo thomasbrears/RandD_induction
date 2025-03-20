@@ -23,7 +23,7 @@ import '../style/Table.css';
 import { Link } from 'react-router-dom';
 import Status from '../models/Status';
 import Loading from '../components/Loading';
-import { toast } from 'react-toastify';
+import { notifyError } from '../utils/notificationService';
 
 const columnHelper = createColumnHelper();
 
@@ -93,7 +93,7 @@ const AssignedInductions = ({ uid }) => {
           const response = await getAssignedInductions(user, userId);
           setAssignedInductions(response.assignedInductions || []);
         } catch (error) {
-          toast.error('Unable to load assigned inductions. Please try again later.');
+          notifyError('Unable to load assigned inductions', 'Please try again later.');          
           console.error('Error fetching assigned induction list:', error);
         } finally {
           setLoading(false);
