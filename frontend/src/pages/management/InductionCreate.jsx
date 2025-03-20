@@ -7,15 +7,14 @@ import { DefaultNewInduction } from "../../models/Inductions";
 import useAuth from "../../hooks/useAuth";
 import { FaSave } from 'react-icons/fa';
 import { Modal, Result, Button } from 'antd';
-import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css'; // import styles
 import InductionFormHeader from "../../components/InductionFormHeader";
 import InductionFormContent from "../../components/InductionFormContent";
 import { getAllDepartments } from "../../api/DepartmentApi";
 import Loading from "../../components/Loading";
-import { MODULES, FORMATS } from "../../models/QuillConfig";
 import { createNewInduction } from "../../api/InductionApi";
 import { useNavigate } from "react-router-dom";
+import TiptapEditor from "../../components/TiptapEditor";
 
 const InductionCreate = () => {
   const { user } = useAuth(); // Get the user object from the useAuth hook
@@ -347,14 +346,8 @@ const InductionCreate = () => {
                 {currentStep === 3 && (
                   <div>
                     <p className="mb-2 text-gray-500">How should we describe what this induction covers? (Please be detailed)</p>
-                    <ReactQuill
-                      value={induction.description}
-                      onChange={(value) => setInduction({ ...induction, description: value })}
-                      placeholder="e.g. This induction covers the general health and safety across AUT and covers the following topics..."
-                      className="w-full h-40 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
-                      modules={MODULES}
-                      formats={FORMATS}
-                    />
+                    <p className="mb-2 text-gray-500">e.g. This induction covers the general health and safety across AUT and covers the following topics...</p>
+                    <TiptapEditor localDescription={induction.description} handleLocalChange={(field, value) => setInduction({ ...induction, description: value })} />
                   </div>
                 )}
               </div>
@@ -408,19 +401,21 @@ const InductionCreate = () => {
                           Discard & Submit
                         </Button>
                       )}
-                      {(actionType === "prompt" || actionType === "unfinished" || actionType === "failedSave") && (
-                        <Button key="continueEditing" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
-                          Continue Editing
-                        </Button>
-                      )}
                       {(actionType === "unsaved" || actionType === "unfinished") && (
                         <Button key="saveAndCheck" type="primary" className="w-auto min-w-0 text-sm" onClick={handleSaveAndCheck} disabled={savingInProgress}>
                           Save & Check
                         </Button>
                       )}
-                      <Button key="cancel" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
+                      {(actionType === "prompt" || actionType === "unfinished" || actionType === "failedSave") && (
+                        <Button key="continueEditing" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
+                          Continue Editing
+                        </Button>
+                      )}
+                      {(!(actionType === "prompt" || actionType === "unfinished" || actionType === "failedSave")) && (
+                        <Button key="cancel" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
                         Cancel
                       </Button>
+                      )}
                     </div>
                   }
                 >

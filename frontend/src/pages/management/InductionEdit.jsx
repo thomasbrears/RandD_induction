@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import InductionFormHeader from "../../components/InductionFormHeader";
-import { useLocation, useNavigate} from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import useAuth from "../../hooks/useAuth";
 import { DefaultNewInduction } from "../../models/Inductions";
@@ -89,7 +89,7 @@ const InductionEdit = () => {
       if (savingInProgress) return;
       setSaveAllFields(true);
       setSavingInProgress(true);
-  
+
       const timeoutId = setTimeout(handleFailedSave, 5000);
       setSaveTimeoutId(timeoutId);
     } else {
@@ -270,19 +270,21 @@ const InductionEdit = () => {
                       Discard & Submit
                     </Button>
                   )}
-                  {(actionType === "prompt" || actionType === "unfinished" || actionType === "failedSave") && (
-                    <Button key="continueEditing" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
-                      Continue Editing
-                    </Button>
-                  )}
                   {(actionType === "unsaved" || actionType === "unfinished") && (
                     <Button key="saveAndCheck" type="primary" className="w-auto min-w-0 text-sm" onClick={handleSaveAndCheck} disabled={savingInProgress}>
                       Save & Check
                     </Button>
                   )}
-                  <Button key="cancel" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
-                    Cancel
-                  </Button>
+                  {(actionType === "prompt" || actionType === "unfinished" || actionType === "failedSave") && (
+                    <Button key="continueEditing" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
+                      Continue Editing
+                    </Button>
+                  )}
+                  {(!(actionType === "prompt" || actionType === "unfinished" || actionType === "failedSave")) && (
+                    <Button key="cancel" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
+                      Cancel
+                    </Button>
+                  )}
                 </div>
               }
             >
