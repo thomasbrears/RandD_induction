@@ -23,9 +23,6 @@ const corsOptions = {
     const isThomaseProject = origin && 
       (origin.startsWith('https://thomasbrears-projects.vercel.app') || 
        origin.includes('-thomasbrears-projects.vercel.app'));
-
-    // Debug logging for troubleshooting
-    console.log(`CORS request from: ${origin}`);
     
     // In production, check against allowed list or pattern
     if (process.env.NODE_ENV === 'production') {

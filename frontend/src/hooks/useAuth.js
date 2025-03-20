@@ -1,7 +1,8 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { auth } from "../firebaseConfig";
 import { useNavigate, useLocation } from "react-router-dom";
-import { toast } from "react-toastify";
+import { notification } from "antd";
+import { CheckCircleOutlined, CloseCircleOutlined } from "@ant-design/icons";
 
 const useAuth = () => {
   // State for user data and loading status
@@ -10,9 +11,9 @@ const useAuth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Refs to prevent duplicate toast notifications and track token timing
-  const HAS_SHOWN_EXPIRED_TOAST = useRef(false); // Tracks if session expired toast was shown
-  const HAS_SHOWN_SIGNOUT_TOAST = useRef(false); // Tracks if sign out toast was shown
+  // Refs to prevent duplicate notifications and track token timing
+  const HAS_SHOWN_EXPIRED_NOTIFICATION = useRef(false); // Tracks if session expired notification was shown
+  const HAS_SHOWN_SIGNOUT_NOTIFICATION = useRef(false); // Tracks if sign out notification was shown
   const TOKEN_EXPIRY_TIME = useRef(null); // Stores when the current token will expire
   const TOKEN_REFRESH_TIMEOUT = useRef(null); // Reference to the refresh timer
   
@@ -82,23 +83,28 @@ const useAuth = () => {
     } catch (error) {
       console.error("Error refreshing token:", error);
       
-      // Show expired session toast only once
-      if (!HAS_SHOWN_EXPIRED_TOAST.current) {
-        toast.error("Session expired, please sign in again.");
-        HAS_SHOWN_EXPIRED_TOAST.current = true;
+      // Show expired session notification only once
+      if (!HAS_SHOWN_EXPIRED_NOTIFICATION.current) {
+        notification.error({
+          message: "Session Expired",
+          description: "Your session has expired, please sign in again.",
+          icon: <CloseCircleOutlined style={{ color: '#ff4d4f' }} />,
+          duration: 4.5,
+        });
+        HAS_SHOWN_EXPIRED_NOTIFICATION.current = true;
       }
       
-      // Sign out without showing sign out toast (to avoid duplicate notifications)
+      // Sign out without showing sign out notification (to avoid duplicate notifications)
       sessionStorage.setItem('previousUrl', location.pathname);
       signOut(false);
     }
-  }, []);
+  }, [location.pathname]);
 
   // Main auth state listener effect
   useEffect(() => {
-    // Reset toast flags when component mounts
-    HAS_SHOWN_EXPIRED_TOAST.current = false;
-    HAS_SHOWN_SIGNOUT_TOAST.current = false;
+    // Reset notification flags when component mounts
+    HAS_SHOWN_EXPIRED_NOTIFICATION.current = false;
+    HAS_SHOWN_SIGNOUT_NOTIFICATION.current = false;
     
     // Set up Firebase auth state listener
     const unsubscribe = auth.onAuthStateChanged(async (currentUser) => {
@@ -150,7 +156,7 @@ const useAuth = () => {
   }, [user, refreshUserToken]);
 
   // Function to sign out the user
-  const signOut = (showToast = true) => {
+  const signOut = (showNotification = true) => {
     // Clear any scheduled token refresh
     if (TOKEN_REFRESH_TIMEOUT.current) {
       clearTimeout(TOKEN_REFRESH_TIMEOUT.current);
@@ -161,10 +167,15 @@ const useAuth = () => {
       setUser(null);
       navigate("/");
       
-      // Show sign out toast only if requested AND not already shown
-      if (showToast && !HAS_SHOWN_SIGNOUT_TOAST.current) {
-        toast.success("You have been signed out! Have a great day!");
-        HAS_SHOWN_SIGNOUT_TOAST.current = true;
+      // Show sign out notification only if requested AND not already shown
+      if (showNotification && !HAS_SHOWN_SIGNOUT_NOTIFICATION.current) {
+        notification.success({
+          message: "Sign Out Successful",
+          description: "You have been signed out! Have a great day!",
+          icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />,
+          duration: 4.5,
+        });
+        HAS_SHOWN_SIGNOUT_NOTIFICATION.current = true;
       }
     });
   };

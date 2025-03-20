@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Helmet } from 'react-helmet-async';
-import { toast } from 'react-toastify';
+import { Helmet } from 'react-helmet-async'; 
+import { messageWarning, notifySuccess } from '../../utils/notificationService';
 import PageHeader from "../../components/PageHeader";
 import ManagementSidebar from "../../components/ManagementSidebar";
 import { DefaultNewInduction } from "../../models/Inductions";
@@ -145,8 +145,7 @@ const InductionCreate = () => {
     const missingFields = checkForMissingFields();
 
     if (missingFields.length > 0) {
-      toast.warn(`Please fill in the following fields: ${missingFields.join(", ")}`);
-      console.log(missingFields);
+      messageWarning(`Please fill in the following fields: ${missingFields.join(", ")}`);
       return;
     }
 
@@ -154,7 +153,7 @@ const InductionCreate = () => {
     if (user) {
       const result = await createNewInduction(user, induction);
       console.log(result);
-      toast.success("Induction updated successfully!");
+      notifySuccess("Induction updated successfully!");
     }
     setShowResult(true);
   };
@@ -237,7 +236,7 @@ const InductionCreate = () => {
     if (induction.name && induction.department && induction.description) {
       setShowModal(false);
     } else {
-      toast.warn("Please complete all required fields before continuing.");
+      messageWarning("Please complete all required fields before continuing.");
     }
   };
 

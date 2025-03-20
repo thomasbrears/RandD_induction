@@ -24,8 +24,7 @@ import {
   Avatar,
   Empty
 } from 'antd';
-import { toast, ToastContainer } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
+import { notifyError, notifySuccess, notifyInfo } from '../../utils/notificationService';
 import { 
   EyeOutlined, 
   MailOutlined, 
@@ -99,13 +98,13 @@ const ContactSubmissions = () => {
           setDepartmentMap(deptMap);
         } catch (error) {
           console.error('Error fetching departments:', error);
-          toast.error('Failed to load departments');
+          notifyError('Failed to load departments');
         }
         
         // Then fetch submissions
         const currentUser = auth.currentUser;
         if (!currentUser) {
-          toast.error('You must be logged in to view submissions');
+          notifyError('You must be logged in to view submissions');
           setLoading(false);
           return;
         }
@@ -124,7 +123,7 @@ const ContactSubmissions = () => {
         setSubmissions(formattedSubmissions);
       } catch (error) {
         console.error('Error fetching data:', error);
-        toast.error('Failed to load contact submissions');
+        notifyError('Failed to load contact submissions');
       } finally {
         setLoading(false);
       }
@@ -174,14 +173,14 @@ const ContactSubmissions = () => {
   // Handle delete submission
   const handleDeleteSubmission = async (id) => {
     if (!isAdmin) {
-      toast.info('Only administrators can delete submissions');
+      notifyInfo('Only administrators can delete submissions');
       return;
     }
 
     try {
       const currentUser = auth.currentUser;
       if (!currentUser) {
-        toast.error('You must be logged in to delete submissions');
+        notifyError('You must be logged in to delete submissions');
         return;
       }
       
@@ -190,7 +189,7 @@ const ContactSubmissions = () => {
       
       // Remove from local state
       setSubmissions(submissions.filter(submission => submission.id !== id));
-      toast.success('Submission deleted successfully');
+      notifySuccess('Submission deleted successfully');
       
       // Close modal if the deleted submission is currently open
       if (currentSubmission && currentSubmission.id === id) {
@@ -198,7 +197,7 @@ const ContactSubmissions = () => {
       }
     } catch (error) {
       console.error('Error deleting submission:', error);
-      toast.error('Failed to delete submission');
+      notifyError('Failed to delete submission');
     }
   };
 

@@ -5,7 +5,7 @@ import { DefaultNewUser } from '../../models/User';
 import useAuth from '../../hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getUser, updateUser, sendPasswordResetEmail, setPassword  } from "../../api/UserApi";
-import { toast } from 'react-toastify';
+import { notifyError, notifySuccess } from '../../utils/notificationService';
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
 import UserInductionManagement from '../../components/management/UserInductionManagement';
@@ -34,7 +34,7 @@ const ManageUserInductionPage = () => {
           setViewedUser(userData);
         } catch (err) {
           const errorMessage = err.response?.data?.message || "An error occurred";
-          toast.error(errorMessage);
+          notifyError("Failed to load user", errorMessage);
         } finally {
           setLoading(false);
         }
@@ -46,7 +46,7 @@ const ManageUserInductionPage = () => {
       }, 1000);
 
       const errorMessage = "No user was selected. Please select a user to edit.";
-      toast.error(errorMessage);
+      notifyError("No user selected", errorMessage);
     }
     
   }, [uid, navigate, user, authLoading]);
@@ -55,11 +55,11 @@ const ManageUserInductionPage = () => {
     if(user){
       updateUser(user, userData)
       .then(() => {
-        toast.success('Inductions updated sucessfully!', { position: 'top-right', autoClose: 3000, });
+        notifySuccess('Inductions updated successfully');
       })
       .catch((err) => {
         const errorMessage = err.response?.data?.message || "An error occurred";
-          toast.error(errorMessage);
+        notifyError("Update failed", errorMessage);
         console.error(err);
       });
      }
