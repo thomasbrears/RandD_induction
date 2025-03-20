@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom'; 
 import { Tabs } from 'antd';
-import { toast } from 'react-toastify';
+import { notifyError } from '../../utils/notificationService';
 import { AiOutlineSetting } from 'react-icons/ai';
 import { FaBuilding, FaUserTie } from 'react-icons/fa';
 import { IoLocation } from "react-icons/io5";
@@ -23,7 +23,7 @@ const Settings = () => {
       setLoading(false); // Stop loading if the user is authenticated
     } else if (!user && !loading) {
       // Redirect non-authenticated users after loading
-      toast.error('You must be logged in to access this page');
+      notifyError('Authentication required', 'You must be logged in to access this page');
       navigate('/login');
     }
   }, [user, loading, navigate]);

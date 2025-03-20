@@ -1,45 +1,98 @@
-import React, { useState } from 'react';
-import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
-import { auth } from '../firebaseConfig.js';
-import { useNavigate, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
 import { sendPasswordResetEmail } from 'firebase/auth';
-import { toast } from 'react-toastify'; // Toastify success/error/info messages
-import Loading from '../components/Loading'; // Loading animation
-import '../style/Auth.css';
+import { auth } from '../firebaseConfig.js';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { notification, Input, Button, Form, Typography } from 'antd';
+import { MailOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import AuthLayout from '../layouts/AuthLayout';
+
+const { Text } = Typography;
 
 function ResetPasswordPage() {
     const [email, setEmail] = useState('');
     const [loading, setLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const navigate = useNavigate();
+    const location = useLocation();
+    const [form] = Form.useForm();
 
-    // Function to handle password reset email sending
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    useEffect(() => {
+        // Check if email was passed in the location state (from sign-in page)
+        if (location.state && location.state.email) {
+            setEmail(location.state.email);
+            form.setFieldsValue({ email: location.state.email });
+        }
+    }, [location, form]);
+
+    const handlePasswordReset = async (values) => {
+        const { email } = values;
+        if (!email) {
+            notification.error({
+                message: 'Error',
+                description: 'Please enter your email.',
+            });
+            return;
+        }
+
         try {
             setLoading(true);
-            setLoadingMessage(`Sending password reset email to ${email}...`);	
-
+            setLoadingMessage(`Sending password reset email to ${email}...`);
             await sendPasswordResetEmail(auth, email);
-            toast.success('If an account exists with that email, we have sent a password reset email.', { position: 'top-center', autoClose: 7000 });
-            // Delay navigation to login page for 2 seconds to display success message
+            
+            notification.sucess({
+                message: 'Check Your Email',
+                description: 'If an account exists with that email, you should receive a password reset link shortly.',
+            });
+            
+            // Store the email for potential use back on the sign-in page
             setTimeout(() => {
-                navigate("/auth/signin");
-            }, 1000); // 1 second
+                navigate('/auth/signin', { state: { email, fromReset: true }});
+            }, 1000);
         } catch (error) {
-           // Handle Firebase Auth specific error messages
+            console.error("Error sending reset email:", error);
             switch (error.code) {
                 case 'auth/invalid-email':
-                    toast.error('Invalid email format. Please check and try again.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'Invalid email format. Please enter a valid email.',
+                    });
+                    break;
+                case 'auth/missing-email':
+                    notification.error({
+                        message: 'Error',
+                        description: 'Please provide an email address.',
+                    });
+                    break;
+                case 'auth/user-not-found':
+                    // For security reasons, we don't reveal if an email exists or not
+                    notification.info({
+                        message: 'Check Your Email',
+                        description: 'If an account exists with that email, you should receive a password reset link shortly.',
+                    });
+                    setTimeout(() => {
+                        navigate('/auth/signin', { state: { email, fromReset: true }});
+                    }, 1000);
                     break;
                 case 'auth/network-request-failed':
-                    toast.error('Network error. Please check your connection and try again.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'Network error. Please check your connection and try again.',
+                    });
+                    break;
+                case 'auth/too-many-requests':
+                    notification.error({
+                        message: 'Error',
+                        description: 'Too many requests. Please wait a moment before trying again.',
+                    });
                     break;
                 default:
-                    toast.error('Error sending reset email. Please try again.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'Failed to send reset email. Please try again.',
+                    });
                     break;
             }
-            console.error("Error sending reset email:", error);
         } finally {
             setLoading(false);
         }
@@ -47,44 +100,68 @@ function ResetPasswordPage() {
 
     return (
         <>
-            <Helmet><title>Reset Password | AUT Events Induction Portal</title></Helmet>
-            <div 
-                className="min-h-screen flex items-center justify-center bg-cover bg-center px-4" 
-                style={{ backgroundImage: 'url(/images/WG_OUTSIDE_AUT.webp)' }} // Background image
+            <Helmet>
+                <title>Reset Password | AUT Events Induction Portal</title>
+            </Helmet>
+            <AuthLayout
+                heading="Reset Password"
+                loading={loading}
+                loadingMessage={loadingMessage}
             >
-                {loading && <Loading message={loadingMessage} />}
-                <div className="w-full max-w-sm p-8 bg-white shadow-lg rounded-lg">
-                    <h1 className="text-3xl font-bold text-gray-800 text-center mb-6">Reset Password</h1>
-                    <p className="text-sm text-gray-600 mb-4 text-center">
-                        Please enter your email, and we will send you a link to reset your password.
-                    </p>
+                <p className="block text-gray-600 text-sm mb-6">
+                    Enter your email address below and we'll send you a link to reset your password.
+                </p>
 
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address</label>
-                            <input
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-sm shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                placeholder="Enter your email"
-                            />
-                        </div>
-
-                        <button type="submit" className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
+                <Form
+                    form={form}
+                    name="resetPassword"
+                    onFinish={handlePasswordReset}
+                    layout="vertical"
+                    className="space-y-4"
+                    initialValues={{ email }}
+                >
+                    <Form.Item
+                        name="email"
+                        label={<span className="text-gray-700">Email Address</span>}
+                        rules={[
+                            {
+                                required: true,
+                                message: 'Please enter your email!',
+                                type: 'email'
+                            }
+                        ]}
+                    >
+                        <Input
+                            prefix={<MailOutlined className="site-form-item-icon text-gray-400" />}
+                            placeholder="Enter your email"
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="px-4 py-2 h-11 rounded-lg"
+                            value={email}
+                        />
+                    </Form.Item>
+                    
+                    <Form.Item>
+                        <Button
+                            type="primary"
+                            htmlType="submit"
+                            className="w-full bg-blue-600 text-white font-semibold py-3 h-11 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 text-center"
+                        >
                             Reset Password
-                        </button>
-                    </form>
-
-                    <div className="text-center mt-4">
-                        <p className="text-sm text-gray-600">
-                            Remembered your password?{' '}
-                            <Link to="/auth/signin" className="font-bold text-black hover:underline">Sign in</Link>
-                        </p>
+                        </Button>
+                    </Form.Item>
+                    
+                    <div className="mt-6 text-center">
+                        <Button 
+                            type="link" 
+                            icon={<ArrowLeftOutlined />}
+                            onClick={() => navigate('/auth/signin', { state: { email }})}
+                            className="text-blue-600 hover:text-blue-800"
+                        >
+                            Back to Sign In
+                        </Button>
                     </div>
-                </div>
-            </div>
+                </Form>
+            </AuthLayout>
         </>
     );
 }

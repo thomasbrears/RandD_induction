@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { toast } from "react-toastify";
 import { db } from "../../firebaseConfig";
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { Button, Popconfirm, Skeleton } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { notifySuccess, notifyError, messageWarning } from "../../utils/notificationService";
 
 const ManagePositions = () => {
   const [newPositionName, setNewPositionName] = useState(""); 
@@ -31,7 +31,7 @@ const ManagePositions = () => {
         setFilteredPositions(positionsList); // Set filtered positions to the full list initially
       } catch (error) {
         console.error("Error fetching positions:", error);
-        toast.error("Failed to fetch positions.");
+        notifyError("Failed to fetch positions");
       } finally {
         setIsLoading(false); 
       }
@@ -61,7 +61,7 @@ const ManagePositions = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newPositionName.trim()) {
-      toast.warn("Please enter a position name.");
+      messageWarning("Please enter a position name");
       return;
     }
 
@@ -73,7 +73,7 @@ const ManagePositions = () => {
         name: newPositionName,
       });
 
-      toast.success("Position added successfully!");
+      notifySuccess("Position added successfully");
       setNewPositionName(""); // Clear input field after successful submission
 
       // Update the position list without fetching from Firestore
@@ -83,7 +83,7 @@ const ManagePositions = () => {
       ]);
       setIsAddingNew(false); // Close input field after submission
     } catch (error) {
-      toast.error("Failed to add position.");
+      notifyError("Failed to add position", error.message);
       console.error("Error adding position:", error);
     } finally {
       setIsSubmitting(false);
@@ -101,7 +101,7 @@ const ManagePositions = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!positionName.trim()) {
-      toast.warn("Please enter a position name.");
+      messageWarning("Please enter a position name");
       return;
     }
 
@@ -113,7 +113,7 @@ const ManagePositions = () => {
         name: positionName,
       });
 
-      toast.success("Position updated successfully!");
+      notifySuccess("Position updated successfully");
       setPositionName(""); // Clear input field after successful update
       setIsEditing(false); // Switch back to add mode
 
@@ -126,7 +126,7 @@ const ManagePositions = () => {
         )
       );
     } catch (error) {
-      toast.error("Failed to update position.");
+      notifyError("Failed to update position", error.message);
       console.error("Error updating position:", error);
     } finally {
       setIsSubmitting(false);
@@ -139,14 +139,14 @@ const ManagePositions = () => {
       const positionRef = doc(db, "positions", id);  // Use the id passed in directly
       await deleteDoc(positionRef);  // Delete from Firestore
 
-      toast.success("Position deleted successfully!");
+      notifySuccess("Position deleted successfully");
 
       // Remove the deleted position from the state
       setPositions((prevPositions) =>
         prevPositions.filter((position) => position.id !== id)
       );
     } catch (error) {
-      toast.error("Failed to delete position.");
+      notifyError("Failed to delete position", error.message);
       console.error("Error deleting position:", error);
     }
   };

@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import useAuth from '../hooks/useAuth';
 import { getAssignedInductions } from '../api/InductionApi';
-import { toast } from 'react-toastify'; // Toastify success/error/info messages
+import { notification, Button } from 'antd'; 
+import { WarningOutlined } from '@ant-design/icons';
 
 const HomePage = () => {
     const { user } = useAuth();
@@ -28,6 +29,19 @@ const HomePage = () => {
         ).length;
     };
 
+    // Function to check if notification should be shown
+    const shouldShowNotification = () => {
+        const lastNotifiedTime = localStorage.getItem('lastOverdueNotification');
+        const currentTime = Date.now();
+        
+        // Show notification if never shown before or last shown more than 30 minutes ago
+        if (!lastNotifiedTime || currentTime - parseInt(lastNotifiedTime) > 30 * 60 * 1000) {
+            localStorage.setItem('lastOverdueNotification', currentTime.toString());
+            return true;
+        }
+        return false;
+    };
+
     // Fetch inductions assigned to the user
     const fetchInductions = async () => {
         if (user) {
@@ -42,32 +56,41 @@ const HomePage = () => {
                 setInductionsCount(incompleteInductions);
                 setOverdueInductionsCount(overdueInductions); 
 
-                // Show a toast with a link if there are overdue inductions
-                if (overdueInductions > 0) {
-                    toast.warning(
-                        <div>
-                            <span>
-                                You have {overdueInductions} overdue induction{overdueInductions > 1 ? 's' : ''}. Please complete {overdueInductionsCount > 1 ? 'them' : 'it'} as soon as possible.
-                                <br />
-                                <Link
-                                    to="/inductions/my-inductions"
-                                    className="text-blue-500"
-                                    onClick={() => toast.dismiss()}
+                // Show a notification with a button if there are overdue inductions
+                // and notification hasn't been shown recently
+                if (overdueInductions > 0 && shouldShowNotification()) {
+                    const key = `overdue-${Date.now()}`;
+                    const notificationTitle = overdueInductions === 1 ? 'Overdue Induction' : 'Overdue Inductions';
+                    
+                    notification.warning({
+                        message: notificationTitle,
+                        description: (
+                            <div>
+                                <p>
+                                    You have {overdueInductions} overdue 
+                                    {overdueInductions === 1 ? ' induction' : ' inductions'}. 
+                                    Please complete 
+                                    {overdueInductions === 1 ? ' it' : ' them'} as soon as possible.
+                                </p>
+                                <Button 
+                                    type="primary" 
+                                    size="small" 
+                                    style={{ marginTop: '8px' }}
+                                    onClick={() => {
+                                        // Just navigate without closing the notification
+                                        window.location.href = '/inductions/my-inductions';
+                                    }}
                                 >
-                                    View inductions
-                                </Link>{' '}
-                                
-                            </span>
-                        </div>,
-                        {
-                            position: 'bottom-right',
-                            autoClose: 120000,
-                            hideProgressBar: true,
-                            closeOnClick: true,
-                            draggable: true,
-                            progress: undefined,
-                        }
-                    );
+                                    View Inductions
+                                </Button>
+                            </div>
+                        ),
+                        icon: <WarningOutlined style={{ color: '#faad14' }} />,
+                        key,
+                        placement: 'bottomRight',
+                        duration: 0, // Don't auto-close
+                        style: { minWidth: '320px', maxWidth: '450px' } // Wider notification
+                    });
                 }
 
             } catch (error) {
@@ -101,7 +124,7 @@ const HomePage = () => {
             <div className="bg-white py-8 mb-8">
                 {!isAuthenticated ? (
                     <>
-                        {/* Not loged in content */}
+                        {/* Not logged in content */}
                         <h3 className="text-3xl text-center font-semibold mb-4">Let's get started</h3>
                         <p className="text-lg text-center mb-6">Please sign in to view and complete your inductions.</p>
                         <div className="flex justify-center gap-6">
@@ -120,7 +143,13 @@ const HomePage = () => {
                                 {/* Show overdue inductions message if applicable */}
                                 {overdueInductionsCount > 0 && (
                                     <p className="text-red-500 text-center mb-8">
-                                        <Link to="/inductions/my-inductions" >You have {overdueInductionsCount} overdue induction{overdueInductionsCount > 1 ? 's' : ''}. Please complete {overdueInductionsCount > 1 ? 'them' : 'it'} as soon as possible.</Link>  {/* Message with cases for 1 or muiltiple overdue inductions and a link to the inductions page */}
+                                        <Link to="/inductions/my-inductions" >
+                                            You have {overdueInductionsCount} overdue 
+                                            {overdueInductionsCount === 1 ? ' induction' : ' inductions'}. 
+                                            Please complete 
+                                            {overdueInductionsCount === 1 ? ' it ' : ' them '} 
+                                            as soon as possible.
+                                        </Link>
                                     </p>
                                 )}
 
@@ -134,13 +163,17 @@ const HomePage = () => {
                                 <h2 className="text-3xl text-center font-semibold mb-4">Hi {user.displayName ? user.displayName.split(" ")[0] : ""}, let's get started</h2>
                                 <p className="text-xl text-center mb-8">
                                     {loading ? "Loading your inductions..." : 
-                                    (error ? `Error: ${error}` : `You currently have ${inductionsCount > 0 ? inductionsCount : "no"} induction${inductionsCount > 1 ? 's' : ''} to complete...`)}
+                                    (error ? `Error: ${error}` : `You currently have ${inductionsCount > 0 ? inductionsCount : "no"} induction${inductionsCount === 1 ? '' : 's'} to complete...`)}
                                 </p>
 
-                                {/* Show overdue inductions message if applicable */}
+                                {/* Show overdue inductions message if applicable - fixed pluralization */}
                                 {overdueInductionsCount > 0 && (
                                     <p className="text-red-500 text-center mb-8">
-                                        You have {overdueInductionsCount} overdue induction{overdueInductionsCount > 1 ? 's' : ''}. Please complete {overdueInductionsCount > 1 ? 'them' : 'it'} as soon as possible. {/* Message with cases for 1 or muiltiple overdue inductions */}
+                                        You have {overdueInductionsCount} overdue 
+                                        {overdueInductionsCount === 1 ? ' induction' : ' inductions'}. 
+                                        Please complete 
+                                        {overdueInductionsCount === 1 ? ' it ' : ' them '} 
+                                        as soon as possible.
                                     </p>
                                 )}
                                 <div className="flex justify-center gap-6">
@@ -178,7 +211,7 @@ const HomePage = () => {
 
             {/* Feedback Section */}
             <div className="bg-white text-black py-16 mb-5">
-                <h2 className="text-2xl text-center font-semibold mb-4">Contact us - We’d love to hear from you!</h2>
+                <h2 className="text-2xl text-center font-semibold mb-4">Contact us - We'd love to hear from you!</h2>
                 <div className="max-w-4xl mx-auto text-center">
                     <p className="text-lg mb-8">If you have any questions, feedback or complaints, please don't hesitate to get in touch with us using the button below or by direct email to your manager.</p>
                     <Link to="/contact" className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md text-center w-auto mx-auto">Contact us</Link>

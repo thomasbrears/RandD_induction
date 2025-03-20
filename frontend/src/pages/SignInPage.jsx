@@ -1,19 +1,32 @@
-import React, { useState } from 'react';
-import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
-//import '../style/Auth.css';
-import { signInWithEmailAndPassword, sendSignInLinkToEmail } from 'firebase/auth';
+import React, { useState, useEffect } from 'react';
+import { Helmet } from 'react-helmet-async';
+import {
+    signInWithEmailAndPassword,
+    sendSignInLinkToEmail,
+} from 'firebase/auth';
 import { auth } from '../firebaseConfig.js';
-import { Link, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify'; // Toastify success/error/info messages
-import Loading from '../components/Loading'; // Loading animation
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { notification, Input, Button, Divider, Form, Typography } from 'antd';
+import { MailOutlined, LockOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import AuthLayout from '../layouts/AuthLayout';
 
-function LoginPage() {
+const { Text } = Typography;
+
+function SignInPage() {
     const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [showPasswordField, setShowPasswordField] = useState(false); // To toggle password field visibility
     const [loading, setLoading] = useState(false);
     const [loadingMessage, setLoadingMessage] = useState('');
     const navigate = useNavigate();
+    const location = useLocation();
+    const [form] = Form.useForm();
+
+    useEffect(() => {
+        // Check if email was passed from reset password page
+        if (location.state && location.state.email) {
+            setEmail(location.state.email);
+            form.setFieldsValue({ email: location.state.email });
+        }
+    }, [location, form]);
 
     // Function to get user role from Firebase custom claims
     const getUserRole = async (user) => {
@@ -21,245 +34,273 @@ function LoginPage() {
         return tokenResult.claims.role;  // Fetch the role from the claims
     };
 
-    // Email validation function
-    const isValidEmail = (email) => {
-        const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-        return emailRegex.test(email);
-    };
-
-    // Function for email and password sign in
-    const handleEmailPasswordSignIn = async (e) => {
-        e.preventDefault();
-
-        // Check if email is entered
-        if (!email) {
-            toast.error('Please enter your email.');
+    // Handle email/password sign-in
+    const handleEmailPasswordSignIn = async (values) => {
+        const { email, password } = values;
+        if (!email || !password) {
+            notification.error({
+                message: 'Error',
+                description: 'Please enter both email and password.',
+            });
             return;
         }
-
-        // Check if email is in valid format
-        if (!isValidEmail(email)) {
-            toast.error('Invalid email format. Please enter a valid email address.');
-            return;
-        }
-        
-        // Check if password is entered
-        if (!password) {
-            toast.error('Please enter your password.');
-            return;
-        }
-
         try {
             setLoading(true);
             setLoadingMessage(`Signing in as ${email}...`);
-
             const userCredential = await signInWithEmailAndPassword(auth, email, password);
             const user = userCredential.user;
-
+            
             localStorage.setItem('token', user.accessToken);
             localStorage.setItem('user', JSON.stringify(user));
-            toast.success('Signed in successfully!', { position: 'top-right', autoClose: 3000 });
-
+           
+            notification.success({
+                message: 'Success',
+                description: 'Successfully signed in! Welcome!',
+                icon: <CheckCircleOutlined style={{ color: '#52c41a' }} />
+            });
+            
             // Get user role from Firebase custom claims
             const userRole = await getUserRole(user);
-
-            if (!userRole) {
-                console.warn('User role is undefined or null.');  // Log warning if role is missing
-            }
 
             // Check if there is a previous URL stored
             const previousUrl = sessionStorage.getItem('previousUrl');
 
             if (previousUrl) {
                 // If there's a previous URL, redirect to it
-                navigate(previousUrl); // Redirect to the previous URL
+                navigate(previousUrl);
                 sessionStorage.removeItem('previousUrl'); // Clear after redirect
             } else {
                 // Redirect based on role if no previous URL
                 if (userRole === 'admin' || userRole === 'manager') {
-                    navigate('/management/dashboard'); // Redirect to for admins and managers
+                    navigate('/management/dashboard'); // Redirect for admins and managers
                 } else if (userRole === 'user') {
                     navigate('/inductions/my-inductions'); // Redirect for users
                 } else {
                     navigate('/'); // Redirect home for unknown roles
                 }
-            }            
+            }
         } catch (error) {
-            console.error("Error during sign in:", error);
+            console.error("Error during sign-in:", error);
             switch (error.code) {
                 case 'auth/user-not-found':
-                    toast.error('No user found with this email.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'No user found with this email.',
+                    });
                     break;
                 case 'auth/wrong-password':
-                    toast.error('Incorrect password. Please try again.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'Incorrect password.',
+                    });
                     break;
                 case 'auth/invalid-email':
-                    toast.error('Invalid email format, Please enter a valid email address.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'Invalid email format. Please enter a valid email address.',
+                    });
                     break;
                 case 'auth/invalid-credential':
-                    toast.error('Invalid credentials. Please try again.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'Invalid credentials. Please try again.',
+                    });
                     break;
                 case 'auth/user-disabled':
-                    toast.error('Your account is disabled. Please contact your supervisor or manager for assistance.');
-                    break;    
+                    notification.error({
+                        message: 'Error',
+                        description: 'Your account is disabled. Please contact your supervisor or manager for assistance.',
+                    });
+                    break;
                 default:
-                    toast.error('Login failed. Please try again.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'Login failed. Please try again.',
+                    });
                     break;
             }
         } finally {
-            setLoading(false); // Reset loading state
+            setLoading(false);
         }
     };
 
-    // Function for passwordless sign in using email link
-    const handlePasswordlessSignIn = async (e) => {
-        e.preventDefault();
-
-        // Check if email is entered
-        if (!email) {
-            toast.error('Please enter your email.');
+    // Handle passwordless sign-in via email link
+    const handlePasswordlessSignIn = async () => {
+        // Get email from form
+        const formEmail = form.getFieldValue('email');
+        const emailToUse = formEmail || email;
+        
+        if (!emailToUse) {
+            notification.error({
+                message: 'Error',
+                description: 'Please enter your email.',
+            });
             return;
         }
-
-        // Check if email is in valid format
-        if (!isValidEmail(email)) {
-            toast.error('Invalid email format. Please enter a valid email address.');
-            return;
-        }
-
+        
         const actionCodeSettings = {
-            url: 'http://localhost:3000/auth/complete-signin',
+            url: window.location.origin + '/auth/complete-signin',
             handleCodeInApp: true,
         };
-
+        
         try {
             setLoading(true);
-            setLoadingMessage(`Sending sign in link to ${email}...`);	
-
-            await sendSignInLinkToEmail(auth, email, actionCodeSettings);
-            window.localStorage.setItem('emailForSignIn', email);
-            toast.success('sign in link sent! Please check your email and click the link included.', { autoClose: 7000 });
-            navigate('/auth/complete-signin'); // Redirect to complete sign in page
+            setLoadingMessage(`Sending sign-in link to ${emailToUse}...`);
+            await sendSignInLinkToEmail(auth, emailToUse, actionCodeSettings);
+            window.localStorage.setItem('emailForSignIn', emailToUse);
+           
+            notification.success({
+                message: 'Success',
+                description: 'Sign-in link sent! Please check your email and click the link included.',
+            });
+            
+            // Navigate to complete-signin with a flag indicating we just sent an email
+            // This prevents error messages while the user waits for the email
+            navigate('/auth/complete-signin', { state: { emailJustSent: true } });
         } catch (error) {
-            // Handle Firebase Auth specific error messages
-            console.error("Error sending sign in link:", error);
-
+            console.error("Error sending sign-in link:", error);
             switch (error.code) {
                 case 'auth/invalid-email':
-                    toast.error('Invalid email format. Please enter a valid email.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'Invalid email format. Please enter a valid email.',
+                    });
                     break;
                 case 'auth/missing-email':
-                    toast.error('Please provide an email address.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'Please provide an email address.',
+                    });
                     break;
                 case 'auth/user-not-found':
-                    toast.error('No account found with this email. Please sign up or use a different email.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'No account found with this email. Please contact us.',
+                    });
                     break;
                 case 'auth/network-request-failed':
-                    toast.error('Network error. Please check your connection and try again.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'Network error. Please check your connection and try again.',
+                    });
                     break;
                 case 'auth/too-many-requests':
-                    toast.error('Too many requests. Please wait a moment and try again.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'Too many requests. Please wait a moment and try again.',
+                    });
                     break;
                 case 'auth/user-disabled':
-                    toast.error('Your account is disabled. Please contact your supervisor or manager for assistance.');
-                    break; 
+                    notification.error({
+                        message: 'Error',
+                        description: 'Your account is disabled. Please contact your supervisor or manager for assistance.',
+                    });
+                    break;
                 default:
-                    toast.error('Error sending sign in link. Please try again.');
+                    notification.error({
+                        message: 'Error',
+                        description: 'Error sending sign-in link. Please try again.',
+                    });
                     break;
             }
         } finally {
-            setLoading(false); // Reset loading state
+            setLoading(false);
         }
     };
 
     return (
         <>
-            <Helmet> <title>Sign in | AUT Events Induction Portal</title> </Helmet>
-            <div 
-                className="min-h-screen flex items-center justify-center bg-cover bg-center px-4" 
-                style={{ backgroundImage: 'url(/images/WG_OUTSIDE_AUT.webp)' }} // Background image
+            <Helmet>
+                <title>Sign-In | AUT Events Induction Portal</title>
+            </Helmet>
+            <AuthLayout
+                heading="Sign-In"
+                loading={loading}
+                loadingMessage={loadingMessage}
             >
-                {loading && <Loading message={loadingMessage} />}
-                <div className="w-full max-w-sm p-8 bg-white shadow-lg rounded-lg">
-                    <h1 className="text-3xl font-bold text-gray-800 text-center mb-6">Sign in</h1>
-                    <p className="text-sm text-gray-600 mb-4 text-center">
-                        Only approved staff can access the AUT Event induction platform. If you do not have an account and you should, or if you face any issues, please{' '}
-                        <Link to="/contact" className="font-bold text-black hover:underline">contact us.</Link>
-                    </p>
-                    <p className="text-sm text-gray-600 mb-4 text-center">
-                        If you have not set a password, please enter your email and click the "email me a sign in link" option below or{' '}
-                        <Link to="/auth/reset-password" className="font-bold text-black hover:underline">set your password here.</Link>
-                    </p>
-    
-                    <form onSubmit={handleEmailPasswordSignIn} className="space-y-4">
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email Address</label>
-                            <input
-                                className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-sm shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                required
-                                placeholder="Enter your email"
-                            />
-                        </div>
-    
-                        {showPasswordField && (
-                            <>
-                                <div>
-                                    <label htmlFor="password" className="block text-sm font-medium text-gray-700">Password</label>
-                                    <input
-                                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-sm shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                                        type="password"
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
-                                        required
-                                        placeholder="Enter your password"
-                                    />
-                                </div>
-    
-                                <div className="text-left">
-                                    <Link to="/auth/reset-password" className="text-sm font-bold text-black hover:underline">Forgot password?</Link>
-                                </div>
-    
-                                <button type="submit" className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
-                                    Sign in with Password
-                                </button>
-    
-                                <div className="flex items-center justify-between mt-4">
-                                    <hr className="flex-1 border-t border-gray-300" />
-                                    <span className="mx-2 text-sm text-gray-500">or</span>
-                                    <hr className="flex-1 border-t border-gray-300" />
-                                </div>
-    
-                                <button type="button" onClick={handlePasswordlessSignIn} className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
-                                    Send me a sign in Link
-                                </button>
-                            </>
-                        )}
-    
-                        {!showPasswordField && (
-                            <>
-                                <button type="button" onClick={handlePasswordlessSignIn} className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
-                                    Email me a Sign in Link
-                                </button>
-    
-                                <div className="flex items-center justify-between mt-4">
-                                    <hr className="flex-1 border-t border-gray-300" />
-                                    <span className="mx-2 text-sm text-gray-500">or</span>
-                                    <hr className="flex-1 border-t border-gray-300" />
-                                </div>
-    
-                                <button type="button" onClick={() => setShowPasswordField(true)} className="w-full bg-black text-white py-2 rounded-sm hover:bg-gray-900 text-center">
-                                    Sign in with Password
-                                </button>
-                            </>
-                        )}
-                    </form>
-                </div>
-            </div>
+                <p className="block text-gray-600 text-sm mb-6">
+                    Only approved staff can access the AUT Event induction platform. If you do not have an account and you should, 
+                    please <Link to="/contact" className="text-blue-600 hover:text-blue-800 transition-colors duration-200">contact us</Link>.
+                </p>
+
+                <Form
+                    form={form}
+                    name="signin"
+                    onFinish={handleEmailPasswordSignIn}
+                    layout="vertical"
+                    className="space-y-4"
+                    initialValues={{ email }}
+                >
+                    <Form.Item
+                        name="email"
+                        label={<span className="text-gray-700">Email Address</span>}
+                        rules={[
+                            {
+                                required: true,
+                                message: 'Please enter your email!',
+                                type: 'email'
+                            }
+                        ]}
+                    >
+                        <Input
+                            prefix={<MailOutlined className="site-form-item-icon text-gray-400" />}
+                            placeholder="Enter your email"
+                            onChange={(e) => setEmail(e.target.value)}
+                            className="px-4 py-2 h-11 rounded-lg"
+                        />
+                    </Form.Item>
+                    <Form.Item
+                        name="password"
+                        label={<span className="text-gray-700">Password</span>}
+                        rules={[{ required: true, message: 'Please enter your password!' }]}
+                    >
+                        <Input.Password
+                            prefix={<LockOutlined className="site-form-item-icon text-gray-400" />}
+                            placeholder="Enter your password"
+                            className="px-4 py-2 h-11 rounded-lg"
+                        />
+                    </Form.Item>
+                    {/* Forgot password link */}
+                    <div className="flex justify-end">
+                        <Link
+                            to="/auth/reset-password"
+                            state={{ email: email }}
+                            className="text-sm text-blue-600 hover:text-blue-800 transition-colors duration-200"
+                        >
+                            Forgot Password?
+                        </Link>
+                    </div>
+                    <Form.Item>
+                        <Button
+                            type="primary"
+                            htmlType="submit"
+                            className="w-full bg-blue-600 text-white font-semibold py-3 h-11 px-4 rounded-lg hover:bg-blue-700 transition-colors duration-300 text-center"
+                        >
+                            Sign In with Password
+                        </Button>
+                    </Form.Item>
+                    
+                    <Divider className="border-gray-300">
+                        <span className="text-sm text-gray-500">or</span>
+                    </Divider>
+                    
+                    <Form.Item>
+                        <Button
+                            onClick={handlePasswordlessSignIn}
+                            className="w-full flex items-center justify-center px-4 py-3 h-11 bg-white text-gray-700 font-medium text-sm rounded-lg border border-gray-300 transition-colors duration-300 hover:bg-gray-100"
+                            icon={<MailOutlined />}
+                        >
+                            Send Sign-in Link to Email
+                        </Button>
+                    </Form.Item>
+                </Form>
+                
+                <p className="mt-8 text-sm text-center block text-gray-500">
+                    If you have not set a password yet, please use the email sign-in link option above or <Link to="/auth/reset-password" state={{ email: email }} className="text-blue-600 hover:text-blue-800 transition-colors duration-200">set one here</Link>.
+                </p>
+            </AuthLayout>
         </>
-    );       
+    );
 }
 
-export default LoginPage;
+export default SignInPage;

@@ -4,7 +4,7 @@ import { UserForm } from "../../components/UserForm";
 import { createNewUser } from "../../api/UserApi";
 import { DefaultNewUser } from "../../models/User";
 import useAuth from "../../hooks/useAuth";
-import { toast } from "react-toastify";
+import { notifyError, notifySuccess } from "../../utils/notificationService";
 import PageHeader from "../../components/PageHeader";
 import ManagementSidebar from "../../components/ManagementSidebar";
 import { useNavigate } from "react-router-dom";
@@ -21,7 +21,7 @@ const AddUser = () => {
     if (user) {
       createNewUser(user, submittedUser)
         .then((createdUser) => {
-          toast.success("User created successfully!");
+          notifySuccess("User created successfully");
 
           // Save the created users info in state
           setCreatedUser({
@@ -34,7 +34,7 @@ const AddUser = () => {
         })
         .catch((err) => {
           const errorMessage = err.message || "An error occurred";
-          toast.error(errorMessage);
+          notifyError("Failed to create user", errorMessage);
         });
     }
   };

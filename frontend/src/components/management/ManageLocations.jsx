@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { toast } from "react-toastify";
 import { db } from "../../firebaseConfig";
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { Button, Popconfirm, Skeleton } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+import { notifySuccess, notifyError, messageWarning } from "../../utils/notificationService";
 
 const ManageLocations = () => {
   const [newLocationName, setNewLocationName] = useState(""); 
@@ -13,7 +13,7 @@ const ManageLocations = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState("");
-  const [filteredLocations, setFilteredLocations] = useState([]); // New state for filtered locations
+  const [filteredLocations, setFilteredLocations] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddingNew, setIsAddingNew] = useState(false); 
   const [isLoading, setIsLoading] = useState(true);
@@ -28,10 +28,10 @@ const ManageLocations = () => {
           name: doc.data().name,
         }));
         setLocations(locationsList);
-        setFilteredLocations(locationsList); // Set filtered locations to the full list initially
+        setFilteredLocations(locationsList);
       } catch (error) {
         console.error("Error fetching locations:", error);
-        toast.error("Failed to fetch locations.");
+        notifyError("Failed to fetch locations", error.message);
       } finally {
         setIsLoading(false); 
       }
@@ -61,7 +61,7 @@ const ManageLocations = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newLocationName.trim()) {
-      toast.warn("Please enter a location name.");
+      messageWarning("Please enter a location name");
       return;
     }
 
@@ -73,9 +73,9 @@ const ManageLocations = () => {
         name: newLocationName,
       });
 
-      toast.success("Location added successfully!");
-      setNewLocationName(""); // Clear input field after successful submission
-
+      notifySuccess("Location added successfully", `"${newLocationName}" has been added to your locations list.`);
+      setNewLocationName("");
+      
       // Update the location list without fetching from Firestore
       setLocations((prevLocations) => [
         ...prevLocations,
@@ -83,7 +83,7 @@ const ManageLocations = () => {
       ]);
       setIsAddingNew(false); // Close input field after submission
     } catch (error) {
-      toast.error("Failed to add location.");
+      notifyError("Failed to add location", error.message);
       console.error("Error adding location:", error);
     } finally {
       setIsSubmitting(false);
@@ -101,7 +101,7 @@ const ManageLocations = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!locationName.trim()) {
-      toast.warn("Please enter a location name.");
+      messageWarning("Please enter a location name");
       return;
     }
 
@@ -113,9 +113,9 @@ const ManageLocations = () => {
         name: locationName,
       });
 
-      toast.success("Location updated successfully!");
-      setLocationName(""); // Clear input field after successful update
-      setIsEditing(false); // Switch back to add mode
+      notifySuccess("Location updated", `Location has been renamed to "${locationName}"`);
+      setLocationName("");
+      setIsEditing(false);
 
       // Update the location list with the new name
       setLocations((prevLocations) =>
@@ -126,7 +126,7 @@ const ManageLocations = () => {
         )
       );
     } catch (error) {
-      toast.error("Failed to update location.");
+      notifyError("Failed to update location", error.message);
       console.error("Error updating location:", error);
     } finally {
       setIsSubmitting(false);
@@ -139,14 +139,19 @@ const ManageLocations = () => {
       const locationRef = doc(db, "locations", id);  // Use the id passed in directly
       await deleteDoc(locationRef);  // Delete from Firestore
 
-      toast.success("Location deleted successfully!");
+      // Find the name of the deleted location for the notification
+      const deletedLocation = locations.find(loc => loc.id === id);
+      notifySuccess(
+        "Location deleted", 
+        deletedLocation ? `"${deletedLocation.name}" has been removed` : ""
+      );
 
       // Remove the deleted location from the state
       setLocations((prevLocations) =>
         prevLocations.filter((location) => location.id !== id)
       );
     } catch (error) {
-      toast.error("Failed to delete location.");
+      notifyError("Failed to delete location", error.message);
       console.error("Error deleting location:", error);
     }
   };
@@ -157,7 +162,7 @@ const ManageLocations = () => {
     const filtered = locations.filter((dep) =>
       dep.name.toLowerCase().includes(e.target.value.toLowerCase())
     );
-    setFilteredLocations(filtered); // Update filtered locations based on search
+    setFilteredLocations(filtered);
   };
 
   return (

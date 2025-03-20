@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { toast } from "react-toastify";
 import { db } from "../../firebaseConfig";
 import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { Button, Popconfirm, Skeleton } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
+// Import the notification functions
+import { notifySuccess, notifyError, messageWarning } from "../../utils/notificationService";
 
 const ManageDepartments = () => {
   const [newDepartmentName, setNewDepartmentName] = useState(""); 
@@ -34,7 +35,7 @@ const ManageDepartments = () => {
         setFilteredDepartments(departmentsList);
       } catch (error) {
         console.error("Error fetching departments:", error);
-        toast.error("Failed to fetch departments.");
+        notifyError("Failed to fetch departments");
       } finally {
         setIsLoading(false); 
       }
@@ -75,19 +76,19 @@ const ManageDepartments = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newDepartmentName.trim()) {
-      toast.warn("Please enter a department name.");
+      messageWarning("Please enter a department name");
       return;
     }
 
     if (!newDepartmentEmail.trim()) {
-      toast.warn("Please enter a department email.");
+      messageWarning("Please enter a department email");
       return;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newDepartmentEmail)) {
-      toast.warn("Please enter a valid email address.");
+      messageWarning("Please enter a valid email address");
       return;
     }
 
@@ -100,7 +101,7 @@ const ManageDepartments = () => {
         email: newDepartmentEmail, // Add email to the document
       });
 
-      toast.success("Department added successfully!");
+      notifySuccess("Department added successfully");
       
       // Clear input fields after successful submission
       setNewDepartmentName("");
@@ -113,7 +114,7 @@ const ManageDepartments = () => {
       ]);
       setIsAddingNew(false); // Close input field after submission
     } catch (error) {
-      toast.error("Failed to add department.");
+      notifyError("Failed to add department", error.message);
       console.error("Error adding department:", error);
     } finally {
       setIsSubmitting(false);
@@ -132,19 +133,19 @@ const ManageDepartments = () => {
   const handleUpdate = async (e) => {
     e.preventDefault();
     if (!departmentName.trim()) {
-      toast.warn("Please enter a department name.");
+      messageWarning("Please enter a department name");
       return;
     }
 
     if (!departmentEmail.trim()) {
-      toast.warn("Please enter a department email.");
+      messageWarning("Please enter a department email");
       return;
     }
 
     // Basic email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(departmentEmail)) {
-      toast.warn("Please enter a valid email address.");
+      messageWarning("Please enter a valid email address");
       return;
     }
 
@@ -157,7 +158,7 @@ const ManageDepartments = () => {
         email: departmentEmail, // Update email as well
       });
 
-      toast.success("Department updated successfully!");
+      notifySuccess("Department updated successfully");
       
       // Clear input fields after successful update
       setDepartmentName("");
@@ -173,7 +174,7 @@ const ManageDepartments = () => {
         )
       );
     } catch (error) {
-      toast.error("Failed to update department.");
+      notifyError("Failed to update department", error.message);
       console.error("Error updating department:", error);
     } finally {
       setIsSubmitting(false);
@@ -186,14 +187,14 @@ const ManageDepartments = () => {
       const departmentRef = doc(db, "departments", id);
       await deleteDoc(departmentRef);
 
-      toast.success("Department deleted successfully!");
+      notifySuccess("Department deleted successfully");
 
       // Remove the deleted department from the state
       setDepartments((prevDepartments) =>
         prevDepartments.filter((department) => department.id !== id)
       );
     } catch (error) {
-      toast.error("Failed to delete department.");
+      notifyError("Failed to delete department", error.message);
       console.error("Error deleting department:", error);
     }
   };
