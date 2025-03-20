@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import { Helmet } from 'react-helmet-async'; 
-import { createNewInduction } from "../../api/InductionApi";
 import { messageWarning, notifySuccess } from '../../utils/notificationService';
 import PageHeader from "../../components/PageHeader";
 import ManagementSidebar from "../../components/ManagementSidebar";
