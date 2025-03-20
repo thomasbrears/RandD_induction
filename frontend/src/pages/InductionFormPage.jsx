@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { notifyError } from '../utils/notificationService';
 import useAuth from '../hooks/useAuth';
 import { getInduction } from '../api/InductionApi';
 import Loading from '../components/Loading';
+import QuestionTypes from '../models/QuestionTypes';
+
+const STATES = {
+  LOADING: 'LOADING',
+  SUCCESS: 'SUCCESS',
+  ERROR: 'ERROR'
+};
 
 const InductionFormPage = () => {
   const { user } = useAuth();
@@ -15,81 +22,193 @@ const InductionFormPage = () => {
   const idParam = assignmentID || id; // Use whichever is available
   const navigate = useNavigate();
   
+  // Use refs to avoid intermediate state updates
+  const stateRef = useRef(STATES.LOADING);
+  const inducRef = useRef(null);
+  const errorMessageRef = useRef(null);
+  
+  // These states will ONLY be updated once we're certain of their final values
+  const [viewState, setViewState] = useState(STATES.LOADING);
   const [induction, setInduction] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
+  
+  // Other UI states
   const [started, setStarted] = useState(false);
-  const [formData, setFormData] = useState({});
-  const [loadAttempts, setLoadAttempts] = useState(0);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [answers, setAnswers] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Load induction data just once on mount
   useEffect(() => {
-    const fetchInduction = async () => {
+    let mounted = true;
+    let errorDisplayTimeout;
+    let hasErrorBeenShown = false;
+    
+    // Clean up function to handle unmounting
+    const cleanup = () => {
+      mounted = false;
+      clearTimeout(errorDisplayTimeout);
+    };
+    
+    // Redirect immediately if no ID
+    if (!idParam) {
+      toast.error('No induction specified');
+      navigate('/inductions/my-inductions');
+      return cleanup;
+    }
+    
+    // Fetch data and handle loading states
+    const fetchData = async () => {
       try {
-        if (!idParam) {
-          notifyError('No induction specified', 'Please select an induction to complete');
-          navigate('/inductions/my-inductions');
-          return;
-        }
-        
-        setLoading(true);
-        setNotFound(false);
-        
+        console.log("Starting fetch...");
+
         const data = await getInduction(user, idParam);
         
+        // If we got valid data, always show it immediately
         if (data) {
-          setInduction(data);
-          setLoading(false);
-        } else {
-          // Only set not found after a delay to prevent flash
-          setTimeout(() => {
-            if (loadAttempts < 3) { // Try up to 3 times
-              setLoadAttempts(prev => prev + 1);
-            } else {
-              setNotFound(true);
-              setLoading(false);
+          console.log("✅ Got valid data");
+          
+          // Update refs first (these never cause renders)
+          inducRef.current = data;
+          stateRef.current = STATES.SUCCESS;
+          
+          // Only update state if still mounted
+          if (mounted) {
+            // Use requestAnimationFrame to batch these updates together
+            window.requestAnimationFrame(() => {
+              setInduction(data);
+              setViewState(STATES.SUCCESS);
+            });
+          }
+        } 
+        // If we got null data and haven't changed state yet
+        else if (stateRef.current === STATES.LOADING) {
+          console.log("❌ Got null data");
+          
+          errorMessageRef.current = 'Induction not found';
+          
+          // IMPORTANT: Only show error after a delay, giving any successful
+          // request time to come back first
+          errorDisplayTimeout = setTimeout(() => {
+            // Only change state if we STILL haven't got valid data AND still mounted
+            if (stateRef.current === STATES.LOADING && mounted) {
+              console.log("⚠️ Showing error after delay");
+              
+              stateRef.current = STATES.ERROR;
+              setViewState(STATES.ERROR);
+              
+              if (!hasErrorBeenShown) {
+                toast.error(errorMessageRef.current);
+                hasErrorBeenShown = true;
+              }
+            }
+          }, 1000); // Wait 1 second before showing error
+        }
+      } catch (error) {
+        console.error("Error in fetch:", error);
+        
+        // Only handle error if still in loading state
+        if (stateRef.current === STATES.LOADING) {
+          errorMessageRef.current = 'Error loading induction';
+          
+          // Same delay approach for errors
+          errorDisplayTimeout = setTimeout(() => {
+            if (stateRef.current === STATES.LOADING && mounted) {
+              console.log("⚠️ Showing error after delay");
+              
+              stateRef.current = STATES.ERROR;
+              setViewState(STATES.ERROR);
+              
+              if (!hasErrorBeenShown) {
+                toast.error(errorMessageRef.current);
+                hasErrorBeenShown = true;
+              }
             }
           }, 1000);
         }
-      } catch (error) {
-        console.error('Error fetching induction:', error);
-        
-        // Only show error and set not found after final attempt
-        if (loadAttempts >= 2) {
-          notifyError('Failed to load induction', 'Please try again later or contact support');
-          setNotFound(true);
-          setLoading(false);
-        } else {
-          // Try again if we haven't reached max attempts
-          setLoadAttempts(prev => prev + 1);
-        }
       }
     };
+    
+    // Set a timeout for stalled requests
+    const timeoutId = setTimeout(() => {
+      if (stateRef.current === STATES.LOADING && mounted) {
+        errorMessageRef.current = 'Request timed out';
+        
+        stateRef.current = STATES.ERROR;
+        setViewState(STATES.ERROR);
+        
+        if (!hasErrorBeenShown) {
+          toast.error(errorMessageRef.current);
+          hasErrorBeenShown = true;
+        }
+      }
+    }, 15000);
+    
+    // Start the fetch
+    fetchData();
+    
+    // Cleanup on unmount
+    return () => {
+      cleanup();
+      clearTimeout(timeoutId);
+    };
+  }, [idParam, user, navigate]);
 
-    fetchInduction();
-  }, [idParam, user, navigate, loadAttempts]);
+  const handleStart = () => {
+    setStarted(true);
+    const initialAnswers = {};
+    induction.questions.forEach(question => {
+      initialAnswers[question.id] = question.type === QuestionTypes.MULTICHOICE ? [] : '';
+    });
+    setAnswers(initialAnswers);
+  };
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  const handleAnswer = (questionId, answer) => {
+    setAnswers(prev => ({
+      ...prev,
+      [questionId]: answer
+    }));
+  };
+
+  const handleNextQuestion = () => {
+    if (currentQuestionIndex < induction.questions.length - 1) {
+      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    }
+  };
+
+  const handlePrevQuestion = () => {
+    if (currentQuestionIndex > 0) {
+      setCurrentQuestionIndex(currentQuestionIndex - 1);
+    }
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    // Submit the form data
-    console.log('Form submitted', formData);
-  };
-
-  const handleStart = () => {
-    setStarted(true);
+    setIsSubmitting(true);
+    
+    const submissionData = {
+      inductionId: induction.id,
+      userId: user?.id,
+      answers: answers,
+      completedAt: new Date().toISOString()
+    };
+    
+    console.log('Form submitted', submissionData);
+    
+    toast.success('Induction completed successfully!');
+    setTimeout(() => {
+      navigate('/inductions/my-inductions');
+    }, 2000);
   };
 
   // Calculate estimated time (assumed 2 minutes per question as a default)
   const estimatedTime = induction?.questions?.length ? induction.questions.length * 2 : 0;
 
-  if (loading) {
+  // Render based on view state
+  if (viewState === STATES.LOADING) {
     return <Loading />;
   }
 
-  if (notFound) {
+  if (viewState === STATES.ERROR) {
     return (
       <>
         <Helmet><title>Induction Not Found | AUT Events Induction Portal</title></Helmet>
@@ -148,18 +267,213 @@ const InductionFormPage = () => {
             </button>
           </div>
         ) : (
-          <div>
+          <div className="bg-white shadow-md rounded-lg p-6">
             <h1 className="text-2xl font-bold mb-4 break-words">{induction.name}</h1>
-            <p>Welcome, {user?.email}! Please complete the induction form below.</p>
-            {/* Actual induction form content would go here */}
-            <div className="mt-6">
-              <p>Induction questions would appear here...</p>
-            </div>
+            
+            {induction.questions.length > 0 ? (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* Progress indicator */}
+                <div className="mb-4">
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm font-medium">Progress</span>
+                    <span className="text-sm font-medium">{currentQuestionIndex + 1} of {induction.questions.length}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5">
+                    <div 
+                      className="bg-gray-800 h-2.5 rounded-full" 
+                      style={{ width: `${((currentQuestionIndex + 1) / induction.questions.length) * 100}%` }}
+                    ></div>
+                  </div>
+                </div>
+                
+                {/* Current question */}
+                <div className="bg-gray-50 p-6 rounded-lg">
+                  {induction.questions[currentQuestionIndex] && (
+                    <div className="space-y-4">
+                      <h2 className="text-xl font-semibold">{induction.questions[currentQuestionIndex].question}</h2>
+                      
+                      {induction.questions[currentQuestionIndex].description && (
+                        <div 
+                          className="text-gray-600 prose"
+                          dangerouslySetInnerHTML={{ __html: induction.questions[currentQuestionIndex].description }}
+                        />
+                      )}
+                      
+                      {/* Question content based on type */}
+                      <div className="mt-4">
+                        {renderQuestionByType(
+                          induction.questions[currentQuestionIndex], 
+                          answers[induction.questions[currentQuestionIndex].id], 
+                          (answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Navigation buttons */}
+                <div className="flex justify-between mt-6">
+                  <button 
+                    type="button"
+                    onClick={handlePrevQuestion}
+                    disabled={currentQuestionIndex === 0}
+                    className={`px-4 py-2 border rounded-md ${
+                      currentQuestionIndex === 0 
+                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                        : 'bg-white text-gray-800 hover:bg-gray-50'
+                    }`}
+                  >
+                    Previous
+                  </button>
+                  
+                  {currentQuestionIndex < induction.questions.length - 1 ? (
+                    <button 
+                      type="button"
+                      onClick={handleNextQuestion}
+                      className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
+                    >
+                      Next
+                    </button>
+                  ) : (
+                    <button 
+                      type="submit"
+                      disabled={isSubmitting}
+                      className={`px-6 py-2 bg-gray-800 text-white rounded-md ${
+                        isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-700'
+                      }`}
+                    >
+                      {isSubmitting ? 'Submitting...' : 'Complete Induction'}
+                    </button>
+                  )}
+                </div>
+              </form>
+            ) : (
+              <div className="text-center py-10">
+                <p className="text-xl text-gray-600">No questions available for this induction.</p>
+                <button 
+                  onClick={() => navigate('/inductions/my-inductions')}
+                  className="mt-4 px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
+                >
+                  Return to My Inductions
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>
     </>
   );
 };
+
+// Helper function to render the appropriate question type
+function renderQuestionByType(question, answer, handleAnswerChange) {
+  switch (question.type) {
+    case QuestionTypes.TRUE_FALSE:
+      return (
+        <div className="space-y-3">
+          {question.options.map((option, index) => (
+            <div key={index} className="flex items-center">
+              <input
+                type="radio"
+                id={`option-${index}`}
+                name={`question-${question.id}`}
+                value={index}
+                checked={answer === index}
+                onChange={() => handleAnswerChange(index)}
+                className="w-4 h-4 text-gray-800 border-gray-300 focus:ring-gray-500"
+              />
+              <label htmlFor={`option-${index}`} className="ml-2 block text-gray-700">
+                {option}
+              </label>
+            </div>
+          ))}
+        </div>
+      );
+      
+    case QuestionTypes.MULTICHOICE:
+      return (
+        <div className="space-y-3">
+          {question.options.map((option, index) => (
+            <div key={index} className="flex items-center">
+              <input
+                type="checkbox"
+                id={`option-${index}`}
+                name={`question-${question.id}`}
+                value={index}
+                checked={Array.isArray(answer) && answer.includes(index)}
+                onChange={() => {
+                  if (Array.isArray(answer)) {
+                    if (answer.includes(index)) {
+                      handleAnswerChange(answer.filter(i => i !== index));
+                    } else {
+                      handleAnswerChange([...answer, index]);
+                    }
+                  } else {
+                    handleAnswerChange([index]);
+                  }
+                }}
+                className="w-4 h-4 text-gray-800 border-gray-300 rounded focus:ring-gray-500"
+              />
+              <label htmlFor={`option-${index}`} className="ml-2 block text-gray-700">
+                {option}
+              </label>
+            </div>
+          ))}
+        </div>
+      );
+      
+    case QuestionTypes.DROPDOWN:
+      return (
+        <select
+          value={answer}
+          onChange={(e) => handleAnswerChange(e.target.value)}
+          className="block w-full mt-1 rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50"
+        >
+          <option value="">Select an answer</option>
+          {question.options.map((option, index) => (
+            <option key={index} value={index}>
+              {option}
+            </option>
+          ))}
+        </select>
+      );
+      
+    case QuestionTypes.FILE_UPLOAD:
+      return (
+        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+          <div className="space-y-1 text-center">
+            <svg
+              className="mx-auto h-12 w-12 text-gray-400"
+              stroke="currentColor"
+              fill="none"
+              viewBox="0 0 48 48"
+              aria-hidden="true"
+            >
+              <path
+                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            <div className="flex text-sm text-gray-600">
+              <label
+                htmlFor="file-upload"
+                className="relative cursor-pointer bg-white rounded-md font-medium text-gray-800 hover:text-gray-700 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gray-500"
+              >
+                <span>Upload a file</span>
+                <input id="file-upload" name="file-upload" type="file" className="sr-only" />
+              </label>
+              <p className="pl-1">or drag and drop</p>
+            </div>
+            <p className="text-xs text-gray-500">PNG, JPG, PDF up to 10MB</p>
+          </div>
+        </div>
+      );
+      
+    default:
+      return <p className="text-red-500">Unknown question type: {question.type}</p>;
+  }
+}
 
 export default InductionFormPage;
