@@ -6,6 +6,7 @@ import useAuth from '../hooks/useAuth';
 import { getInduction } from '../api/InductionApi';
 import Loading from '../components/Loading';
 import QuestionTypes from '../models/QuestionTypes';
+import { notifyError, notifySuccess, messageError, messageSuccess } from '../utils/notificationService';
 
 const STATES = {
   LOADING: 'LOADING',
@@ -51,7 +52,7 @@ const InductionFormPage = () => {
     
     // Redirect immediately if no ID
     if (!idParam) {
-      toast.error('No induction specified');
+      messageError('No induction specified');
       navigate('/inductions/my-inductions');
       return cleanup;
     }
@@ -90,14 +91,12 @@ const InductionFormPage = () => {
           // request time to come back first
           errorDisplayTimeout = setTimeout(() => {
             // Only change state if we STILL haven't got valid data AND still mounted
-            if (stateRef.current === STATES.LOADING && mounted) {
-              console.log("⚠️ Showing error after delay");
-              
+            if (stateRef.current === STATES.LOADING && mounted) {              
               stateRef.current = STATES.ERROR;
               setViewState(STATES.ERROR);
               
               if (!hasErrorBeenShown) {
-                toast.error(errorMessageRef.current);
+                messageError(errorMessageRef.current);
                 hasErrorBeenShown = true;
               }
             }
@@ -119,7 +118,7 @@ const InductionFormPage = () => {
               setViewState(STATES.ERROR);
               
               if (!hasErrorBeenShown) {
-                toast.error(errorMessageRef.current);
+                messageError(errorMessageRef.current);
                 hasErrorBeenShown = true;
               }
             }
@@ -137,7 +136,7 @@ const InductionFormPage = () => {
         setViewState(STATES.ERROR);
         
         if (!hasErrorBeenShown) {
-          toast.error(errorMessageRef.current);
+          messageError(errorMessageRef.current);
           hasErrorBeenShown = true;
         }
       }
@@ -194,7 +193,7 @@ const InductionFormPage = () => {
     
     console.log('Form submitted', submissionData);
     
-    toast.success('Induction completed successfully!');
+    messageSuccess('Induction completed successfully!');
     setTimeout(() => {
       navigate('/inductions/my-inductions');
     }, 2000);
