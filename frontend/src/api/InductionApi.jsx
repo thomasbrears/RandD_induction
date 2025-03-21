@@ -68,24 +68,28 @@ export const getInduction = async (user, idParam) => {
     const token = user?.token;
     const headers = token ? {authtoken: token}: {};
     
-    console.log("API: Starting induction request");
-    
-    // No artificial delay needed
-    const assignedResponse = await axios.get(`${API_URL}/users/get-assigned-induction`, {
-      headers,
-      params: { assignmentID: idParam },
-      signal: window.abortController.signal
-    });
-    
-    console.log("API: Got response", !!assignedResponse?.data?.induction);
-    
-    if (assignedResponse.data?.induction) {
-      return assignedResponse.data.induction;
+    // First attempt to get the induction from the assignment endpoint (new approach)
+    try {
+      const assignedResponse = await axios.get(`${API_URL}/users/get-assigned-induction`, {
+        headers,
+        params: { assignmentID: idParam },
+      });
+      
+      if (assignedResponse.data?.induction) {
+        return assignedResponse.data.induction;
+      }
+    } catch (err) {
+      // If the endpoint doesn't exist or returns an error, we'll try the fallback
+      console.log("Assignment endpoint failed, trying fallback...");
     }
     
-    // Important: Return null if no induction found, but don't throw error
-    console.log("API: No induction found");
-    return null;
+    // Fallback to the direct induction endpoint (old approach)
+    const response = await axios.get(`${API_URL}/inductions/get-induction`, {
+      headers,
+      params: { id: idParam },
+    });
+    
+    return response.data;
   } catch (error) {
     // Don't log aborted requests as errors
     if (error.name === 'AbortError' || error.name === 'CanceledError') {
