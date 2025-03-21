@@ -36,6 +36,7 @@ const InductionFormPage = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showAllQuestions, setShowAllQuestions] = useState(true); // New state to control view mode
 
   // Load induction data just once on mount
   useEffect(() => {
@@ -160,6 +161,11 @@ const InductionFormPage = () => {
     setAnswers(initialAnswers);
   };
 
+  // New function to toggle between slideshow and list view
+  const toggleViewMode = () => {
+    setShowAllQuestions(prev => !prev);
+  };
+
   const handleAnswer = (questionId, answer) => {
     setAnswers(prev => ({
       ...prev,
@@ -270,80 +276,158 @@ const InductionFormPage = () => {
             
             {induction.questions.length > 0 ? (
               <form onSubmit={handleSubmit} className="space-y-6">
-                {/* Progress indicator */}
-                <div className="mb-4">
-                  <div className="flex justify-between mb-2">
-                    <span className="text-sm font-medium">Progress</span>
-                    <span className="text-sm font-medium">{currentQuestionIndex + 1} of {induction.questions.length}</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div 
-                      className="bg-gray-800 h-2.5 rounded-full" 
-                      style={{ width: `${((currentQuestionIndex + 1) / induction.questions.length) * 100}%` }}
-                    ></div>
-                  </div>
+                {/* View Mode Toggle */}
+                <div className="mb-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={toggleViewMode}
+                    className="text-gray-600 hover:text-gray-800 text-sm font-medium flex items-center"
+                  >
+                    {showAllQuestions ? (
+                      <>
+                        <span>Switch to Slideshow View</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                        </svg>
+                      </>
+                    ) : (
+                      <>
+                        <span>View All Questions</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                      </>
+                    )}
+                  </button>
                 </div>
                 
-                {/* Current question */}
-                <div className="bg-gray-50 p-6 rounded-lg">
-                  {induction.questions[currentQuestionIndex] && (
-                    <div className="space-y-4">
-                      <h2 className="text-xl font-semibold">{induction.questions[currentQuestionIndex].question}</h2>
-                      
-                      {induction.questions[currentQuestionIndex].description && (
-                        <div 
-                          className="text-gray-600 prose"
-                          dangerouslySetInnerHTML={{ __html: induction.questions[currentQuestionIndex].description }}
-                        />
-                      )}
-                      
-                      {/* Question content based on type */}
-                      <div className="mt-4">
-                        {renderQuestionByType(
-                          induction.questions[currentQuestionIndex], 
-                          answers[induction.questions[currentQuestionIndex].id], 
-                          (answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)
+                {/* List view or slideshow based on showAllQuestions state */}
+                {showAllQuestions ? (
+                  /* List View - All questions displayed */
+                  <div className="space-y-8">
+                    {induction.questions.map((question, index) => (
+                      <div 
+                        key={question.id}
+                        className="bg-gray-50 p-4 sm:p-6 rounded-lg"
+                      >
+                        <h2 className="text-xl font-semibold mb-2 flex items-center">
+                          <span className="bg-gray-800 text-white rounded-full w-7 h-7 flex items-center justify-center mr-2 text-sm flex-shrink-0">
+                            {index + 1}
+                          </span>
+                          <span className="break-words">{question.question}</span>
+                        </h2>
+                        
+                        {question.description && (
+                          <div 
+                            className="text-gray-600 prose max-w-none mb-4"
+                            dangerouslySetInnerHTML={{ __html: question.description }}
+                          />
                         )}
+                        
+                        <div className="mt-2">
+                          {renderQuestionByType(
+                            question, 
+                            answers[question.id], 
+                            (answer) => handleAnswer(question.id, answer)
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  /* Slideshow View - Single question displayed */
+                  <>
+                    {/* Progress indicator */}
+                    <div className="mb-4">
+                      <div className="flex justify-between mb-2">
+                        <span className="text-sm font-medium">Progress</span>
+                        <span className="text-sm font-medium">{currentQuestionIndex + 1} of {induction.questions.length}</span>
+                      </div>
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div 
+                          className="bg-gray-800 h-2.5 rounded-full" 
+                          style={{ width: `${((currentQuestionIndex + 1) / induction.questions.length) * 100}%` }}
+                        ></div>
                       </div>
                     </div>
-                  )}
-                </div>
+                    
+                    {/* Current question */}
+                    <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
+                      {induction.questions[currentQuestionIndex] && (
+                        <div className="space-y-4">
+                          <h2 className="text-xl font-semibold">{induction.questions[currentQuestionIndex].question}</h2>
+                          
+                          {induction.questions[currentQuestionIndex].description && (
+                            <div 
+                              className="text-gray-600 prose max-w-none"
+                              dangerouslySetInnerHTML={{ __html: induction.questions[currentQuestionIndex].description }}
+                            />
+                          )}
+                          
+                          {/* Question content based on type */}
+                          <div className="mt-4">
+                            {renderQuestionByType(
+                              induction.questions[currentQuestionIndex], 
+                              answers[induction.questions[currentQuestionIndex].id], 
+                              (answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Navigation buttons */}
+                    <div className="flex justify-between mt-6">
+                      <button 
+                        type="button"
+                        onClick={handlePrevQuestion}
+                        disabled={currentQuestionIndex === 0}
+                        className={`px-4 py-2 border rounded-md ${
+                          currentQuestionIndex === 0 
+                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                            : 'bg-white text-gray-800 hover:bg-gray-50'
+                        }`}
+                      >
+                        Previous
+                      </button>
+                      
+                      {currentQuestionIndex < induction.questions.length - 1 ? (
+                        <button 
+                          type="button"
+                          onClick={handleNextQuestion}
+                          className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
+                        >
+                          Next
+                        </button>
+                      ) : (
+                        <button 
+                          type="submit"
+                          disabled={isSubmitting}
+                          className={`px-6 py-2 bg-gray-800 text-white rounded-md ${
+                            isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-700'
+                          }`}
+                        >
+                          {isSubmitting ? 'Submitting...' : 'Complete Induction'}
+                        </button>
+                      )}
+                    </div>
+                  </>
+                )}
                 
-                {/* Navigation buttons */}
-                <div className="flex justify-between mt-6">
-                  <button 
-                    type="button"
-                    onClick={handlePrevQuestion}
-                    disabled={currentQuestionIndex === 0}
-                    className={`px-4 py-2 border rounded-md ${
-                      currentQuestionIndex === 0 
-                        ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                        : 'bg-white text-gray-800 hover:bg-gray-50'
-                    }`}
-                  >
-                    Previous
-                  </button>
-                  
-                  {currentQuestionIndex < induction.questions.length - 1 ? (
-                    <button 
-                      type="button"
-                      onClick={handleNextQuestion}
-                      className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
-                    >
-                      Next
-                    </button>
-                  ) : (
+                {/* Submit button for list view */}
+                {showAllQuestions && (
+                  <div className="mt-8 flex justify-center">
                     <button 
                       type="submit"
                       disabled={isSubmitting}
-                      className={`px-6 py-2 bg-gray-800 text-white rounded-md ${
+                      className={`px-6 py-3 bg-gray-800 text-white rounded-md w-full sm:w-auto ${
                         isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-700'
                       }`}
                     >
                       {isSubmitting ? 'Submitting...' : 'Complete Induction'}
                     </button>
-                  )}
-                </div>
+                  </div>
+                )}
               </form>
             ) : (
               <div className="text-center py-10">
@@ -373,14 +457,14 @@ function renderQuestionByType(question, answer, handleAnswerChange) {
             <div key={index} className="flex items-center">
               <input
                 type="radio"
-                id={`option-${index}`}
+                id={`option-${question.id}-${index}`}
                 name={`question-${question.id}`}
                 value={index}
                 checked={answer === index}
                 onChange={() => handleAnswerChange(index)}
-                className="w-4 h-4 text-gray-800 border-gray-300 focus:ring-gray-500"
+                className="w-5 h-5 text-gray-800 border-gray-300 focus:ring-gray-500"
               />
-              <label htmlFor={`option-${index}`} className="ml-2 block text-gray-700">
+              <label htmlFor={`option-${question.id}-${index}`} className="ml-2 block text-gray-700">
                 {option}
               </label>
             </div>
@@ -395,7 +479,7 @@ function renderQuestionByType(question, answer, handleAnswerChange) {
             <div key={index} className="flex items-center">
               <input
                 type="checkbox"
-                id={`option-${index}`}
+                id={`option-${question.id}-${index}`}
                 name={`question-${question.id}`}
                 value={index}
                 checked={Array.isArray(answer) && answer.includes(index)}
@@ -410,9 +494,9 @@ function renderQuestionByType(question, answer, handleAnswerChange) {
                     handleAnswerChange([index]);
                   }
                 }}
-                className="w-4 h-4 text-gray-800 border-gray-300 rounded focus:ring-gray-500"
+                className="w-5 h-5 text-gray-800 border-gray-300 rounded focus:ring-gray-500"
               />
-              <label htmlFor={`option-${index}`} className="ml-2 block text-gray-700">
+              <label htmlFor={`option-${question.id}-${index}`} className="ml-2 block text-gray-700 text-base">
                 {option}
               </label>
             </div>
@@ -425,7 +509,7 @@ function renderQuestionByType(question, answer, handleAnswerChange) {
         <select
           value={answer}
           onChange={(e) => handleAnswerChange(e.target.value)}
-          className="block w-full mt-1 rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50"
+          className="block w-full p-2 mt-1 rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-base"
         >
           <option value="">Select an answer</option>
           {question.options.map((option, index) => (
@@ -454,15 +538,15 @@ function renderQuestionByType(question, answer, handleAnswerChange) {
                 strokeLinejoin="round"
               />
             </svg>
-            <div className="flex text-sm text-gray-600">
+            <div className="flex flex-col sm:flex-row text-sm text-gray-600 justify-center">
               <label
-                htmlFor="file-upload"
+                htmlFor={`file-upload-${question.id}`}
                 className="relative cursor-pointer bg-white rounded-md font-medium text-gray-800 hover:text-gray-700 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gray-500"
               >
                 <span>Upload a file</span>
-                <input id="file-upload" name="file-upload" type="file" className="sr-only" />
+                <input id={`file-upload-${question.id}`} name={`file-upload-${question.id}`} type="file" className="sr-only" />
               </label>
-              <p className="pl-1">or drag and drop</p>
+              <p className="pl-1 mt-1 sm:mt-0">or drag and drop</p>
             </div>
             <p className="text-xs text-gray-500">PNG, JPG, PDF up to 10MB</p>
           </div>
