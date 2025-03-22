@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Alert } from 'antd';
+import { Form, Input, Button, Alert, Skeleton } from 'antd';
 import { 
   getAuth, 
   EmailAuthProvider,
@@ -24,10 +24,12 @@ const EmailManage = () => {
   const [pendingEmailChange, setPendingEmailChange] = useState(null);
   const [pendingEmailExpiration, setPendingEmailExpiration] = useState(null);
   const [checkingVerification, setCheckingVerification] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
   useEffect(() => {
     if (auth.currentUser) {
       setCurrentEmail(auth.currentUser.email);
+      setInitialLoading(false);
     }
   }, [auth.currentUser]);
 
@@ -232,17 +234,27 @@ const EmailManage = () => {
     );
   };
 
+  // Show skeleton loading state
+  if (initialLoading) {
+    return (
+      <div className="p-6 border border-gray-300 rounded-lg shadow bg-white w-full">
+        <Skeleton active paragraph={{ rows: 6 }} title={{ width: '40%' }} />
+      </div>
+    );
+  }
+
   return (
     <div className="p-6 border border-gray-300 rounded-lg shadow bg-white w-full">
       <h2 className="text-xl font-semibold mb-4">Change Email</h2>
-      <p className="text-sm text-gray-600 mb-4">Current Email: <strong>{currentEmail}</strong>
+      <p className="text-sm text-gray-600 mb-4">Current Email: <b>{currentEmail}</b>
         {auth.currentUser?.emailVerified ? (
           <span className="ml-2 bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">Verified</span>
         ) : (
           <Button 
+            type="primary"
             size="small"
             onClick={handleSendVerificationEmail}
-            className="ml-2 text-xs bg-blue-500 hover:bg-blue-700 text-white"
+            loading={checkingVerification}
           >
             Verify Email
           </Button>
@@ -256,19 +268,18 @@ const EmailManage = () => {
             message="Email Change Pending"
             description={
               <>
-                <p>You have requested to change your email to: <strong>{pendingEmailChange}</strong></p>
-                <p>Please check your inbox and verify this email before {pendingEmailExpiration}.</p>
-                <p className="mt-2 text-sm">After clicking the verification link in your email, return here and click the button below to complete the process:</p>
+                <p>You have requested to change your email to: <b>{pendingEmailChange}</b></p>
+                <p>Please check your inbox and verify this email within the next 24 hours, before <b>{pendingEmailExpiration}.</b></p>
+                <p className="mt-2 mb-4 text-sm">After clicking the verification link in your email, return here and click the button below to complete the process:</p>
                 <Button 
                   type="primary"
                   onClick={checkVerificationStatus}
-                  className="mt-2 bg-blue-500 text-white hover:bg-blue-700"
                   loading={checkingVerification}
                 >
                   {checkingVerification ? 'Checking...' : 'Check Verification Status'}
                 </Button>
-                <p className="mt-2 text-sm text-yellow-600">
-                  <strong>Note:</strong> After verifying your new email, your current session will expire and you will need to sign in again using your new email address.
+                <p className="mt-4 text-sm text-yellow-600">
+                  <b>Note:</b> After verifying your new email, your current session will expire and you will need to sign in again using your new email address.
                 </p>
               </>
             }
@@ -286,10 +297,10 @@ const EmailManage = () => {
         <Form.Item
           label="Current Password"
           name="currentPassword"
-          rules={[{ required: true, message: 'Please input your current password!' }]}
+          rules={[{ required: true, message: 'Please input your current password to authenticate the request!' }]}
         >
           <Input.Password 
-            placeholder="Enter your current password" 
+            placeholder="Enter your current password to authenticate the request" 
             className="border p-2 w-full rounded-md"
           />
         </Form.Item>
@@ -336,11 +347,6 @@ const EmailManage = () => {
             htmlType="submit" 
             loading={isLoading}
             disabled={isLoading || !auth.currentUser?.emailVerified}
-            className={`p-2 w-full rounded-md text-white ${
-              isLoading || !auth.currentUser?.emailVerified
-                ? 'bg-gray-300 cursor-not-allowed' 
-                : 'bg-gray-800 hover:bg-gray-900'
-            }`}
           >
             {isLoading ? 'Processing...' : 'Update Email'}
           </Button>

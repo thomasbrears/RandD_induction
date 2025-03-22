@@ -29,6 +29,7 @@ import EditUser from './pages/management/EditUser';
 import Settings from './pages/management/Settings';
 import ContactSubmissions from './pages/management/ContactSubmissions.jsx';
 import ManageAccount from './pages/ManageAccountPage';
+import FeedbackTestPage from './pages/FeedbackTestPage.jsx';
 
 // Auth hook and components
 import useAuth from './hooks/useAuth';
@@ -104,6 +105,7 @@ const App = () => {
                 <Route path="/auth/complete-signin" element={<CompleteSignInPage />} />
                 <Route path="/auth/set-password" element={<SetPasswordPage />} />
                 <Route path="*" element={<NotFoundPage />} />
+                <Route path="/feedback" element={<FeedbackTestPage />} />
 
                 {/* Restricted to logged-in users */}
                 <Route path="/inductions/my-inductions" element={<PrivateRoute component={FormListPage} />} />
@@ -111,9 +113,9 @@ const App = () => {
                 <Route path="/account/manage" element={<PrivateRoute component={ManageAccount} />} />
 
                 {/* Management restricted routes for admin and/or mananger */}
-                <Route path="/admin/settings" element={<PrivateRoute component={Settings} roleRequired = {[Permissions.ADMIN]} />} />
-                <Route path="/management/contact-submissions" element={<PrivateRoute component={ContactSubmissions} roleRequired = {[Permissions.ADMIN, Permissions.MANAGER]} />} />
-                <Route path="/management/dashboard" element={<PrivateRoute component={Dashboard} roleRequired = {[Permissions.ADMIN, Permissions.MANAGER]} />} />
+                <Route path="/admin/settings" element={<PrivateRoute component={Settings} roleRequired={[Permissions.ADMIN]} />} />
+                <Route path="/management/contact-submissions" element={<PrivateRoute component={ContactSubmissions} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+                <Route path="/management/dashboard" element={<PrivateRoute component={Dashboard} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
                 <Route path="/management/users/view" element={<PrivateRoute component={ViewUsers} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
                 <Route path="/management/users/edit" element={<PrivateRoute component={EditUser} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
                 <Route path="/management/users/create" element={<PrivateRoute component={UserForm} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />

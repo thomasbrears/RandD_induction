@@ -60,8 +60,6 @@ const InductionFormPage = () => {
     // Fetch data and handle loading states
     const fetchData = async () => {
       try {
-        console.log("Starting fetch...");
-
         const data = await getInduction(user, idParam);
         
         // If we got valid data, always show it immediately
