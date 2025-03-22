@@ -18,6 +18,8 @@
     "buffer": "^6.0.3",
     "dayjs": "^1.11.13",
     "firebase": "^10.13.1",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^3.0.1",
     "lucide-react": "^0.446.0",
     "moment": "^2.30.1",
     "process": "^0.11.10",

@@ -1,31 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { getAssignedInductions } from '../api/InductionApi';
+import React, { useState, useEffect, useCallback } from 'react';
+import { getAssignedInductions, getInduction } from '../api/InductionApi';
 import useAuth from '../hooks/useAuth';
-import { Skeleton } from 'antd';
-import {
-  createColumnHelper,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  useReactTable,
-  getPaginationRowModel,
-} from '@tanstack/react-table';
-import {
-  ArrowUpDown,
-  Search,
-  ChevronsLeft,
-  ChevronLeft,
-  ChevronRight,
-  ChevronsRight,
-} from 'lucide-react';
-import '../style/Table.css';
-import { Link } from 'react-router-dom';
+import { Tabs, Button, Table, Tooltip, Input, Empty } from 'antd';
+import { SearchOutlined, CheckCircleOutlined, TrophyOutlined } from '@ant-design/icons';
+import { Link, useNavigate } from 'react-router-dom';
+import CompletionCertificate from './CompletionCertificate';
 import Status from '../models/Status';
-import Loading from '../components/Loading';
-import { notifyError } from '../utils/notificationService';
+import { 
+  notifyError, 
+  notifyWarning
+} from '../utils/notificationService';
 
-const columnHelper = createColumnHelper();
+const { TabPane } = Tabs;
 
 // Reusable StatusBadge Component
 const StatusBadge = ({ status }) => {
@@ -45,56 +31,217 @@ const StatusBadge = ({ status }) => {
   );
 };
 
-
 // Reusable DateCell Component
 const DateCell = ({ date }) => (
   <span>{date ? new Date(date).toLocaleDateString() : 'Not Available'}</span>
 );
 
-// Reusable ActionButton Component
-const ActionButton = ({ status, assignmentID }) => {
-  if ([Status.ASSIGNED, Status.IN_PROGRESS, Status.OVERDUE].includes(status)) {
+// Certificate Button Component
+const CertificateButton = ({ record, user }) => {
+  const [fullInduction, setFullInduction] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(false);
+
+  const loadInductionDetails = async () => {
+    if (fullInduction) {
+      return;
+    }
+    
+    setLoading(true);
+    setError(false);
+    
+    try {
+      const data = await getInduction(user, record.assignmentID);
+            
+      if (data) {
+        setFullInduction({
+          ...data,
+          name: data.name || record.name
+        });
+      } else {
+        throw new Error('No data returned');
+      }
+    } catch (error) {
+      setError(true);
+      notifyError('Certificate Error', 'Unable to generate certificate. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCertificateClick = () => {
+    loadInductionDetails();
+  };
+
+  // If there was an error, allow retrying
+  if (error) {
     return (
-      <Link to={`/induction/take?assignmentID=${assignmentID}`}>
-        <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
-          {status === Status.IN_PROGRESS ? 'Continue' : 'Start'}
-        </button>
-      </Link>
+      <Button 
+        type="default"
+        danger
+        icon={<TrophyOutlined />}
+        onClick={handleCertificateClick}
+        loading={loading}
+      >Retry Certificate
+      </Button>
+    );
+  }
+
+  return fullInduction ? (
+    <CompletionCertificate 
+      induction={fullInduction}
+      user={user}
+      completionDate={record.completionDate}
+      fallbackName={record.name}
+    />
+  ) : (
+    <Button 
+      type="primary" 
+      icon={<TrophyOutlined />}
+      onClick={handleCertificateClick}
+      loading={loading}
+      className="certificate-btn"
+      style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+    >View Certificate
+    </Button>
+  );
+};
+
+// Reusable ActionButton Component
+const ActionButton = ({ status, assignmentID, availableFrom }) => {
+  const now = new Date();
+  const startDate = availableFrom ? new Date(availableFrom) : null;
+  const isFutureInduction = startDate && startDate > now;
+  const daysUntilAvailable = startDate ? Math.ceil((startDate - now) / (1000 * 60 * 60 * 24)) : 0;
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  const handleStartClick = (e) => {
+    e.preventDefault();
+    
+    // Verify user has a token before navigating
+    if (!user?.token) {
+      notifyWarning('Login Required', 'Please log in to start this induction');
+      navigate('/auth/signin', { state: { from: `/induction/take?assignmentID=${assignmentID}` } });
+      return;
+    }
+    
+    // Navigate to the induction page
+    navigate(`/induction/take?assignmentID=${assignmentID}`);
+  };
+
+  if ([Status.ASSIGNED, Status.IN_PROGRESS, Status.OVERDUE].includes(status)) {
+    if (isFutureInduction) {
+      return (
+        <Tooltip title={`Available in ${daysUntilAvailable} day${daysUntilAvailable !== 1 ? 's' : ''}`}>
+          <Button type="primary" disabled>
+            Start
+          </Button>
+        </Tooltip>
+      );
+    }
+    
+    return (
+      <Button type="primary" onClick={handleStartClick}>
+        {status === Status.IN_PROGRESS ? 'Continue' : 'Start'}
+      </Button>
     );
   } else if (status === Status.COMPLETE) {
     return (
-      <Link to={`/induction/results/${assignmentID}`}>
-        <button className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-1 rounded">
-          View Results
-        </button>
-      </Link>
+      <div className="flex items-center text-green-600">
+        <CheckCircleOutlined className="mr-1" />
+        <span>Completed</span>
+      </div>
     );
   }
   return null;
+};
+
+// Loading Skeleton Component
+const TableSkeleton = () => (
+  <div className="space-y-4">
+    <div className="flex items-center gap-4 mb-4">
+      <div className="w-full h-10 bg-gray-200 rounded animate-pulse"></div>
+    </div>
+    <div className="hidden lg:block">
+      <div className="min-w-full bg-white shadow-md rounded-lg">
+        <div className="bg-gray-50 px-5 py-3 flex">
+          {[1, 2, 3, 4, 5, 6].map((i) => (
+            <div key={i} className="w-1/6 h-6 bg-gray-200 rounded animate-pulse mr-2"></div>
+          ))}
+        </div>
+        <div className="bg-white divide-y divide-gray-200">
+          {[1, 2, 3, 4, 5].map((row) => (
+            <div key={row} className="flex px-6 py-4">
+              {[1, 2, 3, 4, 5, 6].map((cell) => (
+                <div key={cell} className="w-1/6 h-6 bg-gray-200 rounded animate-pulse mr-2"></div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+    <div className="lg:hidden space-y-4">
+      {[...Array(5)].map((_, index) => (
+        <div key={index} className="bg-white shadow-md rounded-lg p-4">
+          <div className="h-6 bg-gray-200 rounded animate-pulse w-3/4 mb-4"></div>
+          <div className="space-y-2">
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-full"></div>
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-full"></div>
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-full"></div>
+            <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
+          </div>
+          <div className="mt-4 h-8 bg-gray-200 rounded animate-pulse w-24"></div>
+        </div>
+      ))}
+    </div>
+  </div>
+);
+
+const SearchInputWithFocus = ({ value, onChange }) => {
+  const inputRef = React.useRef(null);
+  
+  return (
+    <Input
+      ref={inputRef}
+      placeholder="Search inductions..."
+      prefix={<SearchOutlined />}
+      value={value}
+      onChange={onChange}
+      className="mb-4"
+      allowClear
+    />
+  );
 };
 
 // Main AssignedInductions Component
 const AssignedInductions = ({ uid }) => {
   const [assignedInductions, setAssignedInductions] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [loadingMessage, setLoadingMessage] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [activeTab, setActiveTab] = useState('1');
   const { user } = useAuth();
-  const [sorting, setSorting] = useState([]);
-  const [globalFilter, setGlobalFilter] = useState('');
 
   const userId = uid || user?.uid;
+
+  // Handle search input change
+  const handleSearchChange = useCallback((e) => {
+    setSearchText(e.target.value);
+  }, []);
 
   useEffect(() => {
     if (user && userId) {
       const fetchInductions = async () => {
         setLoading(true);
-        setLoadingMessage(`Loading inductions for ${user.displayName || user.email}...`);
         try {
           const response = await getAssignedInductions(user, userId);
           setAssignedInductions(response.assignedInductions || []);
         } catch (error) {
-          notifyError('Unable to load assigned inductions', 'Please try again later.');          
-          console.error('Error fetching assigned induction list:', error);
+          if (error.response?.status === 401) {
+            notifyError('Authentication Error', 'Your session has expired. Please log in again.');
+          } else {
+            notifyError('Unable to load assigned inductions', 'Please try again later or contact support.');
+          }
         } finally {
           setLoading(false);
         }
@@ -104,226 +251,175 @@ const AssignedInductions = ({ uid }) => {
     }
   }, [user, userId]);
 
-  const columns = [
-    columnHelper.accessor('name', {
-      cell: (info) => (
-        <Link to={`/induction/take?assignmentID=${info.row.original.assignmentID}`} className="text-black hover:underline">
-          {info.getValue()}
+  // Handle tab change
+  const handleTabChange = (key) => {
+    setActiveTab(key);
+  };
+
+  // Separate inductions into active and completed
+  const activeInductions = assignedInductions.filter(induction => 
+    induction.status !== Status.COMPLETE
+  );
+  
+  const completedInductions = assignedInductions.filter(induction => 
+    induction.status === Status.COMPLETE
+  );
+
+  // Filter function for search
+  const filterInductions = useCallback((dataSource) => {
+    if (!searchText) return dataSource;
+    
+    return dataSource.filter(item => 
+      item.name?.toLowerCase().includes(searchText.toLowerCase())
+    );
+  }, [searchText]);
+
+  // Define ANTD table columns
+  const activeColumns = [
+    {
+      title: 'Induction Name',
+      dataIndex: 'name',
+      key: 'name',
+      sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+      render: (text, record) => (
+        <Link to={`/induction/take?assignmentID=${record.assignmentID}`} className="text-black hover:underline">
+          {text || 'Unnamed Induction'}
         </Link>
       ),
-      header: 'Induction Name',
-    }),
-    columnHelper.accessor('availableFrom', {
-      cell: (info) => <DateCell date={info.getValue()} />,
-      header: 'Available From',
-    }),
-    columnHelper.accessor('dueDate', {
-      cell: (info) => <DateCell date={info.getValue()} />,
-      header: 'Due Date',
-    }),
-    columnHelper.accessor('completionDate', {
-      cell: (info) => <DateCell date={info.getValue()} />,
-      header: 'Completion Date',
-    }),
-    columnHelper.accessor('status', {
-      cell: (info) => <StatusBadge status={info.getValue()} />,
-      header: 'Status',
-    }),
-    columnHelper.display({
-      id: 'actions',
-      cell: (info) => (
+    },
+    {
+      title: 'Available From',
+      dataIndex: 'availableFrom',
+      key: 'availableFrom',
+      sorter: (a, b) => new Date(a.availableFrom || 0) - new Date(b.availableFrom || 0),
+      render: (date) => <DateCell date={date} />,
+    },
+    {
+      title: 'Due Date',
+      dataIndex: 'dueDate',
+      key: 'dueDate',
+      sorter: (a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0),
+      render: (date) => <DateCell date={date} />,
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      sorter: (a, b) => (a.status || 0) - (b.status || 0),
+      render: (status) => <StatusBadge status={status} />,
+    },
+    {
+      title: '',
+      key: 'action',
+      render: (_, record) => (
         <ActionButton 
-          status={info.row.original.status} 
-          assignmentID={info.row.original.assignmentID}
+          status={record.status} 
+          assignmentID={record.assignmentID}
+          availableFrom={record.availableFrom}
         />
       ),
-      header: 'Action',
-    }),    
+    },
   ];
 
-  const table = useReactTable({
-    data: assignedInductions,
-    columns,
-    state: {
-      sorting,
-      globalFilter,
+  const completedColumns = [
+    {
+      title: 'Induction Name',
+      dataIndex: 'name',
+      key: 'name',
+      sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
+      render: (text, record) => (
+        <Link to={`/induction/take?assignmentID=${record.assignmentID}`} className="text-black hover:underline">
+          {text || 'Unnamed Induction'}
+        </Link>
+      ),
     },
-    initialState: {
-      pagination: { pageSize: 10 },
-      sorting: [
-        { id: 'status', desc: false },
-        { id: 'dueDate', desc: false },
-      ],
+    {
+      title: 'Available From',
+      dataIndex: 'availableFrom',
+      key: 'availableFrom',
+      sorter: (a, b) => new Date(a.availableFrom || 0) - new Date(b.availableFrom || 0),
+      render: (date) => <DateCell date={date} />,
     },
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-    onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
-    onGlobalFilterChange: setGlobalFilter,
-    getFilteredRowModel: getFilteredRowModel(),
-  });
+    {
+      title: 'Due Date',
+      dataIndex: 'dueDate',
+      key: 'dueDate',
+      sorter: (a, b) => new Date(a.dueDate || 0) - new Date(b.dueDate || 0),
+      render: (date) => <DateCell date={date} />,
+    },
+    {
+      title: 'Completion Date',
+      dataIndex: 'completionDate',
+      key: 'completionDate',
+      sorter: (a, b) => new Date(a.completionDate || 0) - new Date(b.completionDate || 0),
+      render: (date) => <DateCell date={date} />,
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status) => <StatusBadge status={status} />,
+    },
+    {
+      title: 'Certificate',
+      key: 'certificate',
+      render: (_, record) => (
+        <CertificateButton 
+          record={record}
+          user={user}
+        />
+      ),
+    }
+  ];
+
+  if (loading) {
+    return <TableSkeleton />;
+  }
+
+  if (assignedInductions.length === 0) {
+    return <Empty description="No inductions assigned" />;
+  }
 
   return (
     <div className="tableContainer">
-      {loading ? (
-        <div className="lg:hidden space-y-4">
-        {[...Array(5)].map((_, index) => (
-          <div key={index} className="bg-white shadow-md rounded-lg p-4">
-            <Skeleton active paragraph={{ rows: 1 }} title={false} />
-            <Skeleton active paragraph={{ rows: 3 }} />
-          </div>
-        ))}
-      </div>
-      ) : assignedInductions.length === 0 ? (
-        <div className="p-4 text-center text-black text-2xl font-bold">No inductions assigned.</div>
-      ) : (
-        <>
-          <div className="mb-4 flex items-center gap-4">
-            <div className="relative flex-grow">
-              <input
-                value={globalFilter ?? ''}
-                onChange={(e) => setGlobalFilter(e.target.value)}
-                placeholder="Search..."
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+      <SearchInputWithFocus 
+        value={searchText}
+        onChange={handleSearchChange}
+      />
+      
+      <Tabs 
+        activeKey={activeTab}
+        onChange={handleTabChange}
+        items={[
+          {
+            key: '1',
+            label: `Active Inductions (${activeInductions.length})`,
+            children: (
+              <Table
+                dataSource={filterInductions(activeInductions)}
+                columns={activeColumns}
+                rowKey="assignmentID"
+                pagination={activeInductions.length > 10 ? { pageSize: 10 } : false}
+                locale={{ emptyText: <Empty description="No active inductions" /> }}
               />
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={20} />
-            </div>
-          </div>
-
-          {/* Desktop Table */}
-          <div className="hidden lg:block">
-            <table className="min-w-full divide-y divide-gray-200 bg-white shadow-md rounded-lg">
-              <thead className="bg-gray-50">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <tr key={headerGroup.id}>
-                    {headerGroup.headers.map((header) => (
-                      <th key={header.id} className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">
-                        <div
-                          {...{
-                            className: header.column.getCanSort() ? 'cursor-pointer select-none' : '',
-                            onClick: header.column.getToggleSortingHandler(),
-                          }}
-                        >
-                          {flexRender(header.column.columnDef.header, header.getContext())}
-                          {header.column.getCanSort() && <ArrowUpDown className="ml-2" size={14} />}
-                        </div>
-                      </th>
-                    ))}
-                  </tr>
-                ))}
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {table.getRowModel().rows.map((row) => (
-                  <tr key={row.id} className="hover:bg-gray-50">
-                    {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-6 py-4 text-sm text-gray-500">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Mobile Induction Cards */}
-          <div className="lg:hidden space-y-4">
-            {table.getRowModel().rows.map((row) => (
-              <div key={row.id} className="bg-white shadow-md rounded-lg p-4">
-                <h3 className="text-lg font-semibold">
-                  <Link to={`/induction/take?assignmentID=${row.original.assignmentID}`} className="text-black hover:underline">
-                    {row.original.name}
-                  </Link>
-                </h3>
-                <div className="text-sm text-gray-600 mt-2">
-                  <p>
-                    <span className="font-semibold">Available From:</span> <DateCell date={row.original.availableFrom} />
-                  </p>
-                  <p>
-                    <span className="font-semibold">Due Date:</span> <DateCell date={row.original.dueDate} />
-                  </p>
-                  <p>
-                    <span className="font-semibold">Completion Date:</span> <DateCell date={row.original.completionDate} />
-                  </p>
-                  <p>
-                    <span className="font-semibold">Status:</span> <StatusBadge status={row.original.status} />
-                  </p>
-                </div>
-                <div className="mt-4">
-                  <ActionButton status={row.original.status} assignmentID={row.original.assignmentID} />
-                </div>
-              </div>
-            ))}
-          </div>
-
-          {/* Pagination Controls */}
-          <div className="flex flex-col sm:flex-row justify-between items-center mt-4 text-sm text-gray-700">
-              {/* Items per page */}
-              <div className="flex items-center mb-4 sm:mb-0">
-                <span className="mr-2">Items per page</span>
-                <select
-                  className="border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2"
-                  value={table.getState().pagination.pageSize}
-                  onChange={(e) => {
-                    table.setPageSize(Number(e.target.value));
-                  }}
-                >
-                  {[10, 20, 30, 40].map((pageSize) => (
-                    <option key={pageSize} value={pageSize}>
-                      {pageSize}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {/* Pagination Buttons */}
-              <div className="flex items-center space-x-2">
-                <button
-                  className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
-                  onClick={() => table.setPageIndex(0)}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <ChevronsLeft size={20} />
-                </button>
-                <button
-                  className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <ChevronLeft size={20} />
-                </button>
-                <span className="flex items-center">
-                  <input
-                    min={1}
-                    max={table.getPageCount()}
-                    type="number"
-                    value={table.getState().pagination.pageIndex + 1}
-                    onChange={(e) => {
-                      const page = e.target.value ? Number(e.target.value) - 1 : 0;
-                      table.setPageIndex(page);
-                    }}
-                    className="w-16 p-2 rounded-md border border-gray-300 text-center"
-                  />
-                  <span className="ml-1">of {table.getPageCount()}</span>
-                </span>
-                <button
-                  className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <ChevronRight size={20} />
-                </button>
-                <button
-                  className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
-                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <ChevronsRight size={20} />
-                </button>
-              </div>
-            </div>
-          </>
-        )}
-      </div>
+            )
+          },
+          {
+            key: '2',
+            label: `Completed Inductions (${completedInductions.length})`,
+            children: (
+              <Table
+                dataSource={filterInductions(completedInductions)}
+                columns={completedColumns}
+                rowKey="assignmentID"
+                pagination={completedInductions.length > 10 ? { pageSize: 10 } : false}
+                locale={{ emptyText: <Empty description="No completed inductions" /> }}
+              />
+            )
+          }
+        ]}
+      />
+    </div>
   );
 };
 
