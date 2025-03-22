@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import useAuth from "../../hooks/useAuth";
 import { DefaultNewInduction } from "../../models/Inductions";
-import { updateInduction, getInduction } from "../../api/InductionApi";
+import { updateInduction, getInduction, deleteInduction } from "../../api/InductionApi";
 import PageHeader from "../../components/PageHeader";
 import ManagementSidebar from "../../components/ManagementSidebar";
 import { FaSave } from 'react-icons/fa';
@@ -231,6 +231,15 @@ const InductionEdit = () => {
     return missingFields;
   };
 
+  const onDeleteInduction = async () => {
+    if (user) {
+      const result = await deleteInduction(user, induction.id);
+      console.log(result);
+      toast.success("Induction deleted successfully!");
+      navigate(-1);
+    }
+  };
+
   return (
     <>
       <Helmet><title>Edit Induction | AUT Events Induction Portal</title></Helmet>
@@ -299,20 +308,38 @@ const InductionEdit = () => {
                   {actionType === "prompt" && (
                     <>
                       <p>Some details are missing. Please review the list below and try again.</p>
-                      <hr />
-                      <p>Issues that need attention:</p>
-                      <ul>{checkForMissingFields().map((field) => <li key={field}>{field}</li>)}</ul>
+
+                      {checkForMissingFields().length > 0 && (
+                        <>
+                          <div className="mt-4"></div>
+                          <div className="p-4 bg-gray-50 border-l-4 border-gray-300 text-gray-700 rounded-md">
+                            <p className="font-medium">Issues that need attention:</p>
+                            <ul className="list-disc list-inside mt-2 space-y-1">
+                              {checkForMissingFields().map((field) => (
+                                <li key={field} className="ml-4">{field}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        </>
+                      )}
                     </>
                   )}
                   {actionType === "unfinished" && <p>You have unsaved and missing fields. Would you like to save first?</p>}
                   {actionType === "failedSave" && (
                     <>
                       <p>Some fields couldn't be saved. Please check the details and try again.</p>
+
                       {checkForMissingFields().length > 0 && (
                         <>
-                          <hr />
-                          <p>Issues that need attention:</p>
-                          <ul>{checkForMissingFields().map((field) => <li key={field}>{field}</li>)}</ul>
+                          <div className="mt-4"></div>
+                          <div className="p-4 bg-gray-50 border-l-4 border-gray-300 text-gray-700 rounded-md">
+                            <p className="font-medium">Issues that need attention:</p>
+                            <ul className="list-disc list-inside mt-2 space-y-1">
+                              {checkForMissingFields().map((field) => (
+                                <li key={field} className="ml-4">{field}</li>
+                              ))}
+                            </ul>
+                          </div>
                         </>
                       )}
                     </>
@@ -330,6 +357,7 @@ const InductionEdit = () => {
                 isCreatingInduction={false}
                 saveAllFields={saveAllFields}
                 updateFieldsBeingEdited={updateFieldsBeingEdited}
+                onDeleteInduction={onDeleteInduction}
               />
 
               {/* Main content for managing induction details */}
@@ -358,7 +386,7 @@ const InductionEdit = () => {
             </div>
           </>
         )}
-      </div>
+      </div >
     </>
   );
 };

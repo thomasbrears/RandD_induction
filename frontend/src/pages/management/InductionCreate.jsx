@@ -58,8 +58,8 @@ const InductionCreate = () => {
     });
   };
 
-  const handleCancelAndReturnButton =() =>{
-    navigate(-1); 
+  const handleCancelAndReturnButton = () => {
+    navigate(-1);
   };
 
   const handleSubmitButton = () => {
@@ -88,7 +88,7 @@ const InductionCreate = () => {
       if (savingInProgress) return;
       setSaveAllFields(true);
       setSavingInProgress(true);
-  
+
       const timeoutId = setTimeout(handleFailedSave, 5000);
       setSaveTimeoutId(timeoutId);
     } else {
@@ -278,14 +278,15 @@ const InductionCreate = () => {
           {/* Modal for induction creation steps */}
           {showModal && (
             <Modal
-              visible={showModal}
+              open={showModal}
               title={currentStep === 0
                 ? "Welcome, let's create your induction module."
                 : currentStep === 1
                   ? "Name"
                   : currentStep === 2
                     ? "Department"
-                    : "Description"}
+                    : "Description"
+              }
               onCancel={HANDLE_CLOSE_MODAL}
               footer={null}
               width={600}
@@ -352,26 +353,38 @@ const InductionCreate = () => {
                 )}
               </div>
 
+              {/* Button Section */}
               <div className="flex justify-between mt-12">
-                {currentStep > 0 && (
-                  <Button onClick={HANDLE_PREVIOUS_STEP} type="default">
-                    Back
+                <div className="flex justify-between w-full">
+                  {/* Cancel and Return Button - Bottom Left */}
+                  <Button
+                    onClick={handleCancelAndReturnButton}
+                    type="default"
+                    className="mr-4"
+                  >
+                    Cancel and Return
                   </Button>
-                )}
-                <Button onClick={handleCancelAndReturnButton} type="default">
-                  Cancel and Return
-                </Button>
-                <Button
-                  onClick={currentStep === 3 ? HANDLE_CLOSE_MODAL : HANDLE_NEXT_STEP}
-                  type="primary"
-                  disabled={
-                    (currentStep === 1 && !induction.name) ||
-                    (currentStep === 2 && !induction.department) ||
-                    (currentStep === 3 && !induction.description)
-                  }
-                >
-                  {currentStep === 3 ? "Continue to add questions" : "Next"}
-                </Button>
+
+                  {/* Back and Next Buttons - Bottom Right */}
+                  <div className="flex space-x-4">
+                    {currentStep > 0 && (
+                      <Button onClick={HANDLE_PREVIOUS_STEP} type="default">
+                        Back
+                      </Button>
+                    )}
+                    <Button
+                      onClick={currentStep === 3 ? HANDLE_CLOSE_MODAL : HANDLE_NEXT_STEP}
+                      type="primary"
+                      disabled={
+                        (currentStep === 1 && !induction.name) ||
+                        (currentStep === 2 && !induction.department) ||
+                        (currentStep === 3 && !induction.description)
+                      }
+                    >
+                      {currentStep === 3 ? "Continue to add questions" : "Next"}
+                    </Button>
+                  </div>
+                </div>
               </div>
             </Modal>
           )}
@@ -413,8 +426,8 @@ const InductionCreate = () => {
                       )}
                       {(!(actionType === "prompt" || actionType === "unfinished" || actionType === "failedSave")) && (
                         <Button key="cancel" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
-                        Cancel
-                      </Button>
+                          Cancel
+                        </Button>
                       )}
                     </div>
                   }
@@ -430,20 +443,38 @@ const InductionCreate = () => {
                       {actionType === "prompt" && (
                         <>
                           <p>Some details are missing. Please review the list below and try again.</p>
-                          <hr />
-                          <p>Issues that need attention:</p>
-                          <ul>{checkForMissingFields().map((field) => <li key={field}>{field}</li>)}</ul>
+
+                          {checkForMissingFields().length > 0 && (
+                            <>
+                              <div className="mt-4"></div>
+                              <div className="p-4 bg-gray-50 border-l-4 border-gray-300 text-gray-700 rounded-md">
+                                <p className="font-medium">Issues that need attention:</p>
+                                <ul className="list-disc list-inside mt-2 space-y-1">
+                                  {checkForMissingFields().map((field) => (
+                                    <li key={field} className="ml-4">{field}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </>
+                          )}
                         </>
                       )}
                       {actionType === "unfinished" && <p>You have unsaved and missing fields. Would you like to save first?</p>}
                       {actionType === "failedSave" && (
                         <>
                           <p>Some fields couldn't be saved. Please check the details and try again.</p>
+
                           {checkForMissingFields().length > 0 && (
                             <>
-                              <hr />
-                              <p>Issues that need attention:</p>
-                              <ul>{checkForMissingFields().map((field) => <li key={field}>{field}</li>)}</ul>
+                              <div className="mt-4"></div>
+                              <div className="p-4 bg-gray-50 border-l-4 border-gray-300 text-gray-700 rounded-md">
+                                <p className="font-medium">Issues that need attention:</p>
+                                <ul className="list-disc list-inside mt-2 space-y-1">
+                                  {checkForMissingFields().map((field) => (
+                                    <li key={field} className="ml-4">{field}</li>
+                                  ))}
+                                </ul>
+                              </div>
                             </>
                           )}
                         </>

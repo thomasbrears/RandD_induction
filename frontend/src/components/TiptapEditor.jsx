@@ -4,6 +4,7 @@ import Underline from "@tiptap/extension-underline";
 import CharacterCount from "@tiptap/extension-character-count";
 import Placeholder from '@tiptap/extension-placeholder';
 import { Bold, Italic, Underline as UnderlineIcon } from "lucide-react";
+import "../style/Tiptap.css";
 
 export default function TiptapEditor({ localDescription, handleLocalChange }) {
     const maxDescriptionLength = 500;
@@ -70,32 +71,7 @@ export default function TiptapEditor({ localDescription, handleLocalChange }) {
                         border: "none",
                     }}
                 />
-                <style jsx global>{`
-                    .ProseMirror {
-                        outline: none !important;
-                        border: none !important;
-                    }
-
-                    .ProseMirror.ProseMirror-focused {
-                        outline: none !important;
-                        border: none !important;
-                    }
-
-                    .tiptap p {
-                        margin-top: 0 !important;
-                        margin-bottom: 0 !important;
-                        border: none !important;
-                    }
-                    .tiptap p.is-editor-empty:first-child::before {
-                        color: #adb5bd;
-                        content: attr(data-placeholder);
-                        float: left;
-                        height: 0;
-                        pointer-events: none;
-                        font-size: 1rem;
-                        line-height: 1.5;
-                    }
-                `}</style>
+                
             </div>
             {/* Character Counter */}
             <p className={`text-sm mt-1 ${editor.storage.characterCount.characters() === maxDescriptionLength ? "text-red-500" : "text-gray-500"}`}>

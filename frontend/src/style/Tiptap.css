@@ -1,0 +1,25 @@
+.ProseMirror {
+    outline: none !important;
+    border: none !important;
+  }
+  
+  .ProseMirror.ProseMirror-focused {
+    outline: none !important;
+    border: none !important;
+  }
+  
+  .tiptap p {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    border: none !important;
+  }
+  
+  .tiptap p.is-editor-empty:first-child::before {
+    color: #adb5bd;
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+    font-size: 1rem;
+    line-height: 1.5;
+  }
