@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getAssignedInductions, getInduction } from '../api/InductionApi';
 import useAuth from '../hooks/useAuth';
-import { Tabs, Button, Table, Tooltip, Input, Empty } from 'antd';
-import { SearchOutlined, CheckCircleOutlined, TrophyOutlined } from '@ant-design/icons';
+import { Tabs, Button, Table, Tooltip, Input, Empty, Card } from 'antd';
+import { SearchOutlined, CheckCircleOutlined, TrophyOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { Link, useNavigate } from 'react-router-dom';
 import CompletionCertificate from './CompletionCertificate';
 import Status from '../models/Status';
@@ -32,8 +32,11 @@ const StatusBadge = ({ status }) => {
 };
 
 // Reusable DateCell Component
-const DateCell = ({ date }) => (
-  <span>{date ? new Date(date).toLocaleDateString() : 'Not Available'}</span>
+const DateCell = ({ date, label }) => (
+  <div className="flex flex-col">
+    {label && <span className="text-xs text-gray-500 lg:hidden">{label}:</span>}
+    <span>{date ? new Date(date).toLocaleDateString() : 'Not Available'}</span>
+  </div>
 );
 
 // Certificate Button Component
@@ -107,12 +110,46 @@ const CertificateButton = ({ record, user }) => {
   );
 };
 
-// Reusable ActionButton Component
-const ActionButton = ({ status, assignmentID, availableFrom }) => {
+// Check if an induction is in the future
+const isFutureInduction = (availableFrom) => {
   const now = new Date();
   const startDate = availableFrom ? new Date(availableFrom) : null;
-  const isFutureInduction = startDate && startDate > now;
-  const daysUntilAvailable = startDate ? Math.ceil((startDate - now) / (1000 * 60 * 60 * 24)) : 0;
+  return startDate && startDate > now;
+};
+
+// Get days until available
+const getDaysUntilAvailable = (availableFrom) => {
+  const now = new Date();
+  const startDate = availableFrom ? new Date(availableFrom) : null;
+  return startDate ? Math.ceil((startDate - now) / (1000 * 60 * 60 * 24)) : 0;
+};
+
+// Reusable InductionTitle component that handles future inductions
+const InductionTitle = ({ record }) => {
+  const future = isFutureInduction(record.availableFrom);
+  const daysUntil = getDaysUntilAvailable(record.availableFrom);
+  
+  if (future) {
+    return (
+      <Tooltip title={`Available in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`}>
+        <span className="text-black">
+          {record.name || 'Unnamed Induction'}
+        </span>
+      </Tooltip>
+    );
+  }
+  
+  return (
+    <Link to={`/induction/take?assignmentID=${record.assignmentID}`} className="text-black hover:underline">
+      {record.name || 'Unnamed Induction'}
+    </Link>
+  );
+};
+
+// Reusable ActionButton Component
+const ActionButton = ({ status, assignmentID, availableFrom }) => {
+  const future = isFutureInduction(availableFrom);
+  const daysUntil = getDaysUntilAvailable(availableFrom);
   const navigate = useNavigate();
   const { user } = useAuth();
 
@@ -131,10 +168,11 @@ const ActionButton = ({ status, assignmentID, availableFrom }) => {
   };
 
   if ([Status.ASSIGNED, Status.IN_PROGRESS, Status.OVERDUE].includes(status)) {
-    if (isFutureInduction) {
+    if (future) {
       return (
-        <Tooltip title={`Available in ${daysUntilAvailable} day${daysUntilAvailable !== 1 ? 's' : ''}`}>
-          <Button type="primary" disabled>
+        <Tooltip title={`Available in ${daysUntil} day${daysUntil !== 1 ? 's' : ''}`}>
+          <Button type="primary" disabled className="flex items-center">
+            <ClockCircleOutlined className="mr-1" />
             Start
           </Button>
         </Tooltip>
@@ -155,6 +193,55 @@ const ActionButton = ({ status, assignmentID, availableFrom }) => {
     );
   }
   return null;
+};
+
+// Mobile Card Component for Active Inductions
+const ActiveInductionCard = ({ induction }) => {
+  return (
+    <Card className="mb-4 shadow-sm">
+      <div className="flex justify-between items-start mb-2">
+        <div className="flex-1">
+          <h3 className="text-lg font-medium mb-1">
+            <InductionTitle record={induction} />
+          </h3>
+          <StatusBadge status={induction.status} />
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-2 mt-4 mb-4">
+        <DateCell date={induction.availableFrom} label="Available From" />
+        <DateCell date={induction.dueDate} label="Due Date" />
+      </div>
+      
+      <div className="mt-2">
+        <ActionButton 
+          status={induction.status} 
+          assignmentID={induction.assignmentID}
+          availableFrom={induction.availableFrom}
+        />
+      </div>
+    </Card>
+  );
+};
+
+// Mobile Card Component for Completed Inductions
+const CompletedInductionCard = ({ induction, user }) => {
+  return (
+    <Card className="mb-4 shadow-sm">
+      <div className="flex justify-between items-start mb-2">
+        <div className="flex-1">
+          <h3 className="text-lg font-medium mb-1">
+            <InductionTitle record={induction} /> </h3>
+        </div>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-2 mt-4 mb-4">
+        <DateCell date={induction.availableFrom} label="Available From" />
+        <DateCell date={induction.dueDate} label="Due Date" />
+        <b><DateCell date={induction.completionDate} label="Completed On" /></b>
+      </div>
+    </Card>
+  );
 };
 
 // Loading Skeleton Component
@@ -281,11 +368,7 @@ const AssignedInductions = ({ uid }) => {
       dataIndex: 'name',
       key: 'name',
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
-      render: (text, record) => (
-        <Link to={`/induction/take?assignmentID=${record.assignmentID}`} className="text-black hover:underline">
-          {text || 'Unnamed Induction'}
-        </Link>
-      ),
+      render: (text, record) => <InductionTitle record={record} />,
     },
     {
       title: 'Available From',
@@ -327,11 +410,7 @@ const AssignedInductions = ({ uid }) => {
       dataIndex: 'name',
       key: 'name',
       sorter: (a, b) => (a.name || '').localeCompare(b.name || ''),
-      render: (text, record) => (
-        <Link to={`/induction/take?assignmentID=${record.assignmentID}`} className="text-black hover:underline">
-          {text || 'Unnamed Induction'}
-        </Link>
-      ),
+      render: (text, record) => <InductionTitle record={record} />,
     },
     {
       title: 'Available From',
@@ -355,12 +434,6 @@ const AssignedInductions = ({ uid }) => {
       render: (date) => <DateCell date={date} />,
     },
     {
-      title: 'Status',
-      dataIndex: 'status',
-      key: 'status',
-      render: (status) => <StatusBadge status={status} />,
-    },
-    {
       title: 'Certificate',
       key: 'certificate',
       render: (_, record) => (
@@ -380,6 +453,39 @@ const AssignedInductions = ({ uid }) => {
     return <Empty description="No inductions assigned" />;
   }
 
+  // Mobile card view for active inductions
+  const ActiveMobileView = () => (
+    <div className="space-y-4">
+      {filterInductions(activeInductions).length === 0 ? (
+        <Empty description="No active inductions" />
+      ) : (
+        filterInductions(activeInductions).map(induction => (
+          <ActiveInductionCard 
+            key={induction.assignmentID} 
+            induction={induction} 
+          />
+        ))
+      )}
+    </div>
+  );
+
+  // Mobile card view for completed inductions
+  const CompletedMobileView = () => (
+    <div className="space-y-4">
+      {filterInductions(completedInductions).length === 0 ? (
+        <Empty description="No completed inductions" />
+      ) : (
+        filterInductions(completedInductions).map(induction => (
+          <CompletedInductionCard 
+            key={induction.assignmentID} 
+            induction={induction} 
+            user={user}
+          />
+        ))
+      )}
+    </div>
+  );
+
   return (
     <div className="tableContainer">
       <SearchInputWithFocus 
@@ -395,26 +501,46 @@ const AssignedInductions = ({ uid }) => {
             key: '1',
             label: `Active Inductions (${activeInductions.length})`,
             children: (
-              <Table
-                dataSource={filterInductions(activeInductions)}
-                columns={activeColumns}
-                rowKey="assignmentID"
-                pagination={activeInductions.length > 10 ? { pageSize: 10 } : false}
-                locale={{ emptyText: <Empty description="No active inductions" /> }}
-              />
+              <>
+                {/* Desktop view - table */}
+                <div className="hidden lg:block">
+                  <Table
+                    dataSource={filterInductions(activeInductions)}
+                    columns={activeColumns}
+                    rowKey="assignmentID"
+                    pagination={activeInductions.length > 10 ? { pageSize: 10 } : false}
+                    locale={{ emptyText: <Empty description="No active inductions" /> }}
+                  />
+                </div>
+                
+                {/* Mobile view - cards */}
+                <div className="lg:hidden">
+                  <ActiveMobileView />
+                </div>
+              </>
             )
           },
           {
             key: '2',
             label: `Completed Inductions (${completedInductions.length})`,
             children: (
-              <Table
-                dataSource={filterInductions(completedInductions)}
-                columns={completedColumns}
-                rowKey="assignmentID"
-                pagination={completedInductions.length > 10 ? { pageSize: 10 } : false}
-                locale={{ emptyText: <Empty description="No completed inductions" /> }}
-              />
+              <>
+                {/* Desktop view - table */}
+                <div className="hidden lg:block">
+                  <Table
+                    dataSource={filterInductions(completedInductions)}
+                    columns={completedColumns}
+                    rowKey="assignmentID"
+                    pagination={completedInductions.length > 10 ? { pageSize: 10 } : false}
+                    locale={{ emptyText: <Empty description="No completed inductions" /> }}
+                  />
+                </div>
+                
+                {/* Mobile view - cards */}
+                <div className="lg:hidden">
+                  <CompletedMobileView />
+                </div>
+              </>
             )
           }
         ]}

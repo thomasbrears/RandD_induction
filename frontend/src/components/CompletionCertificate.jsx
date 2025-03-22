@@ -31,11 +31,9 @@ const CompletionCertificate = ({ induction, user, completionDate, fallbackName }
   const showModal = () => {
     setIsModalVisible(true);
   };
-
   const handleCancel = () => {
     setIsModalVisible(false);
   };
-
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
     const date = new Date(dateString);
@@ -45,7 +43,6 @@ const CompletionCertificate = ({ induction, user, completionDate, fallbackName }
       year: 'numeric'
     });
   };
-
   const downloadAsPDF = async () => {
     if (!certificateRef.current) return;
    
@@ -100,11 +97,9 @@ const CompletionCertificate = ({ induction, user, completionDate, fallbackName }
       setGenerating(false);
     }
   };
-
   const printCertificate = () => {
     window.print();
   };
-
   // Add print styles to the document head
   useEffect(() => {
     const styleElement = document.createElement('style');
@@ -124,21 +119,24 @@ const CompletionCertificate = ({ induction, user, completionDate, fallbackName }
           width: 100%;
           height: 100%;
           margin: 0;
-          padding: 15mm;
+          padding: 0;
           box-sizing: border-box;
+          page-break-inside: avoid;
         }
-        /* Fix for black header and footer in print mode */
-        #certificate-header {
+        
+        /* Ensure the black strips are visible in print with !important */
+        #certificate-top-strip, #certificate-bottom-strip {
+          visibility: visible !important;
+          display: block !important;
           background-color: #000 !important;
-          -webkit-print-color-adjust: exact !important;
           print-color-adjust: exact !important;
-          color-adjust: exact !important;
+          -webkit-print-color-adjust: exact !important;
         }
-        #certificate-footer {
-          background-color: #000 !important;
-          -webkit-print-color-adjust: exact !important;
-          print-color-adjust: exact !important;
-          color-adjust: exact !important;
+        
+        /* Force landscape orientation */
+        @page {
+          size: landscape;
+          margin: 0;
         }
       }
      
@@ -159,7 +157,6 @@ const CompletionCertificate = ({ induction, user, completionDate, fallbackName }
       document.head.removeChild(styleElement);
     };
   }, []);
-
   return (
     <>
       <Button
@@ -237,12 +234,13 @@ const CompletionCertificate = ({ induction, user, completionDate, fallbackName }
         >
           {/* Black header strip for logo */}
           <div 
-            id="certificate-header"
+            id="certificate-top-strip"
             style={{
               position: 'relative',
               width: '100%',
               height: '70px',
-              background: '#000',
+              background: '#000000',
+              backgroundColor: '#000000',
               display: 'flex',
               alignItems: 'center',
               paddingLeft: '20px',
@@ -260,6 +258,7 @@ const CompletionCertificate = ({ induction, user, completionDate, fallbackName }
               }}
               onError={(e) => { e.target.style.display = 'none' }}
             />
+           
           </div>
          
           <div style={{
@@ -275,20 +274,6 @@ const CompletionCertificate = ({ induction, user, completionDate, fallbackName }
             }}>
               Certificate of Completion
             </h1>
-           
-            <div style={{
-              backgroundImage: "url('/images/certificate-seal.jpg')",
-              backgroundRepeat: 'no-repeat',
-              backgroundPosition: 'center',
-              backgroundSize: '150px',
-              opacity: 0.05,
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              right: 0,
-              bottom: 0,
-              pointerEvents: 'none'
-            }}></div>
            
             <p style={{
               fontSize: '18px',
@@ -341,13 +326,14 @@ const CompletionCertificate = ({ induction, user, completionDate, fallbackName }
          
           {/* Black footer strip */}
           <div 
-            id="certificate-footer"
+            id="certificate-bottom-strip"
             style={{
               position: 'absolute',
               bottom: '0',
               width: '100%',
               height: '20px',
-              background: '#000',
+              background: '#000000',
+              backgroundColor: '#000000',
               WebkitPrintColorAdjust: 'exact',
               printColorAdjust: 'exact'
             }}
