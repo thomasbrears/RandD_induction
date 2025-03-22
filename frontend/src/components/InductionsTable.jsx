@@ -53,7 +53,7 @@ const InductionsTable = () => {
   const columns = [
     columnHelper.accessor("name", {
       cell: (info) => (
-        <div className="break-words text-base font-heliaCoreBook text-gray-500">{info.getValue()}</div>
+        <div className="break-words text-base text-gray-500">{info.getValue()}</div>
       ),
       header: () => (
         <span className="flex items-center">
@@ -63,7 +63,7 @@ const InductionsTable = () => {
     }),
 
     columnHelper.accessor("department", {
-      cell: (info) => <span className="whitespace-nowrap text-base font-heliaCoreBook text-gray-500">{info.getValue()}</span>,
+      cell: (info) => <span className="whitespace-nowrap text-base text-gray-500">{info.getValue()}</span>,
       header: () => (
         <span className="flex items-center">
           <List className="mr-2" size={16} /> Department
@@ -73,7 +73,7 @@ const InductionsTable = () => {
 
     columnHelper.accessor("description", {
       cell: (info) => (
-        <div className="prose !max-w-xs break-words text-base font-heliaCoreBook text-gray-500">
+        <div className="prose !max-w-xs break-words text-base text-gray-500">
           <div dangerouslySetInnerHTML={{ __html: info.getValue() }} />
         </div>
       ),
@@ -251,18 +251,18 @@ const InductionsTable = () => {
                 </h3>
 
                 <div className="text-sm text-gray-600 mt-2 break-words whitespace-normal">
-                  <p>
+                  <div>
                     <span className="font-semibold">Department: </span>
                     <a href={`mailto:${row.original.department}`} className="text-blue-500 hover:underline">
                       {row.original.department}
                     </a>
-                  </p>
-                  <p>
+                  </div>
+                  <div>
                     <span className="font-semibold">Description: </span>
                     <span className="prose !max-w-none text-base">
                       <div dangerouslySetInnerHTML={{ __html: row.original.description }} />
                     </span>
-                  </p>
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap">

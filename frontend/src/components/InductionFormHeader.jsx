@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { FaEdit, FaSave, FaCheck, FaTimes } from 'react-icons/fa';
 import { toast } from 'react-toastify';
 import { Input, Button } from 'antd';
+import ConfirmationModal from './ConfirmationModal';
+import { Trash } from "lucide-react";
 
-const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduction, saveAllFields, updateFieldsBeingEdited }) => {
+const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduction, saveAllFields, updateFieldsBeingEdited, onDeleteInduction }) => {
   const [isEditingName, setIsEditingName] = useState(false);
   const [localInductionName, setLocalInductionName] = useState(induction.name || '');
   const [validationErrors, setValidationErrors] = useState({});
+  const [confirmAction, setConfirmAction] = useState(false);
+  const [actionType, setActionType] = useState(null);
 
   const toggleEditName = () => setIsEditingName((prev) => !prev);
 
@@ -53,8 +57,35 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduct
 
   }, [induction]);
 
+  //Button
+  const handleConfirmDelete = () => {
+    setActionType('delete');
+    setConfirmAction(true);
+  };
+
+  const cancelActionHandler = () => {
+    setConfirmAction(false);
+  };
+
+  const confirmActionHandler = () => {
+    if (actionType === 'delete') {
+      onDeleteInduction();
+    }
+    setConfirmAction(false);
+  };
+
   return (
     <div className="bg-white shadow-md sticky top-0 z-10">
+      <ConfirmationModal
+        isOpen={confirmAction}
+        message="Are you sure you want to delete this Induction?"
+        subtext="This action cannot be undone."
+        onCancel={cancelActionHandler}
+        onConfirm={confirmActionHandler}
+        actionLabel="Yes, Delete Induction"
+        cancelLabel="Cancel"
+      />
+
       <div className="flex flex-col sm:flex-row items-start justify-between p-4 mx-auto max-w-6xl bg-gray-50">
         <div className="flex-1 min-w-0 w-full mb-4 sm:mb-0 max-w-full">
           {/* Induction Name Section */}
@@ -126,6 +157,16 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduct
           >
             <FaSave className="inline mr-2" /> {isCreatingInduction ? "Create" : "Save"} Induction
           </button>
+          {!isCreatingInduction && (
+            <button
+              type="button"
+              onClick={handleConfirmDelete}
+              className="text-white bg-red-600 hover:bg-red-700 px-4 py-2 rounded-md"
+              title="Delete Induction"
+            >
+              <FaSave className="inline mr-2" /> Delete Induction
+            </button>
+          )}
         </div>
       </div>
     </div>

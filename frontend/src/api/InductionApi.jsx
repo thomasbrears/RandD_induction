@@ -54,6 +54,14 @@ export const createNewInduction = async (user, inductionData) => {
 };
 
 export const getInduction = async (user, idParam) => {
+  // Cancel any previous request if a new one starts
+  if (window.abortController) {
+    window.abortController.abort();
+  }
+  
+  // Create a new abort controller for this request
+  window.abortController = new AbortController();
+  
   try {
     // Handle case where user or ID may be undefined/null
     // Instead of throwing immediately, log and continue
@@ -113,6 +121,7 @@ export const getInduction = async (user, idParam) => {
     }
     
     // Default approach - try with the ID as provided
+
     const response = await axios.get(`${API_URL}/inductions/get-induction`, {
       headers,
       params: { id: idParam },
@@ -124,6 +133,7 @@ export const getInduction = async (user, idParam) => {
     
     return null;
   } catch (error) {    
+
     console.error("Error fetching induction:", error);
     throw error; 
   }
@@ -159,3 +169,4 @@ export const deleteInduction = async (user, idParam) => {
     throw error;
   }
 };
+
