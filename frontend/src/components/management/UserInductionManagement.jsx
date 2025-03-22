@@ -13,8 +13,6 @@ import { useLocation, useNavigate } from "react-router-dom";
 import ManageInductionModal from './ManageInductionModal';
 import { FaSave, FaPlus } from 'react-icons/fa';
 import { IoRemoveCircle } from "react-icons/io5";
-import ChangeUser from './ChangeUser';
-
 
 export const UserInductionManagement = ({ userData = DefaultNewUser, onSubmit }) => {
   const [user, setUser] = useState({ ...DefaultNewUser, position: '' });
@@ -269,9 +267,6 @@ export const UserInductionManagement = ({ userData = DefaultNewUser, onSubmit })
 
   return (
     <>
-
-    <ChangeUser onUserSelect={handleUserSelect} />
-
     {/* Assign new induction */}
     <div className="flex flex-col items-start justify-center pt-8 px-2 sm:px-4 md:px-6 lg:px-8">
         <div className="bg-white shadow-lg rounded-lg p-4 sm:p-6 md:p-8 w-full max-w-4xl mx-auto">

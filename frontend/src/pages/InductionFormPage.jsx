@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { notifyError } from '../utils/notificationService';
+import { toast } from 'react-toastify';
 import useAuth from '../hooks/useAuth';
 import { getInduction } from '../api/InductionApi';
 import Loading from '../components/Loading';
@@ -26,7 +26,7 @@ const InductionFormPage = () => {
     const fetchInduction = async () => {
       try {
         if (!idParam) {
-          notifyError('No induction specified', 'Please select an induction to complete');
+          toast.error('No induction specified');
           navigate('/inductions/my-inductions');
           return;
         }
@@ -53,9 +53,9 @@ const InductionFormPage = () => {
       } catch (error) {
         console.error('Error fetching induction:', error);
         
-        // Only show error and set not found after final attempt
+        // Only show error toast and set not found after final attempt
         if (loadAttempts >= 2) {
-          notifyError('Failed to load induction', 'Please try again later or contact support');
+          toast.error('Failed to load induction');
           setNotFound(true);
           setLoading(false);
         } else {

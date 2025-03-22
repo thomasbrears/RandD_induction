@@ -5,7 +5,17 @@ import admin from "firebase-admin";
 // Submit contact form
 export const submitContactForm = async (req, res) => {
   try {
-    const { fullName, email, contactType, subject, message, userId } = req.body;
+    const { 
+      fullName, 
+      email, 
+      contactType, 
+      subject, 
+      message, 
+      userId,
+      formType,
+      skipUserConfirmation,
+      feedbackData
+    } = req.body;
     
     // Validate required fields
     if (!fullName || !email || !subject || !message) {
@@ -18,7 +28,7 @@ export const submitContactForm = async (req, res) => {
     let isLoggedIn = false;
     let authenticatedUserId = null;
     
-    // First check if userId is provided in the request body to check if they are loged in and therfor staff
+    // First check if userId is provided in the request body to check if they are logged in and therefore staff
     if (userId) {
       isLoggedIn = true;
       authenticatedUserId = userId;
@@ -90,6 +100,9 @@ export const submitContactForm = async (req, res) => {
       }
     }
     
+    // Determine if this is a feedback form or regular contact form
+    const isFeedback = formType === 'feedback';
+    
     // Save to Firebase
     const newContact = {
       fullName,
@@ -99,53 +112,78 @@ export const submitContactForm = async (req, res) => {
       message,
       createdAt: new Date(),
       status: 'new',
-      userId: authenticatedUserId || null, //  null for non-logged-in users
-      isLoggedIn: isLoggedIn
+      userId: authenticatedUserId || null, // null for non-logged-in users
+      isLoggedIn: isLoggedIn,
+      formType: isFeedback ? 'feedback' : 'contact', // Feedback or contact form type for filtering
+      // For feedback forms, store the original data for analysis
+      ...(isFeedback && feedbackData ? { feedbackData } : {})
     };
     
     const docRef = await db.collection("contactform").add(newContact);
     
-    // Create user confirmation email body
-    const userEmailBody = `
-      <h1>Kia ora ${fullName}!</h1>
-      <p>Thank you for contacting us. We have received your message and will be in touch soon.</p>
-      <br>
-      <h3>Your message details:</h3>
-      <p><strong>Subject:</strong> ${subject}</p>
-      ${targetDepartment ? `<p><strong>Department:</strong> ${targetDepartment}</p>` : ''}
-      <p><strong>Message:</strong><br>${message.replace(/\n/g, '<br>')}</p>
+    // Only send user confirmation if not skipped (feedback form skips)
+    if (!skipUserConfirmation) {
+      // Create user confirmation email body
+      const userEmailBody = `
+        <h1>Kia ora ${fullName}!</h1>
+        <p>Thank you for contacting us. We have received your message and will be in touch soon.</p>
+        <br>
+        <h3>Your message details:</h3>
+        <p><strong>Subject:</strong> ${subject}</p>
+        <p><strong>Message:</strong><br>${message.replace(/\n/g, '<br>')}</p>
 
-      <p>If you have any further questions, please feel free to reach out to us.</p>
+        <p>If you have any further questions, please feel free to reach out to us.</p>
+        <hr>
+        <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
 
-      <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
+        <br>
+        <p><small>This is an automated message. (${docRef.id})<small></p>
+      `;
 
-      <br>
-      <p>(${docRef.id})</p>
-    `;
-
-    // Create admin notification email body
-    const adminEmailBody = `
-      <h3>New Contact Form Submission</h3>
-      <p><strong>From:</strong> ${fullName}</p>
-      <p><strong>Email:</strong> ${email}</p>
-      <p><strong>Status:</strong> ${isLoggedIn ? 'Staff (Logged In)' : 'Public User (Not Logged In)'}</p>
-      ${targetDepartment ? `<p><strong>Department:</strong> ${targetDepartment}</p>` : '<p><strong>Department:</strong> None</p>'}
-      <p><strong>Subject:</strong> ${subject}</p>
-      <p><strong>Message:</strong><br>${message.replace(/\n/g, '<br>')}</p>
-      <p><strong>Reference ID:</strong> ${docRef.id}</p>
-      ${authenticatedUserId ? `<p><strong>User ID:</strong> ${authenticatedUserId}</p>` : ''}
-    `;
-
-    // Send confirmation email to user
-    await sendEmail(
-      email, 
-      `Thank you for contacting us: ${subject}`,
-      userEmailBody,
-      null, // No reply-to for confirmation email
-      [] // No CC for confirmation email
-    );
+      // Send confirmation email to user
+      await sendEmail(
+        email, 
+        `Thank you for contacting us: ${subject}`,
+        userEmailBody,
+        null, // No reply-to for confirmation email
+        [] // No CC for confirmation email
+      );
+    }
     
-    // Get admin email from environment or use defult email
+    // Create admin notification email body - customize based on form type
+    let adminEmailSubject = '';
+    let adminEmailBody = '';
+    
+    if (isFeedback) {
+      // Subject and body for feedback submissions
+      adminEmailSubject = `${subject}`;
+      
+      adminEmailBody = `
+        <h2>Induction Feedback Submission</h2>
+        <p><strong>From:</strong> ${fullName} (${email})</p>
+        ${targetDepartment ? `<p><strong>Department:</strong> ${targetDepartment}</p>` : ''}
+        <hr>
+        <div style="background-color: #f9f9f9; padding: 15px; border-left: 4px solid #0066cc;">
+          ${message.replace(/\n/g, '<br>')}
+        </div>
+        <p><small>Submission Reference ID: ${docRef.id}<small></p>
+      `;
+    } else {
+      // Regular contact form email
+      adminEmailSubject = `New Contact Form Submission: ${subject}`;
+      
+      adminEmailBody = `
+        <h3>New Contact Form Submission</h3>
+        <p><strong>From:</strong> ${fullName} (${email})</p>
+        <p><strong>Status:</strong> ${isLoggedIn ? 'Staff (Logged In)' : 'Public User (Not Logged In)'}</p>
+        ${targetDepartment ? `<p><strong>Department:</strong> ${targetDepartment}</p>` : '<p><strong>Department:</strong> None</p>'}
+        <p><strong>Subject:</strong> ${subject}</p>
+        <p><strong>Message:</strong><br>${message.replace(/\n/g, '<br>')}</p>
+        <p><small>Submission Reference ID: ${docRef.id}<small></p>
+       `;
+    }
+    
+    // Get admin email from environment or use default email
     const adminEmail = process.env.ADMIN_EMAIL || "autevents@brears.xyz";
     
     // Determine where to send the notification email
@@ -153,7 +191,7 @@ export const submitContactForm = async (req, res) => {
       // If logged-in user has a department with email, send to that department and CC admin
       await sendEmail(
         departmentEmail, // Send to department
-        `New Contact Form Submission: ${subject}`,
+        adminEmailSubject,
         adminEmailBody,
         email, // Set reply-to as user's email
         [adminEmail] // CC admin as an array
@@ -162,21 +200,22 @@ export const submitContactForm = async (req, res) => {
       // For non-logged-in users or if no department email, send to admin only
       await sendEmail(
         adminEmail,
-        `New Contact Form Submission: ${subject}`,
+        adminEmailSubject,
         adminEmailBody,
         email // Set reply-to as user's email
       );
     }
     
     res.status(201).json({ 
-      message: 'Contact form submitted successfully',
+      message: 'Form submitted successfully',
       id: docRef.id,
       isLoggedIn: isLoggedIn, // Return login status in response for debugging
-      departmentRouted: !!departmentEmail // Indicate if it was routed to a department
+      departmentRouted: !!departmentEmail, // Indicate if it was routed to a department
+      formType: isFeedback ? 'feedback' : 'contact' // Return form type in response
     });
   } catch (error) {
-    console.error('Error submitting contact form:', error);
-    res.status(500).json({ message: 'Failed to submit contact form', error: error.message });
+    console.error('Error submitting form:', error);
+    res.status(500).json({ message: 'Failed to submit form', error: error.message });
   }
 };
 

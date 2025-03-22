@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Form, Input, Button, Alert, Progress } from 'antd';
+import { Form, Input, Button, Alert, Progress, Skeleton } from 'antd';
 import { 
   getAuth, 
   updatePassword, 
@@ -16,8 +16,7 @@ const PasswordManage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [passwordStrength, setPasswordStrength] = useState(0);
   const [hasPasswordProvider, setHasPasswordProvider] = useState(false);
-
-  const TESTING_MODE = true; 
+  const [initialLoading, setInitialLoading] = useState(true);
 
   // Determine if user needs to set password or change password
   useEffect(() => {
@@ -31,6 +30,9 @@ const PasswordManage = () => {
       
       // Set the mode based on whether they have a password already
       setPasswordMode(hasProvider ? 'change' : 'set');
+      
+      // Stop showing the loading state
+      setInitialLoading(false);
     }
   }, [auth.currentUser]);
 
@@ -210,14 +212,11 @@ const PasswordManage = () => {
     return 'Strong';
   };
 
-  // Show loading state while determining password mode
-  if (passwordMode === null) {
+  // Show skeleton loading state
+  if (initialLoading) {
     return (
-      <div className="p-6 border border-gray-300 rounded-lg shadow bg-white w-full flex justify-center items-center">
-        <div className="text-center py-10">
-          <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-gray-800 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading account settings...</p>
-        </div>
+      <div className="p-6 border border-gray-300 rounded-lg shadow bg-white w-full">
+        <Skeleton active paragraph={{ rows: 6 }} title={{ width: '40%' }} />
       </div>
     );
   }
@@ -288,10 +287,10 @@ const PasswordManage = () => {
           <Form.Item
             label="Current Password"
             name="currentPassword"
-            rules={[{ required: true, message: 'Please input your current password!' }]}
+            rules={[{ required: true, message: 'Please input your current password to authenticate the change!' }]}
           >
             <Input.Password 
-              placeholder="Enter your current password" 
+              placeholder="Enter your current password to authenticate the change"  
               className="border p-2 w-full rounded-md"
             />
           </Form.Item>
@@ -357,11 +356,6 @@ const PasswordManage = () => {
             htmlType="submit" 
             loading={isLoading}
             disabled={passwordMode === 'set' && hasPasswordProvider}
-            className={`p-2 w-full rounded-md text-white ${
-              isLoading || (passwordMode === 'set' && hasPasswordProvider)
-                ? 'bg-gray-300 cursor-not-allowed' 
-                : 'bg-gray-800 hover:bg-gray-900'
-            }`}
           >
             {isLoading 
               ? 'Processing...' 
