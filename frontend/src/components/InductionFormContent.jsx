@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from "react";
-import { MODULES, FORMATS } from "../models/QuillConfig";
 import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 import { getAllDepartments } from "../api/DepartmentApi";
-import ReactQuill from 'react-quill';
 import QuestionList from "../components/questions/QuestionList";
 import QuestionForm from "../components/questions/QuestionForm";
+import TiptapEditor from "./TiptapEditor";
 
 const InductionFormContent = ({ induction, setInduction, saveAllFields, expandOnError, updateFieldsBeingEdited }) => {
     const [localDepartment, setLocalDepartment] = useState(induction.department);
@@ -238,19 +237,10 @@ const InductionFormContent = ({ induction, setInduction, saveAllFields, expandOn
                     {validationErrors.description && <p className="text-red-500 text-sm">{validationErrors.description}</p>}
 
                     {editingField === "description" ? (
-                        <div className="prose !max-w-none w-full">
-                            <ReactQuill
-                                value={localDescription}
-                                onChange={(value) => { handleLocalChange("description", value) }}
-                                placeholder="Enter description"
-                                className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
-                                modules={MODULES}
-                                formats={FORMATS}
-                            />
-                        </div>
+                        <TiptapEditor localDescription={localDescription} handleLocalChange={handleLocalChange}/>
                     ) : (
                         <div className="prose !max-w-none w-full break-words">
-                            <p className="text-base" dangerouslySetInnerHTML={{ __html: induction.description || "No description added" }} />
+                            <p className="text-base" dangerouslySetInnerHTML={{ __html: localDescription || "No description added" }} />
                         </div>
                     )}
                 </div>

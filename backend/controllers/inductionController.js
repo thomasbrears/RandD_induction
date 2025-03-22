@@ -85,3 +85,26 @@ export const updateInductionById = async (req, res) => {
     res.status(500).send(error);
   }
 };
+
+export const deleteInduction = async (req, res) => {
+  try {
+    const id = req.query.id;
+    if (!id) {
+      return res.status(400).json({ message: "Induction ID is required" });
+    }
+
+    const inductionRef = db.collection("inductions").doc(id);
+    const inductionDoc = await inductionRef.get();
+
+    if (!inductionDoc.exists) {
+      return res.status(404).json({ message: "Induction not found" });
+    }
+
+    await inductionRef.delete();
+
+    res.json({ message: "Induction deleted successfully" });
+  } catch (error) {
+    console.error("Error deleting induction:", error);
+    res.status(500).json({ message: "Failed to delete induction", error });
+  }
+};

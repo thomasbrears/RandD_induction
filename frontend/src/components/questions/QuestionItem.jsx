@@ -31,7 +31,7 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, exp
             setEditingField(null);
         }
         updateFieldsBeingEdited(`${question.id}_header`, editingField);
-        
+
     }, [saveAllFields, editingField]);
 
     const startEditing = (field) => setEditingField(field);
@@ -247,12 +247,13 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, exp
                             </>
                         ) : (
                             <div className="flex-1 min-w-0">
-                                <div
-                                    className="cursor-pointer text-gray-600 break-words text-base"
-                                    onClick={() => startEditing("question")}
-                                    title="Edit Question"
-                                >
-                                    {question.question} <FaEdit className="inline-block ml-2 text-gray-500" />
+                                <div className="text-gray-600 break-words text-base">
+                                    {question.question}
+                                    <FaEdit
+                                        className="inline-block ml-2 text-gray-500 cursor-pointer"
+                                        onClick={() => startEditing("question")}
+                                        title="Edit Question"
+                                    />
                                 </div>
 
                                 {validationErrors.questionText && (
@@ -281,9 +282,8 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, exp
                         overflow: "hidden",
                         transition: isAnimating ? "max-height 0.3s ease-in-out" : "none",
                     }}
-                    className="mt-3 border-t border-gray-300"
                 >
-                    <div className="p-3">{renderQuestion()}</div>
+                    <div className="p-3 mt-3 border-t border-gray-300">{renderQuestion()}</div>
                     {/* Delete Question button */}
                     <div className="flex justify-end mr-6 mb-2">
                         <Button
