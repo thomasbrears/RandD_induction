@@ -4,7 +4,6 @@ import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc } from "firebase
 import { FaEdit, FaTrashAlt } from 'react-icons/fa';
 import { Button, Popconfirm, Skeleton } from 'antd';
 import { PlusOutlined } from '@ant-design/icons';
-// Import the notification functions
 import { notifySuccess, notifyError, messageWarning } from "../../utils/notificationService";
 
 const ManageDepartments = () => {

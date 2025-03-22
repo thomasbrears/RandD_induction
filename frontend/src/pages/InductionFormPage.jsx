@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-toastify';
 import useAuth from '../hooks/useAuth';
 import { getInduction } from '../api/InductionApi';
 import Loading from '../components/Loading';
@@ -60,6 +61,15 @@ const InductionFormPage = () => {
     // Fetch data and handle loading states
     const fetchData = async () => {
       try {
+        if (!idParam) {
+          toast.error('No induction specified');
+          navigate('/inductions/my-inductions');
+          return;
+        }
+        
+        setLoading(true);
+        setNotFound(false);
+
         const data = await getInduction(user, idParam);
         
         // If we got valid data, always show it immediately
@@ -133,9 +143,15 @@ const InductionFormPage = () => {
         stateRef.current = STATES.ERROR;
         setViewState(STATES.ERROR);
         
-        if (!hasErrorBeenShown) {
-          messageError(errorMessageRef.current);
-          hasErrorBeenShown = true;
+        // Only show error toast and set not found after final attempt
+        if (loadAttempts >= 2) {
+          toast.error('Failed to load induction');
+          setNotFound(true);
+          setLoading(false);
+        } else {
+          // Try again if we haven't reached max attempts
+          setLoadAttempts(prev => prev + 1);
+
         }
       }
     }, 15000);

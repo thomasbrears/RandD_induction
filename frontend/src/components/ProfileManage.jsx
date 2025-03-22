@@ -92,7 +92,7 @@ const ProfileManage = () => {
       
       notifySuccess(
         'Request Submitted', 
-        `Your request to update your ${values.fieldName.toLowerCase()} has been submitted. You'll be notified when it's processed.`
+        `Your request to update your ${values.fieldName.toLowerCase()} has been submitted.`
       );
       
       setModalVisible(false);
