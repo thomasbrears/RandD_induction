@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
+import { Helmet } from 'react-helmet-async';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { getInduction } from '../api/InductionApi';
 import Loading from '../components/Loading';
 import QuestionTypes from '../models/QuestionTypes';
 import { notifyError, notifySuccess, messageError, messageSuccess } from '../utils/notificationService';
+import InductionFeedbackModal from '../components/InductionFeedbackModal';
 
 const STATES = {
   LOADING: 'LOADING',
@@ -41,7 +42,10 @@ const InductionFormPage = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showAllQuestions, setShowAllQuestions] = useState(true); // New state to control view mode
+  const [showAllQuestions, setShowAllQuestions] = useState(true);
+  
+  // Add feedback modal state
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
   // Load induction data just once on mount
   useEffect(() => {
@@ -216,10 +220,21 @@ const InductionFormPage = () => {
     
     console.log('Form submitted', submissionData);
     
+    // Show success message
     messageSuccess('Induction completed successfully!');
-    setTimeout(() => {
-      navigate('/inductions/my-inductions');
-    }, 2000);
+    
+    // Show feedback modal
+    setShowFeedbackModal(true);
+    
+    // Reset the form submission state
+    //setIsSubmitting(false);
+  };
+
+  // Handle feedback modal close
+  const handleFeedbackModalClose = () => {
+    setShowFeedbackModal(false);
+    // Navigate away after closing the modal
+    navigate('/inductions/my-inductions');
   };
 
   // Calculate estimated time (assumed 2 minutes per question as a default)
@@ -461,6 +476,14 @@ const InductionFormPage = () => {
           </div>
         )}
       </div>
+
+      {/* Feedback Modal */}
+      <InductionFeedbackModal
+        visible={showFeedbackModal}
+        onClose={handleFeedbackModalClose}
+        inductionId={induction?.id}
+        inductionName={induction?.name}
+      />
     </>
   );
 };

@@ -30,16 +30,18 @@ import { submitContactForm } from './ContactApi';
  
    // Build structured message
    return `
- ${feedbackData.overallRating ? `Overall Rating: ${ratingMap[feedbackData.overallRating] || 'Not provided'}` : ''}
- 
- ${feedbackData.websiteUsability ? `Website Usability: ${usabilityMap[feedbackData.websiteUsability] || 'Not provided'}` : ''}
- 
- ${feedbackData.contentClarity ? `Content Clarity: ${clarityMap[feedbackData.contentClarity] || 'Not provided'}` : ''}
- 
- ${feedbackData.detailedFeedback ? `Comments: ${feedbackData.detailedFeedback}` : 'No additional comments provided.'}
- 
- ${feedbackData.inductionId ? `Induction ID: ${feedbackData.inductionId}` : ''}
-   `.trim();
+    ${feedbackData.inductionName ? `Induction Name: ${feedbackData.inductionName}` : ''}
+
+    ${feedbackData.overallRating ? `Overall Rating: ${ratingMap[feedbackData.overallRating] || 'Not provided'}` : ''}
+    
+    ${feedbackData.websiteUsability ? `Website Usability: ${usabilityMap[feedbackData.websiteUsability] || 'Not provided'}` : ''}
+    
+    ${feedbackData.contentClarity ? `Content Clarity: ${clarityMap[feedbackData.contentClarity] || 'Not provided'}` : ''}
+    
+    ${feedbackData.detailedFeedback ? `Comments: ${feedbackData.detailedFeedback}` : 'No additional comments provided.'}
+    
+    ${feedbackData.inductionId ? `Induction ID: ${feedbackData.inductionId}` : ''}
+      `.trim();
  };
  
  export const submitFeedback = async (feedbackData) => {
@@ -69,7 +71,7 @@ import { submitContactForm } from './ContactApi';
      const contactData = {
        fullName: fullName,
        email: email,
-       subject: `${ratingEmoji} Induction Feedback: ${feedbackData.inductionId || ' '}`,
+       subject: `${ratingEmoji} Induction Feedback: ${feedbackData.inductionName || feedbackData.inductionId || ' '}`,
        message: formatFeedbackMessage(feedbackData),
        
        // Special tag to identify this as feedback rather than a contact form submission
