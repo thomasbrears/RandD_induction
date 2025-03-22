@@ -1,9 +1,8 @@
 import { useState, useEffect } from "react";
-import { Modal, Select, Input, Button, Upload, Checkbox } from "antd";
+import { Modal, Select, Input, Button } from "antd";
 import QuestionTypes from "../../models/QuestionTypes";
 import { Check, X } from "lucide-react";
-import ReactQuill from "react-quill";
-import { MODULES, FORMATS } from "../../models/QuillConfig";
+import TiptapEditor from "../TiptapEditor";
 
 const QuestionForm = ({ visible, onClose, onSave }) => {
     const [questionType, setQuestionType] = useState("");
@@ -45,7 +44,9 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
     };
 
     const handleAddOption = () => {
-        setOptions([...options, ""]);
+        if (options.length < 10) {
+            setOptions([...options, ""]);
+        }
     };
 
     const handleRemoveOption = (index) => {
@@ -64,12 +65,17 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
         setOptions(updatedOptions);
     };
 
-    const handleAnswerSelect = (index) => {
-        setAnswers((prevAnswers) =>
-            prevAnswers.includes(index)
-                ? prevAnswers.filter((answer) => answer !== index)
-                : [...prevAnswers, index]
-        );
+    const handleAnswerClick = (index) => {
+        if (questionType === QuestionTypes.DROPDOWN) {
+            const newAnswers = [index];
+            setAnswers(newAnswers);
+        } else {
+            setAnswers((prevAnswers) =>
+                prevAnswers.includes(index)
+                    ? prevAnswers.filter((answer) => answer !== index)
+                    : [...prevAnswers, index]
+            );
+        }
     };
 
     const handleTrueFalseAnswerSelect = (index) => {
@@ -100,7 +106,11 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
             errors.options = "At least one option is required";
         }
         if ((questionType === QuestionTypes.MULTICHOICE || questionType === QuestionTypes.DROPDOWN) && answers.length === 0) {
-            errors.answers = "At least one answer must be selected";
+            if(questionType === QuestionTypes.DROPDOWN){
+                errors.answers = "One answer must be selected";
+            }else{
+                errors.answers = "At least one answer must be selected";
+            }
         }
         if (options.some(option => option.trim() === "")) {
             errors.options = "All options must have text";
@@ -188,16 +198,7 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
 
                         {/* Hidden input field for description */}
                         {showDescription && (
-                            <div className="prose !max-w-none w-full">
-                                <ReactQuill
-                                    value={description}
-                                    onChange={(value) => setDescription(value)}
-                                    placeholder="Enter description..."
-                                    className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
-                                    modules={MODULES}
-                                    formats={FORMATS}
-                                />
-                            </div>
+                            <TiptapEditor localDescription={description} handleLocalChange={(field, value) => setDescription(value)} />
                         )}
                     </div>
 
@@ -236,8 +237,10 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                         <Button
                             onClick={handleAddOption}
                             className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
+                            title={options.length >= 10 ? "Maximum options reached" : "Add Option"}
+                            disabled={options.length >= 10}
                         >
-                            Add Option
+                            {options.length >= 10 ? "Max Options" : "Add Option"}
                         </Button>
                     </div>
                     {validationErrors.options && <p className="text-red-500 text-sm">{validationErrors.options}</p>}
@@ -254,7 +257,7 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                         >
                             <button
                                 type="button"
-                                onClick={() => handleAnswerSelect(index)}
+                                onClick={() => handleAnswerClick(index)}
                                 className={`relative w-7 h-7 flex items-center justify-center rounded-md cursor-pointer transition-all ${answers.includes(index) ? "bg-green-500" : "bg-gray-400"
                                     }`}
                             >

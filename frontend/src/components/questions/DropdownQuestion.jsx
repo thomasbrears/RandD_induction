@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { Input, Button } from "antd";
 import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
-import ReactQuill from "react-quill";
-import { MODULES, FORMATS } from "../../models/QuillConfig";
+import TiptapEditor from "../TiptapEditor";
 
 const DropdownQuestion = ({ question, onChange, isExpanded, setIsExpanded, expandOnError, saveAllFields, updateFieldsBeingEdited }) => {
   const [editingField, setEditingField] = useState(null);
@@ -57,7 +56,10 @@ const DropdownQuestion = ({ question, onChange, isExpanded, setIsExpanded, expan
   };
 
   const handleAddOption = () => {
-    handleChange("options", [...localValues.options, ""]);
+    if (localValues.options.length < 10) {
+      handleChange("options", [...localValues.options, ""]);
+      startEditing(`option-${localValues.options.length}`);
+    }
   };
 
   const handleRemoveOption = (index) => {
@@ -80,14 +82,7 @@ const DropdownQuestion = ({ question, onChange, isExpanded, setIsExpanded, expan
   };
 
   const handleAnswerSelect = (index) => {
-    let newAnswers = [...localValues.answers];
-
-    if (newAnswers.includes(index)) {
-      newAnswers = newAnswers.filter(answer => answer !== index);
-    } else {
-      newAnswers.push(index);
-    }
-
+    const newAnswers = [index];
     handleChange("answers", newAnswers);
   };
 
@@ -152,16 +147,7 @@ const DropdownQuestion = ({ question, onChange, isExpanded, setIsExpanded, expan
         </div>
 
         {editingField === "description" ? (
-          <div className="prose !max-w-none w-full mt-2">
-            <ReactQuill
-              value={localValues.description}
-              onChange={(value) => handleLocalChange("description", value)}
-              placeholder="Enter description..."
-              className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
-              modules={MODULES}
-              formats={FORMATS}
-            />
-          </div>
+          <TiptapEditor localDescription={localValues.description} handleLocalChange={handleLocalChange} />
         ) : (
           <div className="prose !max-w-none w-full break-words mt-2">
             <p className="text-base cursor-pointer text-gray-600" dangerouslySetInnerHTML={{ __html: question.description || "No description" }} />
@@ -175,10 +161,11 @@ const DropdownQuestion = ({ question, onChange, isExpanded, setIsExpanded, expan
           <p className="font-semibold">Options:</p>
           <Button
             onClick={handleAddOption}
-            className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
-            title="Add Option"
+            className="text-white bg-gray-800 px-4 py-2 rounded-md"
+            title={localValues.options.length >= 10 ? "Maximum options reached" : "Add Option"}
+            disabled={localValues.options.length >= 10}
           >
-            Add Option
+            {localValues.options.length >= 10 ? "Max Options" : "Add Option"}
           </Button>
         </div>
         {validationErrors.options && <p className="text-red-500 text-sm">{validationErrors.options}</p>}
@@ -250,12 +237,13 @@ const DropdownQuestion = ({ question, onChange, isExpanded, setIsExpanded, expan
                 </div>
               </div>
             ) : (
-              <div
-                className="cursor-pointer text-gray-600 flex-1 break-words min-w-0"
-                onClick={() => startEditing(`option-${index}`)}
-                title="Edit Option Text"
-              >
-                {option} <FaEdit className="inline-block ml-2 text-gray-500" />
+              <div className="text-gray-600 flex-1 break-words min-w-0">
+                {option}
+                <FaEdit
+                  className="inline-block ml-2 text-gray-500 cursor-pointer"
+                  onClick={() => startEditing(`option-${index}`)}
+                  title="Edit Option Text"
+                />
               </div>
             )}
 

@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 import { Button } from "antd";
-import ReactQuill from "react-quill";
-import { MODULES, FORMATS } from "../../models/QuillConfig";
+import TiptapEditor from "../TiptapEditor";
 
 const FileUploadQuestion = ({ question, onChange, isExpanded, saveAllFields, updateFieldsBeingEdited }) => {
   const [editingField, setEditingField] = useState(null);
@@ -14,7 +13,7 @@ const FileUploadQuestion = ({ question, onChange, isExpanded, saveAllFields, upd
       setEditingField(null);
     }
     updateFieldsBeingEdited(`${question.id}_content`, editingField);
-    
+
   }, [isExpanded, editingField, saveAllFields]);
 
   const startEditing = (field) => setEditingField(field);
@@ -70,16 +69,7 @@ const FileUploadQuestion = ({ question, onChange, isExpanded, saveAllFields, upd
         </div>
 
         {editingField === "description" ? (
-          <div className="prose !max-w-none w-full mt-2">
-            <ReactQuill
-              value={localValues.description}
-              onChange={(value) => handleLocalChange("description", value)}
-              placeholder="Enter description..."
-              className="w-full h-50 p-2 text-base focus:ring-gray-800 focus:border-gray-800"
-              modules={MODULES}
-              formats={FORMATS}
-            />
-          </div>
+          <TiptapEditor localDescription={localValues.description} handleLocalChange={handleLocalChange}/>
         ) : (
           <div className="prose !max-w-none w-full break-words mt-2">
             <p className="text-base cursor-pointer text-gray-600" dangerouslySetInnerHTML={{ __html: question.description || "No description" }} />
