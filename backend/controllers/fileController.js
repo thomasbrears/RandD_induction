@@ -1,4 +1,8 @@
 import { bucket } from "../gcs.js";
+import { Storage } from "@google-cloud/storage";
+
+const storage = new Storage();
+const BUCKET_NAME = "r_and_d_induction_files";
 
 export const uploadFile = async (req, res) => {
   try {
@@ -8,9 +12,9 @@ export const uploadFile = async (req, res) => {
       return res.status(400).send("No file uploaded.");
     }
 
-    // Generate a unique filename (you can customize this if needed)
+    // Generate a unique filename 
     const gcsFileName = `${Date.now()}_${file.originalname}`;
-    
+
     // Upload the file to Google Cloud Storage
     const blob = bucket.file(gcsFileName);
     const blobStream = blob.createWriteStream({
@@ -32,6 +36,7 @@ export const uploadFile = async (req, res) => {
       res.status(200).json({
         message: "File uploaded successfully!",
         fileUrl,
+        gcsFileName,
       });
     });
 
@@ -39,5 +44,31 @@ export const uploadFile = async (req, res) => {
   } catch (error) {
     console.error("File upload failed:", error);
     res.status(500).send("Internal server error.");
+  }
+};
+
+export const getSignedUrl = async (req, res) => {
+  try {
+    const { fileName } = req.query;
+
+    if (!fileName) {
+      return res.status(400).json({ error: "Filename is required" });
+    }
+
+    const file = storage.bucket(BUCKET_NAME).file(fileName);
+    
+    // Options for the signed URL
+    const options = {
+      version: "v4",
+      action: "read",
+      expires: Date.now() + 60 * 60 * 1000, // 1 hour expiration
+    };
+
+    // Get the signed URL
+    const [url] = await file.getSignedUrl(options);
+
+    res.json({ url });
+  } catch (error) {
+    res.status(500).json({ error: "Failed to generate signed URL", details: error.message });
   }
 };
