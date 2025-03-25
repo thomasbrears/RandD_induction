@@ -213,6 +213,10 @@ const InductionFormPage = () => {
     const currentQuestion = induction.questions[currentQuestionIndex];
     const currentAnswer = answers[currentQuestion.id];
     
+    // Log for debugging
+    console.log('Current Question:', currentQuestion);
+    console.log('Current Answer:', currentAnswer);
+    
     // Check if answer is provided
     if (currentAnswer === undefined || currentAnswer === '' || 
         (Array.isArray(currentAnswer) && currentAnswer.length === 0)) {
@@ -224,36 +228,43 @@ const InductionFormPage = () => {
       return;
     }
 
-    // Validate the answer (simplified example - you need to match this with your actual data structure)
-    // This assumes the correctAnswer field exists in your question objects
-    // If your data structure is different, adjust accordingly
+    // Validate the answer based on question type
     let isCorrect = false;
     
     switch (currentQuestion.type) {
       case QuestionTypes.TRUE_FALSE:
-        // For true/false, compare selected index with correct answer index
-        isCorrect = currentAnswer === currentQuestion.correctAnswer;
+        // For TRUE_FALSE, the correct answer is stored in the answers array
+        console.log('Validating TRUE_FALSE answer:', currentQuestion.answers, currentAnswer);
+        isCorrect = parseInt(currentAnswer) === currentQuestion.answers[0];
         break;
       
       case QuestionTypes.MULTICHOICE:
-        // For multichoice, check if all selected options match correct answers
-        // This assumes correctAnswer is an array of indices
-        if (Array.isArray(currentQuestion.correctAnswer) && Array.isArray(currentAnswer)) {
-          // Check if arrays have same length and same elements (order doesn't matter)
+        // For multiple choice, answers array contains indices of correct options
+        console.log('Validating MULTICHOICE answer:', currentQuestion.answers, currentAnswer);
+        if (Array.isArray(currentQuestion.answers) && Array.isArray(currentAnswer)) {
+          // All selected options should be correct and all correct options should be selected
           isCorrect = 
-            currentAnswer.length === currentQuestion.correctAnswer.length && 
-            currentAnswer.every(answer => currentQuestion.correctAnswer.includes(answer));
+            currentAnswer.length === currentQuestion.answers.length && 
+            currentAnswer.every(answer => 
+              currentQuestion.answers.includes(parseInt(answer))
+            );
         }
         break;
       
       case QuestionTypes.DROPDOWN:
-        // For dropdown, compare selected index with correct answer index
-        isCorrect = currentAnswer == currentQuestion.correctAnswer;
+        // For dropdown, answers array typically contains one correct index
+        console.log('Validating DROPDOWN answer:', currentQuestion.answers, currentAnswer);
+        isCorrect = parseInt(currentAnswer) === currentQuestion.answers[0];
+        break;
+        
+      case QuestionTypes.FILE_UPLOAD:
+        // For file uploads, we always allow proceeding
+        isCorrect = true;
         break;
         
       default:
-        // For other types like file upload, always allow proceeding
-        isCorrect = true;
+        console.warn('Unknown question type:', currentQuestion.type);
+        isCorrect = true; // Default to true for unknown types
     }
 
     // Show feedback based on answer validation
