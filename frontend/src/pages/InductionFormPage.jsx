@@ -44,6 +44,13 @@ const InductionFormPage = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAllQuestions, setShowAllQuestions] = useState(false);
   
+  // Add feedback state for validation
+  const [answerFeedback, setAnswerFeedback] = useState({
+    isCorrect: null,
+    message: '',
+    showFeedback: false
+  });
+  
   // Add feedback modal state
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
@@ -117,7 +124,7 @@ const InductionFormPage = () => {
                 hasErrorBeenShown = true;
               }
             }
-          }, 1000); // Wait 1 second before showing error
+          }, 1000);
         }
       } catch (error) {
         console.error("Error in fetch:", error);
@@ -193,11 +200,88 @@ const InductionFormPage = () => {
       ...prev,
       [questionId]: answer
     }));
+    // Clear feedback when a new answer is selected
+    setAnswerFeedback({
+      isCorrect: null,
+      message: '',
+      showFeedback: false
+    });
   };
 
   const handleNextQuestion = () => {
-    if (currentQuestionIndex < induction.questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
+    // Get current question and answer
+    const currentQuestion = induction.questions[currentQuestionIndex];
+    const currentAnswer = answers[currentQuestion.id];
+    
+    // Check if answer is provided
+    if (currentAnswer === undefined || currentAnswer === '' || 
+        (Array.isArray(currentAnswer) && currentAnswer.length === 0)) {
+      setAnswerFeedback({
+        isCorrect: false,
+        message: 'Please select an answer before proceeding.',
+        showFeedback: true
+      });
+      return;
+    }
+
+    // Validate the answer (simplified example - you need to match this with your actual data structure)
+    // This assumes the correctAnswer field exists in your question objects
+    // If your data structure is different, adjust accordingly
+    let isCorrect = false;
+    
+    switch (currentQuestion.type) {
+      case QuestionTypes.TRUE_FALSE:
+        // For true/false, compare selected index with correct answer index
+        isCorrect = currentAnswer === currentQuestion.correctAnswer;
+        break;
+      
+      case QuestionTypes.MULTICHOICE:
+        // For multichoice, check if all selected options match correct answers
+        // This assumes correctAnswer is an array of indices
+        if (Array.isArray(currentQuestion.correctAnswer) && Array.isArray(currentAnswer)) {
+          // Check if arrays have same length and same elements (order doesn't matter)
+          isCorrect = 
+            currentAnswer.length === currentQuestion.correctAnswer.length && 
+            currentAnswer.every(answer => currentQuestion.correctAnswer.includes(answer));
+        }
+        break;
+      
+      case QuestionTypes.DROPDOWN:
+        // For dropdown, compare selected index with correct answer index
+        isCorrect = currentAnswer == currentQuestion.correctAnswer;
+        break;
+        
+      default:
+        // For other types like file upload, always allow proceeding
+        isCorrect = true;
+    }
+
+    // Show feedback based on answer validation
+    if (isCorrect) {
+      setAnswerFeedback({
+        isCorrect: true,
+        message: 'Correct! Well done.',
+        showFeedback: true
+      });
+      
+      // Proceed to next question after a short delay
+      setTimeout(() => {
+        if (currentQuestionIndex < induction.questions.length - 1) {
+          setCurrentQuestionIndex(currentQuestionIndex + 1);
+          // Reset feedback for the next question
+          setAnswerFeedback({
+            isCorrect: null,
+            message: '',
+            showFeedback: false
+          });
+        }
+      }, 1000);
+    } else {
+      setAnswerFeedback({
+        isCorrect: false,
+        message: 'Incorrect. Please try again.',
+        showFeedback: true
+      });
     }
   };
 
@@ -405,6 +489,28 @@ const InductionFormPage = () => {
                               (answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)
                             )}
                           </div>
+                          
+                          {/* Answer Feedback */}
+                          {answerFeedback.showFeedback && (
+                            <div className={`mt-4 p-3 rounded-md ${
+                              answerFeedback.isCorrect 
+                                ? 'bg-green-50 text-green-700 border border-green-200' 
+                                : 'bg-red-50 text-red-700 border border-red-200'
+                            }`}>
+                              <div className="flex items-center">
+                                {answerFeedback.isCorrect ? (
+                                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                  </svg>
+                                ) : (
+                                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                                  </svg>
+                                )}
+                                <span className="font-medium">{answerFeedback.message}</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
@@ -428,7 +534,12 @@ const InductionFormPage = () => {
                         <button 
                           type="button"
                           onClick={handleNextQuestion}
-                          className="px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
+                          disabled={answerFeedback.showFeedback && !answerFeedback.isCorrect}
+                          className={`px-4 py-2 bg-gray-800 text-white rounded-md ${
+                            answerFeedback.showFeedback && !answerFeedback.isCorrect 
+                              ? 'opacity-50 cursor-not-allowed' 
+                              : 'hover:bg-gray-700'
+                          }`}
                         >
                           Next
                         </button>
