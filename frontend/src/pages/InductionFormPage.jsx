@@ -42,7 +42,7 @@ const InductionFormPage = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showAllQuestions, setShowAllQuestions] = useState(true);
+  const [showAllQuestions, setShowAllQuestions] = useState(false);
   
   // Add feedback modal state
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
