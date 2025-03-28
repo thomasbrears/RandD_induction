@@ -54,6 +54,9 @@ const InductionFormPage = () => {
   // Add feedback modal state
   const [showFeedbackModal, setShowFeedbackModal] = useState(false);
 
+  // Add state to track answered questions
+  const [answeredQuestions, setAnsweredQuestions] = useState({});
+
   // Load induction data just once on mount
   useEffect(() => {
     let mounted = true;
@@ -275,6 +278,12 @@ const InductionFormPage = () => {
         showFeedback: true
       });
       
+      // Mark this question as correctly answered
+      setAnsweredQuestions(prev => ({
+        ...prev,
+        [currentQuestion.id]: true
+      }));
+      
       // Proceed to next question after a short delay
       setTimeout(() => {
         if (currentQuestionIndex < induction.questions.length - 1) {
@@ -334,6 +343,24 @@ const InductionFormPage = () => {
 
   // Calculate estimated time (assumed 2 minutes per question as a default)
   const estimatedTime = induction?.questions?.length ? induction.questions.length * 2 : 0;
+
+  // New function to handle sidebar navigation
+  const handleQuestionNavigation = (index) => {
+    setCurrentQuestionIndex(index);
+    // Reset feedback when navigating
+    setAnswerFeedback({
+      isCorrect: null,
+      message: '',
+      showFeedback: false
+    });
+  };
+
+  // Mobile sidebar state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const toggleMobileMenu = () => {
+    setMobileMenuOpen(prev => !prev);
+  };
 
   // Render based on view state
   if (viewState === STATES.LOADING) {
@@ -399,191 +426,246 @@ const InductionFormPage = () => {
             </button>
           </div>
         ) : (
-          <div className="bg-white shadow-md rounded-lg p-6">
-            <h1 className="text-2xl font-bold mb-4 break-words">{induction.name}</h1>
+          <div className="bg-white shadow-md rounded-lg overflow-hidden">
+            <h1 className="text-2xl font-bold p-6 break-words border-b">{induction.name}</h1>
             
             {induction.questions.length > 0 ? (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                {/* View Mode Toggle */}
-                <div className="mb-4 flex justify-end">
+              <div className="flex flex-col md:flex-row">
+                {/* Mobile toggle button for question navigation */}
+                <div className="md:hidden p-4 border-b">
                   <button
-                    type="button"
-                    onClick={toggleViewMode}
-                    className="text-gray-600 hover:text-gray-800 text-sm font-medium flex items-center"
+                    onClick={toggleMobileMenu}
+                    className="w-full flex items-center justify-between px-4 py-2 bg-gray-100 rounded-md text-gray-700"
                   >
-                    {showAllQuestions ? (
-                      <>
-                        <span>Switch to Slideshow View</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                        </svg>
-                      </>
-                    ) : (
-                      <>
-                        <span>View All Questions</span>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                        </svg>
-                      </>
-                    )}
+                    <span>Question Navigator</span>
+                    <svg 
+                      xmlns="http://www.w3.org/2000/svg" 
+                      className={`h-5 w-5 transition-transform ${mobileMenuOpen ? 'transform rotate-180' : ''}`} 
+                      viewBox="0 0 20 20" 
+                      fill="currentColor"
+                    >
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
                   </button>
                 </div>
                 
-                {/* List view or slideshow based on showAllQuestions state */}
-                {showAllQuestions ? (
-                  /* List View - All questions displayed */
-                  <div className="space-y-8">
+                {/* Question numbers side panel - hidden on mobile unless toggled */}
+                <div className={`${mobileMenuOpen ? 'block' : 'hidden'} md:block md:w-1/4 bg-gray-50 p-4 border-r`}>
+                  <h2 className="text-lg font-medium mb-4">Questions</h2>
+                  <div className="space-y-2">
                     {induction.questions.map((question, index) => (
-                      <div 
+                      <button
                         key={question.id}
-                        className="bg-gray-50 p-4 sm:p-6 rounded-lg"
+                        onClick={() => handleQuestionNavigation(index)}
+                        className={`w-full text-left px-3 py-2 rounded-md flex items-center ${
+                          currentQuestionIndex === index 
+                            ? 'bg-gray-800 text-white' 
+                            : answeredQuestions[question.id]
+                              ? 'bg-green-50 text-green-700 border border-green-200'
+                              : 'text-gray-700 hover:bg-gray-100'
+                        }`}
+                        disabled={!showAllQuestions && !answeredQuestions[question.id] && index > currentQuestionIndex}
                       >
-                        <h2 className="text-xl font-semibold mb-2 flex items-center">
-                          <span className="bg-gray-800 text-white rounded-full w-7 h-7 flex items-center justify-center mr-2 text-sm flex-shrink-0">
-                            {index + 1}
-                          </span>
-                          <span className="break-words">{question.question}</span>
-                        </h2>
-                        
-                        {question.description && (
-                          <div 
-                            className="text-gray-600 prose max-w-none mb-4"
-                            dangerouslySetInnerHTML={{ __html: question.description }}
-                          />
-                        )}
-                        
-                        <div className="mt-2">
-                          {renderQuestionByType(
-                            question, 
-                            answers[question.id], 
-                            (answer) => handleAnswer(question.id, answer)
-                          )}
-                        </div>
-                      </div>
+                        <span className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full mr-2 text-sm ${
+                          currentQuestionIndex === index 
+                            ? 'bg-white text-gray-800' 
+                            : answeredQuestions[question.id]
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-gray-200 text-gray-700'
+                        }`}>
+                          {index + 1}
+                        </span>
+                        <span className="truncate">{question.question.length > 20 ? question.question.substring(0, 20) + '...' : question.question}</span>
+                      </button>
                     ))}
                   </div>
-                ) : (
-                  /* Slideshow View - Single question displayed */
-                  <>
-                    {/* Progress indicator */}
-                    <div className="mb-4">
-                      <div className="flex justify-between mb-2">
-                        <span className="text-sm font-medium">Progress</span>
-                        <span className="text-sm font-medium">{currentQuestionIndex + 1} of {induction.questions.length}</span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2.5">
-                        <div 
-                          className="bg-gray-800 h-2.5 rounded-full" 
-                          style={{ width: `${((currentQuestionIndex + 1) / induction.questions.length) * 100}%` }}
-                        ></div>
-                      </div>
+                </div>
+                
+                {/* Main content area */}
+                <div className="md:w-3/4 p-6">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* View Mode Toggle */}
+                    <div className="mb-4 flex justify-end">
+                      <button
+                        type="button"
+                        onClick={toggleViewMode}
+                        className="text-gray-600 hover:text-gray-800 text-sm font-medium flex items-center"
+                      >
+                        {showAllQuestions ? (
+                          <>
+                            <span>Switch to Slideshow View</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                            </svg>
+                          </>
+                        ) : (
+                          <>
+                            <span>View All Questions</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                            </svg>
+                          </>
+                        )}
+                      </button>
                     </div>
                     
-                    {/* Current question */}
-                    <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
-                      {induction.questions[currentQuestionIndex] && (
-                        <div className="space-y-4">
-                          <h2 className="text-xl font-semibold">{induction.questions[currentQuestionIndex].question}</h2>
-                          
-                          {induction.questions[currentQuestionIndex].description && (
-                            <div 
-                              className="text-gray-600 prose max-w-none"
-                              dangerouslySetInnerHTML={{ __html: induction.questions[currentQuestionIndex].description }}
-                            />
-                          )}
-                          
-                          {/* Question content based on type */}
-                          <div className="mt-4">
-                            {renderQuestionByType(
-                              induction.questions[currentQuestionIndex], 
-                              answers[induction.questions[currentQuestionIndex].id], 
-                              (answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)
+                    {/* List view or slideshow based on showAllQuestions state */}
+                    {showAllQuestions ? (
+                      /* List View - All questions displayed */
+                      <div className="space-y-8">
+                        {induction.questions.map((question, index) => (
+                          <div 
+                            key={question.id}
+                            className="bg-gray-50 p-4 sm:p-6 rounded-lg"
+                          >
+                            <h2 className="text-xl font-semibold mb-2 flex items-center">
+                              <span className="bg-gray-800 text-white rounded-full w-7 h-7 flex items-center justify-center mr-2 text-sm flex-shrink-0">
+                                {index + 1}
+                              </span>
+                              <span className="break-words">{question.question}</span>
+                            </h2>
+                            
+                            {question.description && (
+                              <div 
+                                className="text-gray-600 prose max-w-none mb-4"
+                                dangerouslySetInnerHTML={{ __html: question.description }}
+                              />
                             )}
+                            
+                            <div className="mt-2">
+                              {renderQuestionByType(
+                                question, 
+                                answers[question.id], 
+                                (answer) => handleAnswer(question.id, answer)
+                              )}
+                            </div>
                           </div>
-                          
-                          {/* Answer Feedback */}
-                          {answerFeedback.showFeedback && (
-                            <div className={`mt-4 p-3 rounded-md ${
-                              answerFeedback.isCorrect 
-                                ? 'bg-green-50 text-green-700 border border-green-200' 
-                                : 'bg-red-50 text-red-700 border border-red-200'
-                            }`}>
-                              <div className="flex items-center">
-                                {answerFeedback.isCorrect ? (
-                                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                                  </svg>
-                                ) : (
-                                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                                  </svg>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Slideshow View - Single question displayed */
+                      <>
+                        {/* Progress indicator */}
+                        <div className="mb-4">
+                          <div className="flex justify-between mb-2">
+                            <span className="text-sm font-medium">Progress</span>
+                            <span className="text-sm font-medium">{currentQuestionIndex + 1} of {induction.questions.length}</span>
+                          </div>
+                          <div className="w-full bg-gray-200 rounded-full h-2.5">
+                            <div 
+                              className="bg-gray-800 h-2.5 rounded-full" 
+                              style={{ width: `${((currentQuestionIndex + 1) / induction.questions.length) * 100}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                        
+                        {/* Current question */}
+                        <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
+                          {induction.questions[currentQuestionIndex] && (
+                            <div className="space-y-4">
+                              <h2 className="text-xl font-semibold">{induction.questions[currentQuestionIndex].question}</h2>
+                              
+                              {induction.questions[currentQuestionIndex].description && (
+                                <div 
+                                  className="text-gray-600 prose max-w-none"
+                                  dangerouslySetInnerHTML={{ __html: induction.questions[currentQuestionIndex].description }}
+                                />
+                              )}
+                              
+                              {/* Question content based on type */}
+                              <div className="mt-4">
+                                {renderQuestionByType(
+                                  induction.questions[currentQuestionIndex], 
+                                  answers[induction.questions[currentQuestionIndex].id], 
+                                  (answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)
                                 )}
-                                <span className="font-medium">{answerFeedback.message}</span>
                               </div>
+                              
+                              {/* Answer Feedback */}
+                              {answerFeedback.showFeedback && (
+                                <div className={`mt-4 p-3 rounded-md ${
+                                  answerFeedback.isCorrect 
+                                    ? 'bg-green-50 text-green-700 border border-green-200' 
+                                    : 'bg-red-50 text-red-700 border border-red-200'
+                                }`}>
+                                  <div className="flex items-center">
+                                    {answerFeedback.isCorrect ? (
+                                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                      </svg>
+                                    ) : (
+                                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                                      </svg>
+                                    )}
+                                    <span className="font-medium">{answerFeedback.message}</span>
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           )}
                         </div>
-                      )}
-                    </div>
+                        
+                        {/* Navigation buttons */}
+                        <div className="flex justify-between mt-6">
+                          <button 
+                            type="button"
+                            onClick={handlePrevQuestion}
+                            disabled={currentQuestionIndex === 0}
+                            className={`px-4 py-2 border rounded-md ${
+                              currentQuestionIndex === 0 
+                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                                : 'bg-white text-gray-800 hover:bg-gray-50'
+                            }`}
+                          >
+                            Previous
+                          </button>
+                          
+                          {currentQuestionIndex < induction.questions.length - 1 ? (
+                            <button 
+                              type="button"
+                              onClick={handleNextQuestion}
+                              disabled={answerFeedback.showFeedback && !answerFeedback.isCorrect}
+                              className={`px-4 py-2 bg-gray-800 text-white rounded-md ${
+                                answerFeedback.showFeedback && !answerFeedback.isCorrect 
+                                  ? 'opacity-50 cursor-not-allowed' 
+                                  : 'hover:bg-gray-700'
+                              }`}
+                            >
+                              Next
+                            </button>
+                          ) : (
+                            <button 
+                              type="submit"
+                              disabled={isSubmitting}
+                              className={`px-6 py-2 bg-gray-800 text-white rounded-md ${
+                                isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-700'
+                              }`}
+                            >
+                              {isSubmitting ? 'Submitting...' : 'Complete Induction'}
+                            </button>
+                          )}
+                        </div>
+                      </>
+                    )}
                     
-                    {/* Navigation buttons */}
-                    <div className="flex justify-between mt-6">
-                      <button 
-                        type="button"
-                        onClick={handlePrevQuestion}
-                        disabled={currentQuestionIndex === 0}
-                        className={`px-4 py-2 border rounded-md ${
-                          currentQuestionIndex === 0 
-                            ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                            : 'bg-white text-gray-800 hover:bg-gray-50'
-                        }`}
-                      >
-                        Previous
-                      </button>
-                      
-                      {currentQuestionIndex < induction.questions.length - 1 ? (
-                        <button 
-                          type="button"
-                          onClick={handleNextQuestion}
-                          disabled={answerFeedback.showFeedback && !answerFeedback.isCorrect}
-                          className={`px-4 py-2 bg-gray-800 text-white rounded-md ${
-                            answerFeedback.showFeedback && !answerFeedback.isCorrect 
-                              ? 'opacity-50 cursor-not-allowed' 
-                              : 'hover:bg-gray-700'
-                          }`}
-                        >
-                          Next
-                        </button>
-                      ) : (
+                    {/* Submit button for list view */}
+                    {showAllQuestions && (
+                      <div className="mt-8 flex justify-center">
                         <button 
                           type="submit"
                           disabled={isSubmitting}
-                          className={`px-6 py-2 bg-gray-800 text-white rounded-md ${
+                          className={`px-6 py-3 bg-gray-800 text-white rounded-md w-full sm:w-auto ${
                             isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-700'
                           }`}
                         >
                           {isSubmitting ? 'Submitting...' : 'Complete Induction'}
                         </button>
-                      )}
-                    </div>
-                  </>
-                )}
-                
-                {/* Submit button for list view */}
-                {showAllQuestions && (
-                  <div className="mt-8 flex justify-center">
-                    <button 
-                      type="submit"
-                      disabled={isSubmitting}
-                      className={`px-6 py-3 bg-gray-800 text-white rounded-md w-full sm:w-auto ${
-                        isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-700'
-                      }`}
-                    >
-                      {isSubmitting ? 'Submitting...' : 'Complete Induction'}
-                    </button>
-                  </div>
-                )}
-              </form>
+                      </div>
+                    )}
+                  </form>
+                </div>
+              </div>
             ) : (
               <div className="text-center py-10">
                 <p className="text-xl text-gray-600">No questions available for this induction.</p>
