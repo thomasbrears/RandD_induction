@@ -6,7 +6,7 @@ import Placeholder from '@tiptap/extension-placeholder';
 import { Bold, Italic, Underline as UnderlineIcon } from "lucide-react";
 import "../style/Tiptap.css";
 
-export default function TiptapEditor({ localDescription, handleLocalChange }) {
+export default function TiptapEditor({ description, handleChange }) {
     const maxDescriptionLength = 500;
 
     const editor = useEditor({
@@ -21,9 +21,9 @@ export default function TiptapEditor({ localDescription, handleLocalChange }) {
                 placeholder: 'Enter Description …',
             }),
         ],
-        content: localDescription,
+        content: description,
         onUpdate: ({ editor }) => {
-            handleLocalChange("description", editor.getHTML());
+            handleChange(editor.getHTML());
         },
     });
 

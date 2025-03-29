@@ -4,14 +4,13 @@ import { getAllDepartments } from "../api/DepartmentApi";
 import QuestionList from "../components/questions/QuestionList";
 import QuestionForm from "../components/questions/QuestionForm";
 import TiptapEditor from "./TiptapEditor";
+import { Select } from "antd";
 
-const InductionFormContent = ({ induction, setInduction, saveAllFields, expandOnError, updateFieldsBeingEdited }) => {
-    const [localDepartment, setLocalDepartment] = useState(induction.department);
-    const [localDescription, setLocalDescription] = useState(induction.description);
-    const [editingField, setEditingField] = useState(null);
+const InductionFormContent = ({ induction, setInduction }) => {
     const [Departments, setDepartments] = useState([]);
     const [showQuestionModal, setShowQuestionModal] = useState(false);
     const [validationErrors, setValidationErrors] = useState({});
+    const [editingQuestion, setEditingQuestion] = useState({});
 
     useEffect(() => {
         const getDepartments = async () => {
@@ -21,88 +20,21 @@ const InductionFormContent = ({ induction, setInduction, saveAllFields, expandOn
         getDepartments();
     }, []);
 
-    useEffect(() => {
-        if (saveAllFields && editingField) {
-            if (editingField === "department") {
-                handleDepartmentUpdate();
-            } else if (editingField === "description") {
-                handleDescriptionUpdate();
-            }
-            setEditingField(null);
-        }
-        updateFieldsBeingEdited("induction_content", editingField);
-
-    }, [saveAllFields, editingField]);
-
-    const startEditing = (field) => {
-        if (editingField) {
-            if (editingField === "department") {
-                handleDepartmentUpdate();
-            } else if (editingField === "description") {
-                handleDescriptionUpdate();
-            }
-        }
-        setEditingField(field);
-    };
-
-    const cancelEditing = (field) => {
-        if (field === "department") {
-            setLocalDepartment(induction.department);
-        } else if (field === "description") {
-            setLocalDescription(induction.description);
-        }
-        setEditingField(null);
-    };
-
-    const handleLocalChange = (field, value) => {
-        if (field === "department") {
-            setLocalDepartment(value);
-        } else if (field === "description") {
-            setLocalDescription(value);
-        }
-    };
-
-    const handleDepartmentUpdate = () => {
+    const handleDepartmentUpdate = (value) => {
         setInduction({
             ...induction,
-            department: localDepartment.trim(),
+            department: value,
         });
-        setEditingField(null);
     };
 
-    const handleDescriptionUpdate = () => {
+    const handleDescriptionUpdate = (value) => {
         setInduction({
             ...induction,
-            description: localDescription.trim(),
+            description: value.trim(),
         });
-        setEditingField(null);
     };
 
-    //Question methods
-    const handleCloseModal = () => {
-        setShowQuestionModal(false);
-    };
-
-    const handleAddQuestion = () => {
-        setShowQuestionModal(true);
-    };
-
-    const handleSaveQuestion = (newQuestion) => {
-        setInduction((prevInduction) => ({
-            ...prevInduction,
-            questions: [...prevInduction.questions, newQuestion],
-        }));
-
-        setShowQuestionModal(false);
-    };
-
-    const handleUpdateQuestions = (updateFunction) => {
-        setInduction((prevInduction) => ({
-            ...prevInduction,
-            questions: updateFunction(prevInduction.questions || []),
-        }));
-    };
-
+    //Field validation
     const validateForm = () => {
         const errors = {};
 
@@ -126,16 +58,49 @@ const InductionFormContent = ({ induction, setInduction, saveAllFields, expandOn
         setValidationErrors({});
         validateForm();
 
-    }, [induction]);
+    }, [induction.description, induction.department]);
+
+    //Question methods
+    const handleCloseModal = () => {
+        setShowQuestionModal(false);
+    };
+
+    const handleUpdateQuestions = (updateFunction) => {
+        setInduction((prevInduction) => ({
+            ...prevInduction,
+            questions: updateFunction(prevInduction.questions || []),
+        }));
+    };
+
+    const handleSaveQuestion = (updatedQuestion) => {
+        setInduction((prevInduction) => ({
+            ...prevInduction,
+            questions: prevInduction.questions.some(q => q.id === updatedQuestion.id)
+                ? prevInduction.questions.map(q => q.id === updatedQuestion.id ? updatedQuestion : q)
+                : [...prevInduction.questions, updatedQuestion],
+        }));
+
+        setShowQuestionModal(false);
+    };
+
+    const handleAddQuestion = () => {
+        setEditingQuestion(null);
+        setShowQuestionModal(true);
+    };
+
+    const handleQuestionEdit = (question) => {
+        setEditingQuestion(question);
+        setShowQuestionModal(true);
+    };
 
     return (
         <>
-            <hr />
             {/*Modal for creating the questions */}
             <QuestionForm
                 visible={showQuestionModal}
                 onClose={handleCloseModal}
                 onSave={handleSaveQuestion}
+                editingQuestion={editingQuestion}
             />
 
             <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
@@ -143,106 +108,34 @@ const InductionFormContent = ({ induction, setInduction, saveAllFields, expandOn
                 <div className="space-y-2">
                     <label htmlFor="department" className="text-base font-semibold flex items-center">
                         Department:
-                        {editingField !== "department" ? (
-                            <button
-                                type="button"
-                                onClick={() => { startEditing("department") }}
-                                className="ml-2 text-gray-600 hover:text-gray-800"
-                                title="Edit department"
-                            >
-                                <FaEdit />
-                            </button>
-                        ) : (
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={handleDepartmentUpdate}
-                                    className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
-                                    title="Save Changes"
-                                >
-                                    <FaCheck className="inline mr-2" /> Update
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => { cancelEditing("department") }}
-                                    className="bg-red-500 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
-                                    title="Discard Changes"
-                                >
-                                    <FaTimes className="inline mr-2" /> Cancel
-                                </button>
-                            </div>
-                        )}
                     </label>
                     {validationErrors.department && <p className="text-red-500 text-sm">{validationErrors.department}</p>}
-                    {editingField === "department" ? (
-                        <div className="flex items-center space-x-2">
-                            <select
-                                id="department"
-                                name="department"
-                                value={localDepartment}
-                                onChange={(e) => handleLocalChange("department", e.target.value)}
-                                className="border border-gray-300 rounded-lg p-1 focus:ring-gray-800 focus:border-gray-800 text-sm"
-                            >
-                                <option value="" disabled>
-                                    Select a department
-                                </option>
-                                {Departments.map((dept) => (
-                                    <option key={dept.id} value={dept.name}>
-                                        {dept.name}
-                                    </option>
-                                ))}
-                            </select>
-                        </div>
-                    ) : (
-                        <div className="flex items-center mt-1">
-                            <span className="text-base">{induction.department || "Select a department"}</span>
-                        </div>
-                    )}
+
+                    <Select
+                        id="department"
+                        name="department"
+                        value={induction.department}
+                        onChange={(value) => handleDepartmentUpdate(value)}
+                        className="w-full rounded-lg text-sm"
+                        placeholder="Select a department"
+                        style={{ border: "1px solid #d1d5db" }}
+                    >
+                        {Departments.map((dept) => (
+                            <Select.Option key={dept.id} value={dept.name}>
+                                {dept.name}
+                            </Select.Option>
+                        ))}
+                    </Select>
                 </div>
 
                 {/* Description Section */}
                 <div className="space-y-2 w-full">
                     <label htmlFor="description" className="text-base font-semibold flex items-center">
                         Description:
-                        {editingField !== "description" ? (
-                            <button
-                                type="button"
-                                onClick={() => { startEditing("description") }}
-                                className="ml-2 text-gray-600 hover:text-gray-800"
-                                title="Edit description"
-                            >
-                                <FaEdit />
-                            </button>
-                        ) : (
-                            <div className="flex gap-2">
-                                <button
-                                    type="button"
-                                    onClick={handleDescriptionUpdate}
-                                    className="bg-gray-800 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
-                                    title="Save Changes"
-                                >
-                                    <FaCheck className="inline mr-2" /> Update
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => { cancelEditing("description") }}
-                                    className="bg-red-500 font-normal text-white px-3 py-1 rounded-md text-sm ml-2 flex items-center"
-                                    title="Discard Changes"
-                                >
-                                    <FaTimes className="inline mr-2" /> Cancel
-                                </button>
-                            </div>
-                        )}
                     </label>
                     {validationErrors.description && <p className="text-red-500 text-sm">{validationErrors.description}</p>}
 
-                    {editingField === "description" ? (
-                        <TiptapEditor localDescription={localDescription} handleLocalChange={handleLocalChange}/>
-                    ) : (
-                        <div className="prose !max-w-none w-full break-words">
-                            <p className="text-base" dangerouslySetInnerHTML={{ __html: localDescription || "No description added" }} />
-                        </div>
-                    )}
+                    <TiptapEditor description={induction.description} handleChange={handleDescriptionUpdate} />
                 </div>
             </div>
 
@@ -268,9 +161,7 @@ const InductionFormContent = ({ induction, setInduction, saveAllFields, expandOn
                     <QuestionList
                         questions={induction.questions}
                         setQuestions={handleUpdateQuestions}
-                        saveAllFields={saveAllFields}
-                        expandOnError={expandOnError}
-                        updateFieldsBeingEdited={updateFieldsBeingEdited}
+                        onQuestionEdit={handleQuestionEdit}
                     />
                 </div>
 

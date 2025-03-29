@@ -1,35 +1,6 @@
 import { useState, useEffect } from "react";
-import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
-import { Button } from "antd";
-import TiptapEditor from "../TiptapEditor";
 
-const FileUploadQuestion = ({ question, onChange, isExpanded, saveAllFields, updateFieldsBeingEdited }) => {
-  const [editingField, setEditingField] = useState(null);
-  const [localValues, setLocalValues] = useState({ ...question });
-
-  useEffect(() => {
-    if (editingField && (saveAllFields || !isExpanded)) {
-      stopEditing(editingField, localValues[editingField]);
-      setEditingField(null);
-    }
-    updateFieldsBeingEdited(`${question.id}_content`, editingField);
-
-  }, [isExpanded, editingField, saveAllFields]);
-
-  const startEditing = (field) => setEditingField(field);
-  const stopEditing = (field, value) => {
-    onChange(question.id, field, value);
-    setEditingField(null);
-  };
-
-  const handleLocalChange = (field, value) => {
-    setLocalValues((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleCancel = (field) => {
-    setLocalValues((prev) => ({ ...prev, [field]: question[field] }));
-    setEditingField(null);
-  };
+const FileUploadQuestion = ({ question }) => {
 
   return (
     <div className="p-4 rounded-md bg-white">
@@ -37,44 +8,12 @@ const FileUploadQuestion = ({ question, onChange, isExpanded, saveAllFields, upd
       <div className="mb-2">
         <div className="flex items-center">
           <p className="font-semibold mr-2">Description: <span className="font-normal text-gray-500">(optional)</span></p>
-          {editingField === "description" ? (
-            <div className="flex gap-2">
-              {/* Update Button */}
-              <Button
-                onClick={() => stopEditing("description", localValues.description)}
-                className="bg-gray-800 font-normal text-white px-2 py-1 rounded-md text-sm flex items-center"
-                title="Save Changes"
-              >
-                <FaCheck className="inline mr-2" /> Update
-              </Button>
-              {/* Cancel Button */}
-              <Button
-                onClick={() => handleCancel("description")}
-                className="bg-red-500 text-white px-2 py-1 rounded-md text-sm flex items-center h-8"
-                title="Discard Changes"
-              >
-                <FaTimes className="mr-1 w-4 h-4" /> Cancel
-              </Button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => startEditing("description")}
-              className="ml-2 text-gray-600 hover:text-gray-800"
-              title="Edit description"
-            >
-              <FaEdit />
-            </button>
-          )}
         </div>
 
-        {editingField === "description" ? (
-          <TiptapEditor localDescription={localValues.description} handleLocalChange={handleLocalChange}/>
-        ) : (
-          <div className="prose !max-w-none w-full break-words mt-2">
-            <p className="text-base cursor-pointer text-gray-600" dangerouslySetInnerHTML={{ __html: question.description || "No description" }} />
-          </div>
-        )}
+        <div className="prose !max-w-none w-full break-words mt-2">
+          <p className="text-base cursor-pointer text-gray-600" dangerouslySetInnerHTML={{ __html: question.description || "No description" }} />
+        </div>
+
       </div>
     </div >
   );

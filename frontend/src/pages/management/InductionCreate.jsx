@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Helmet } from 'react-helmet-async'; 
+import { Helmet } from 'react-helmet-async';
 import { messageWarning, notifySuccess } from '../../utils/notificationService';
 import PageHeader from "../../components/PageHeader";
 import ManagementSidebar from "../../components/ManagementSidebar";
@@ -28,15 +28,11 @@ const InductionCreate = () => {
   const [showModal, setShowModal] = useState(true);
   const [currentStep, setCurrentStep] = useState(0);
   const [showResult, setShowResult] = useState(false);
-  const [fieldsBeingEdited, setFieldsBeingEdited] = useState({});
-  const [saveAllFields, setSaveAllFields] = useState(false);
   const [actionType, setActionType] = useState(null);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
-  const [expandOnError, setExpandOnError] = useState(false);
   const [savingInProgress, setSavingInProgress] = useState(false);
   const [Departments, setDepartments] = useState([]);
   const navigate = useNavigate();
-  const [saveTimeoutId, setSaveTimeoutId] = useState(null);
 
   useEffect(() => {
     const getDepartments = async () => {
@@ -46,113 +42,46 @@ const InductionCreate = () => {
     getDepartments();
   }, []);
 
-  const updateFieldsBeingEdited = (field, state) => {
-    setFieldsBeingEdited((prev) => {
-      if (state === null) {
-        const updatedFields = { ...prev };
-        delete updatedFields[field];
-        return updatedFields;
-      }
-
-      return { ...prev, [field]: state };
-    });
-  };
-
   const handleCancelAndReturnButton = () => {
     navigate(-1);
   };
 
   const handleSubmitButton = () => {
     const missingFields = checkForMissingFields();
-    const hasEdits = Object.keys(fieldsBeingEdited).length > 0;
 
     if (missingFields.length === 0) {
-      setActionType(hasEdits ? "unsaved" : "submit");
+      setActionType("submit");
     } else {
-      setActionType(hasEdits ? "unfinished" : "prompt");
+      messageWarning(`Please fill in the following fields: ${missingFields.join(", ")}`);
+      setActionType("prompt");
     }
 
     setConfirmModalVisible(true);
   };
 
   const confirmSubmitActionHandler = () => {
-    if (actionType === "submit" || actionType === "unsaved") {
+    if (actionType === "submit") {
       handleSubmit();
       setConfirmModalVisible(false);
       return;
     }
   };
 
-  const handleSaveAndCheck = () => {
-    if (actionType === "unsaved" || actionType === "unfinished") {
-      if (savingInProgress) return;
-      setSaveAllFields(true);
-      setSavingInProgress(true);
-
-      const timeoutId = setTimeout(handleFailedSave, 5000);
-      setSaveTimeoutId(timeoutId);
-    } else {
-      setConfirmModalVisible(false);
-    }
-  };
-
-  const handleFailedSave = () => {
-    if (savingInProgress) return;
-    setSavingInProgress(false);
-    setSaveAllFields(false);
-    setActionType("failedSave");
-  };
-
-  useEffect(() => {
-    setExpandOnError(false)
-  }, [expandOnError]);
-
   const handleCancel = () => {
     setConfirmModalVisible(false);
-    if (checkForMissingFields().length > 0 || Object.keys(fieldsBeingEdited).length > 0) {
-      setExpandOnError(true);
-    }
   };
 
-  useEffect(() => {
-    if (!savingInProgress) return;
-
-    const updatedMissingFields = checkForMissingFields();
-    const hasEditsAfterSaving = Object.keys(fieldsBeingEdited).length > 0;
-
-    if (!hasEditsAfterSaving) {
-      setSavingInProgress(false);
-      setSaveAllFields(false);
-      if (saveTimeoutId) {
-        clearTimeout(saveTimeoutId);
-        setSaveTimeoutId(null);
-      }
-
-      if (updatedMissingFields.length === 0) {
-        setActionType("submit");
-      } else {
-        setActionType("prompt");
-      }
-    }
-
-  }, [savingInProgress, fieldsBeingEdited])
-
-  // Function to handle form submission, validate inputs and call API
   const handleSubmit = async () => {
+    setSavingInProgress(true);
 
-    // Double check if any required fields are missing and show warning if so
-    const missingFields = checkForMissingFields();
-
-    if (missingFields.length > 0) {
-      messageWarning(`Please fill in the following fields: ${missingFields.join(", ")}`);
-      return;
-    }
-
-    // user exists, send api request to update induction
     if (user) {
       const result = await createNewInduction(user, induction);
-      console.log(result);
-      notifySuccess("Induction updated successfully!");
+      setSavingInProgress(false);
+      if (result) {
+        notifySuccess("Induction updated successfully!");
+      } else {
+        messageWarning("Error while updating induction.");
+      }
     }
     setShowResult(true);
   };
@@ -174,57 +103,8 @@ const InductionCreate = () => {
     if (induction.department === "Select a department" || !induction.department) {
       missingFields.push("Please select a department.");
     }
-
-    // Check if there is at least one question
     if (!induction.questions || induction.questions.length === 0) {
       missingFields.push("Add at least one question.");
-    } else {
-      let questionsMissingAnswer = 0;
-      let questionsMissingText = 0;
-      let questionsMissingType = 0;
-      let questionsMissingOptions = 0;
-      let optionsMissingText = 0;
-
-      induction.questions.forEach((question) => {
-        if (!question.question || question.question.trim() === "") {
-          questionsMissingText++;
-        }
-
-        if (!question.type || question.type.trim() === "") {
-          questionsMissingType++;
-        }
-
-        if (!question.answers || question.answers.length === 0) {
-          questionsMissingAnswer++;
-        }
-
-        if (!question.options || question.options.length === 0) {
-          questionsMissingOptions++;
-        } else {
-          question.options.forEach((option) => {
-            if (!option.trim()) {
-              optionsMissingText++;
-            }
-          });
-        }
-      });
-
-      // Summarize missing fields for questions
-      if (questionsMissingText > 0) {
-        missingFields.push(`${questionsMissingText} question${questionsMissingText > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} text.`);
-      }
-      if (questionsMissingType > 0) {
-        missingFields.push(`${questionsMissingType} question${questionsMissingType > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} a type.`);
-      }
-      if (questionsMissingAnswer > 0) {
-        missingFields.push(`${questionsMissingAnswer} question${questionsMissingAnswer > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} at least one answer.`);
-      }
-      if (questionsMissingOptions > 0) {
-        missingFields.push(`${questionsMissingOptions} question${questionsMissingOptions > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} options.`);
-      }
-      if (optionsMissingText > 0) {
-        missingFields.push(`${optionsMissingText} option${optionsMissingText > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} text.`);
-      }
     }
 
     return missingFields;
@@ -347,7 +227,7 @@ const InductionCreate = () => {
                   <div>
                     <p className="mb-2 text-gray-500">How should we describe what this induction covers? (Please be detailed)</p>
                     <p className="mb-2 text-gray-500">e.g. This induction covers the general health and safety across AUT and covers the following topics...</p>
-                    <TiptapEditor localDescription={induction.description} handleLocalChange={(field, value) => setInduction({ ...induction, description: value })} />
+                    <TiptapEditor localDescription={induction.description} handleChange={(value) => setInduction({ ...induction, description: value })} />
                   </div>
                 )}
               </div>
@@ -389,7 +269,7 @@ const InductionCreate = () => {
           )}
 
           {/* Main content area */}
-          <div className="flex bg-gray-50">
+          <div className="flex bg-gray-50 w-full">
             {/* Management Sidebar */}
             <div className="hidden md:flex">
               <ManagementSidebar />
@@ -408,22 +288,12 @@ const InductionCreate = () => {
                           Submit
                         </Button>
                       )}
-                      {actionType === "unsaved" && (
-                        <Button key="unsavedConfirm" type="primary" danger className="w-auto min-w-0 text-sm" onClick={confirmSubmitActionHandler}>
-                          Discard & Submit
-                        </Button>
-                      )}
-                      {(actionType === "unsaved" || actionType === "unfinished") && (
-                        <Button key="saveAndCheck" type="primary" className="w-auto min-w-0 text-sm" onClick={handleSaveAndCheck} disabled={savingInProgress}>
-                          Save & Check
-                        </Button>
-                      )}
-                      {(actionType === "prompt" || actionType === "unfinished" || actionType === "failedSave") && (
+                      {(actionType === "prompt") && (
                         <Button key="continueEditing" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
                           Continue Editing
                         </Button>
                       )}
-                      {(!(actionType === "prompt" || actionType === "unfinished" || actionType === "failedSave")) && (
+                      {(!(actionType === "prompt")) && (
                         <Button key="cancel" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
                           Cancel
                         </Button>
@@ -433,35 +303,14 @@ const InductionCreate = () => {
                 >
                   {savingInProgress ? (
                     <div className="flex justify-center items-center">
-                      <Loading message="Saving changes..." />
+                      <Loading message="Creating Induction..." />
                     </div>
                   ) : (
                     <>
                       {actionType === "submit" && <p>Are you sure you want to submit this induction?</p>}
-                      {actionType === "unsaved" && <p>You have unsaved changes. Are you sure you want to discard them and submit?</p>}
                       {actionType === "prompt" && (
                         <>
                           <p>Some details are missing. Please review the list below and try again.</p>
-
-                          {checkForMissingFields().length > 0 && (
-                            <>
-                              <div className="mt-4"></div>
-                              <div className="p-4 bg-gray-50 border-l-4 border-gray-300 text-gray-700 rounded-md">
-                                <p className="font-medium">Issues that need attention:</p>
-                                <ul className="list-disc list-inside mt-2 space-y-1">
-                                  {checkForMissingFields().map((field) => (
-                                    <li key={field} className="ml-4">{field}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            </>
-                          )}
-                        </>
-                      )}
-                      {actionType === "unfinished" && <p>You have unsaved and missing fields. Would you like to save first?</p>}
-                      {actionType === "failedSave" && (
-                        <>
-                          <p>Some fields couldn't be saved. Please check the details and try again.</p>
 
                           {checkForMissingFields().length > 0 && (
                             <>
@@ -489,20 +338,12 @@ const InductionCreate = () => {
                     setInduction={setInduction}
                     handleSubmit={handleSubmitButton}
                     isCreatingInduction={true}
-                    saveAllFields={saveAllFields}
-                    updateFieldsBeingEdited={updateFieldsBeingEdited}
                   />
 
                   {/* Main content for managing induction details */}
                   <div className="p-4 mx-auto w-full max-w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl space-y-6">
 
-                    <InductionFormContent
-                      induction={induction}
-                      setInduction={setInduction}
-                      saveAllFields={saveAllFields}
-                      expandOnError={expandOnError}
-                      updateFieldsBeingEdited={updateFieldsBeingEdited}
-                    />
+                    <InductionFormContent induction={induction} setInduction={setInduction} />
 
                     {/* Save Button */}
                     <div className="flex justify-center mt-6">
@@ -519,8 +360,6 @@ const InductionCreate = () => {
                 </div>
               </>
             )}
-
-
           </div>
         </>
       )}

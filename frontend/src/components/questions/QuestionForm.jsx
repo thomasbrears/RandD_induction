@@ -1,21 +1,40 @@
 import { useState, useEffect } from "react";
 import { Modal, Select, Input, Button } from "antd";
 import QuestionTypes from "../../models/QuestionTypes";
-import { Check, X } from "lucide-react";
 import TiptapEditor from "../TiptapEditor";
+import { FaCheck, FaTimes } from "react-icons/fa";
 
-const QuestionForm = ({ visible, onClose, onSave }) => {
+const QuestionForm = ({ visible, onClose, onSave, editingQuestion }) => {
     const [questionType, setQuestionType] = useState("");
     const [questionText, setQuestionText] = useState("");
+    const [description, setDescription] = useState("");
     const [options, setOptions] = useState([]);
     const [answers, setAnswers] = useState([]);
+    const [imageFile, setImageFile] = useState(null); {/*figure out how this works later */ }
+
     const [showDescription, setShowDescription] = useState(false);
-    const [description, setDescription] = useState("");
+    const [showImageUpload, setShowImageUpload] = useState(false);
+
     const [validationErrors, setValidationErrors] = useState({});
     const [validateAll, setValidateAll] = useState(false);
 
-    const [showImageUpload, setShowImageUpload] = useState(false);
-    const [imageFile, setImageFile] = useState(null); {/*figure out how this works later */ }
+    useEffect(() => {
+        if (editingQuestion) {
+            setQuestionType(editingQuestion.type || "");
+            setQuestionText(editingQuestion.question || "");
+            setDescription(editingQuestion.description || "");
+            setOptions(editingQuestion.options || []);
+            setAnswers(editingQuestion.answers || []);
+            setImageFile(editingQuestion.imageFile || null);
+        } else {
+            setQuestionType("");
+            setQuestionText("");
+            setDescription("");
+            setOptions([]);
+            setAnswers([]);
+            setImageFile(null);
+        }
+    }, [editingQuestion]);
 
     const handleQuestionTypeChange = (value) => {
         if (validateAll) {//Reset validation if form changes
@@ -106,9 +125,9 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
             errors.options = "At least one option is required";
         }
         if ((questionType === QuestionTypes.MULTICHOICE || questionType === QuestionTypes.DROPDOWN) && answers.length === 0) {
-            if(questionType === QuestionTypes.DROPDOWN){
+            if (questionType === QuestionTypes.DROPDOWN) {
                 errors.answers = "One answer must be selected";
-            }else{
+            } else {
                 errors.answers = "At least one answer must be selected";
             }
         }
@@ -133,7 +152,7 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
         if (!validateForm()) return;
 
         const newQuestion = {
-            id: Date.now().toString(),
+            id: editingQuestion?.id || Date.now().toString(),
             type: questionType,
             question: questionText,
             description,
@@ -198,7 +217,7 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
 
                         {/* Hidden input field for description */}
                         {showDescription && (
-                            <TiptapEditor localDescription={description} handleLocalChange={(field, value) => setDescription(value)} />
+                            <TiptapEditor description={description} handleChange={(value) => setDescription(value)} />
                         )}
                     </div>
 
@@ -263,9 +282,9 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                             >
                                 <span className="group">
                                     {answers.includes(index) ? (
-                                        <Check className="text-white w-5 h-5" />
+                                        <FaCheck className="text-white w-5 h-5" />
                                     ) : (
-                                        <X className="text-white w-5 h-5" />
+                                        <FaTimes className="text-white w-5 h-5" />
                                     )}
                                     {/* Tooltip */}
                                     <span className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black text-white text-xs rounded px-2 py-1 whitespace-nowrap">
@@ -325,7 +344,7 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
             <div className="mt-6 flex justify-end">
                 <Button onClick={handleCancel} className="mr-2">Cancel</Button>
                 <Button type="primary" onClick={handleSubmit} disabled={Object.keys(validationErrors).length > 0}>
-                    Save
+                    {editingQuestion ? "Save Changes" : "Add Question"}
                 </Button>
             </div>
         </Modal>

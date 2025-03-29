@@ -3,51 +3,24 @@ import {
     useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Input, Button } from "antd";
+import { Button } from "antd";
 import TrueFalseQuestion from "./TrueFalseQuestion";
 import MultichoiceQuestion from "./MultichoiceQuestion";
 import DropdownQuestion from "./DropdownQuestion";
 import FileUploadQuestion from "./FileUploadQuestion";
-import { FaBars, FaChevronDown, FaChevronUp, FaEdit, FaCheck, FaTimes } from 'react-icons/fa';
+import { FaBars, FaChevronDown, FaChevronUp, FaEdit } from 'react-icons/fa';
 import QuestionTypes from "../../models/QuestionTypes";
 import ConfirmationModal from "../ConfirmationModal";
 import { Trash } from "lucide-react";
 
-const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, expandOnError, updateFieldsBeingEdited }) => {
+const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit }) => {
     const [hasExpandedBefore, setHasExpandedBefore] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
-    const [editingField, setEditingField] = useState(null);
-    const [localValues, setLocalValues] = useState({ ...question });
     const contentRef = useRef(null);
     const [maxHeight, setMaxHeight] = useState("0px");
     const [isAnimating, setIsAnimating] = useState(false);
     const [confirmAction, setConfirmAction] = useState(false);
     const [actionType, setActionType] = useState(null);
-    const [validationErrors, setValidationErrors] = useState({});
-
-    useEffect(() => {
-        if (saveAllFields) {
-            stopEditing(editingField, localValues[editingField]);
-            setEditingField(null);
-        }
-        updateFieldsBeingEdited(`${question.id}_header`, editingField);
-
-    }, [saveAllFields, editingField]);
-
-    const startEditing = (field) => setEditingField(field);
-    const stopEditing = (field, value) => {
-        onChange(question.id, field, value);
-        setEditingField(null);
-    };
-
-    const handleEditCancel = (field) => {
-        setLocalValues((prev) => ({ ...prev, [field]: question[field] }));
-        setEditingField(null);
-    };
-
-    const handleLocalChange = (field, value) => {
-        setLocalValues((prev) => ({ ...prev, [field]: value }));
-    };
 
     const toggleExpand = () => setIsExpanded((prev) => !prev);
 
@@ -57,6 +30,10 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, exp
     const style = {
         transform: transform ? CSS.Translate.toString(transform) : undefined,
         transition,
+    };
+
+    const handleQuestionEdit= ()=>{
+        onQuestionEdit(question);
     };
 
     const handleConfirmDelete = () => {
@@ -104,38 +81,18 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, exp
             case QuestionTypes.TRUE_FALSE:
                 return <TrueFalseQuestion
                     question={question}
-                    onChange={onChange}
-                    isExpanded={isExpanded}
-                    saveAllFields={saveAllFields}
-                    updateFieldsBeingEdited={updateFieldsBeingEdited}
                 />;
             case QuestionTypes.MULTICHOICE:
                 return <MultichoiceQuestion
                     question={question}
-                    onChange={onChange}
-                    isExpanded={isExpanded}
-                    setIsExpanded={setIsExpanded}
-                    saveAllFields={saveAllFields}
-                    expandOnError={expandOnError}
-                    updateFieldsBeingEdited={updateFieldsBeingEdited}
                 />;
             case QuestionTypes.DROPDOWN:
                 return <DropdownQuestion
                     question={question}
-                    onChange={onChange}
-                    isExpanded={isExpanded}
-                    setIsExpanded={setIsExpanded}
-                    saveAllFields={saveAllFields}
-                    expandOnError={expandOnError}
-                    updateFieldsBeingEdited={updateFieldsBeingEdited}
                 />;
             case QuestionTypes.FILE_UPLOAD:
                 return <FileUploadQuestion
                     question={question}
-                    onChange={onChange}
-                    isExpanded={isExpanded}
-                    saveAllFields={saveAllFields}
-                    updateFieldsBeingEdited={updateFieldsBeingEdited}
                 />;
             default:
                 return <span>{question.question}</span>;
@@ -163,27 +120,10 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, exp
 
     const confirmActionHandler = () => {
         if (actionType === 'delete') {
-            onDeleteQuestion(localValues.id);
+            onDeleteQuestion(question.id);
         }
         setConfirmAction(false);
     };
-
-    const validateForm = () => {
-        const errors = {};
-
-        if (!question.question.trim()) {
-            errors.questionText = "Question text cannot be empty";
-        }
-
-        setValidationErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
-
-    useEffect(() => {
-        setValidationErrors({});
-        validateForm();
-
-    }, [question]);
 
     return (
         <>
@@ -208,60 +148,22 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, exp
                     {/* Question Type and Text */}
                     <span className="text-lg font-bold uppercase min-w-max">{renderQuestionType()}</span>
                     <div className="flex flex-wrap items-center flex-grow gap-4 min-w-0">
-                        {editingField === "question" ? (
-                            <>
-                                <div className="flex flex-col gap-2 w-full">
-                                    {/* Textarea */}
-                                    <Input.TextArea
-                                        value={localValues.question}
-                                        onChange={(e) => handleLocalChange("question", e.target.value)}
-                                        placeholder="Enter your question..."
-                                        autoSize={{ minRows: 1, maxRows: 5 }}
-                                        className="w-full text-sm"
-                                        maxLength={250}
-                                        showCount={true}
-                                    />
-
-                                    {validationErrors.questionText && <p className="text-red-500 text-sm">{validationErrors.questionText}</p>}
-
-                                    <div className="flex gap-2 w-full mt-2">
-                                        {/* Update Button */}
-                                        <Button
-                                            onClick={() => stopEditing("question", localValues.question)}
-                                            className="bg-gray-800 text-white px-3 py-1 rounded-md text-sm flex items-center h-8"
-                                            title="Save Changes"
-                                        >
-                                            <FaCheck className="mr-1 w-4 h-4" /> Update
-                                        </Button>
-
-                                        {/* Cancel Button */}
-                                        <Button
-                                            onClick={() => handleEditCancel("question")}
-                                            className="bg-red-500 text-white px-3 py-1 rounded-md text-sm flex items-center h-8"
-                                            title="Discard Changes"
-                                        >
-                                            <FaTimes className="mr-1 w-4 h-4" /> Cancel
-                                        </Button>
-                                    </div>
-                                </div>
-                            </>
-                        ) : (
-                            <div className="flex-1 min-w-0">
-                                <div className="text-gray-600 break-words text-base">
-                                    {question.question}
-                                    <FaEdit
-                                        className="inline-block ml-2 text-gray-500 cursor-pointer"
-                                        onClick={() => startEditing("question")}
-                                        title="Edit Question"
-                                    />
-                                </div>
-
-                                {validationErrors.questionText && (
-                                    <p className="text-red-500 text-sm mt-1">{validationErrors.questionText}</p>
-                                )}
+                        <div className="flex-1 min-w-0">
+                            <div className="text-gray-600 break-words text-base">
+                                {question.question}
                             </div>
-                        )}
+                        </div>
                     </div>
+
+                    {/* Question Edit Button */}
+                    <button
+                        type="button"
+                        className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md flex items-center gap-2"
+                        onClick={handleQuestionEdit}
+                        title="Edit Question"
+                        >
+                        <FaEdit/>Edit Question
+                    </button>
 
                     {/* Expand/Collapse Button */}
                     <button
