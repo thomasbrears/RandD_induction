@@ -8,6 +8,9 @@ import TrueFalseQuestion from "./TrueFalseQuestion";
 import MultichoiceQuestion from "./MultichoiceQuestion";
 import DropdownQuestion from "./DropdownQuestion";
 import FileUploadQuestion from "./FileUploadQuestion";
+import YesNoQuestion from "./YesNoQuestion";
+import ShortAnswerQuestion from "./ShortAnswerQuestion";
+import InformationQuestion from "./InformationQuestion";
 import { FaBars, FaChevronDown, FaChevronUp, FaEdit } from 'react-icons/fa';
 import QuestionTypes from "../../models/QuestionTypes";
 import ConfirmationModal from "../ConfirmationModal";
@@ -32,7 +35,7 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit }) => {
         transition,
     };
 
-    const handleQuestionEdit= ()=>{
+    const handleQuestionEdit = () => {
         onQuestionEdit(question);
     };
 
@@ -94,6 +97,18 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit }) => {
                 return <FileUploadQuestion
                     question={question}
                 />;
+            case QuestionTypes.YES_NO:
+                return <YesNoQuestion
+                    question={question}
+                />;
+            case QuestionTypes.SHORT_ANSWER:
+                return <ShortAnswerQuestion
+                    question={question}
+                />;
+            case QuestionTypes.INFORMATION:
+                return <InformationQuestion
+                    question={question}
+                />;
             default:
                 return <span>{question.question}</span>;
         }
@@ -109,6 +124,12 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit }) => {
                 return "Dropdown";
             case QuestionTypes.FILE_UPLOAD:
                 return "File Upload";
+            case QuestionTypes.YES_NO:
+                return "Yes/No";
+            case QuestionTypes.SHORT_ANSWER:
+                return "Short Answer";
+            case QuestionTypes.INFORMATION:
+                return "Information";
             default:
                 return question.questionType;
         }
@@ -146,7 +167,7 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit }) => {
                     </span>
 
                     {/* Question Type and Text */}
-                    <span className="text-lg font-bold uppercase min-w-max">{renderQuestionType()}</span>
+                    <span className="text-lg font-bold min-w-max">{renderQuestionType()}</span>
                     <div className="flex flex-wrap items-center flex-grow gap-4 min-w-0">
                         <div className="flex-1 min-w-0">
                             <div className="text-gray-600 break-words text-base">
@@ -161,8 +182,8 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit }) => {
                         className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md flex items-center gap-2"
                         onClick={handleQuestionEdit}
                         title="Edit Question"
-                        >
-                        <FaEdit/>Edit Question
+                    >
+                        <FaEdit />Edit Question
                     </button>
 
                     {/* Expand/Collapse Button */}

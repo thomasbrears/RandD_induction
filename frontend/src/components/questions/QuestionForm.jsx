@@ -3,14 +3,10 @@ import { Modal, Select, Input, Button } from "antd";
 import QuestionTypes from "../../models/QuestionTypes";
 import TiptapEditor from "../TiptapEditor";
 import { FaCheck, FaTimes } from "react-icons/fa";
+import { DefaultNewQuestion } from "../../models/Question";
 
 const QuestionForm = ({ visible, onClose, onSave, editingQuestion }) => {
-    const [questionType, setQuestionType] = useState("");
-    const [questionText, setQuestionText] = useState("");
-    const [description, setDescription] = useState("");
-    const [options, setOptions] = useState([]);
-    const [answers, setAnswers] = useState([]);
-    const [imageFile, setImageFile] = useState(null); {/*figure out how this works later */ }
+    const [question, setQuestion] = useState(DefaultNewQuestion);
 
     const [showDescription, setShowDescription] = useState(false);
     const [showImageUpload, setShowImageUpload] = useState(false);
@@ -19,119 +15,127 @@ const QuestionForm = ({ visible, onClose, onSave, editingQuestion }) => {
     const [validateAll, setValidateAll] = useState(false);
 
     useEffect(() => {
-        if (editingQuestion) {
-            setQuestionType(editingQuestion.type || "");
-            setQuestionText(editingQuestion.question || "");
-            setDescription(editingQuestion.description || "");
-            setOptions(editingQuestion.options || []);
-            setAnswers(editingQuestion.answers || []);
-            setImageFile(editingQuestion.imageFile || null);
-        } else {
-            setQuestionType("");
-            setQuestionText("");
-            setDescription("");
-            setOptions([]);
-            setAnswers([]);
-            setImageFile(null);
-        }
+        setQuestion(editingQuestion || DefaultNewQuestion);
+        if(!editingQuestion) handleChange("type", "");
     }, [editingQuestion]);
+
+    const handleChange = (field, value) => {
+        setQuestion((prev) => ({
+            ...prev,
+            [field]: value,
+        }));
+    };
 
     const handleQuestionTypeChange = (value) => {
         if (validateAll) {//Reset validation if form changes
             setValidateAll(false);
             setValidationErrors({});
         }
-        setQuestionType(value);
+        handleChange("type", value);
         switch (value) {
             case QuestionTypes.TRUE_FALSE:
-                setOptions(["True", "False"]);
-                setAnswers([0]);
+                handleChange("options",["True", "False"]);
+                handleChange("answers",[0]);
                 break;
             case QuestionTypes.DROPDOWN:
             case QuestionTypes.MULTICHOICE:
-                setOptions([]);
-                setAnswers([]);
+                handleChange("options",[]);
+                handleChange("answers",[]);
                 break;
             case QuestionTypes.FILE_UPLOAD:
-                setOptions(["Yes", "No"]);
-                setAnswers([0]);
+            case QuestionTypes.YES_NO:
+            case QuestionTypes.INFORMATION:
+            case QuestionTypes.SHORT_ANSWER:
+                handleChange("options",["Yes", "No"]);
+                handleChange("answers",[0]);
                 break;
             default:
-                setOptions([]);
-                setAnswers([]);
+                handleChange("options",[]);
+                handleChange("answers",[]);
         }
     };
 
     const handleAddOption = () => {
-        if (options.length < 10) {
-            setOptions([...options, ""]);
+        if (question.options.length < 10) {
+            handleChange("options", [...question.options, ""]);
         }
     };
 
     const handleRemoveOption = (index) => {
-        const updatedOptions = options.filter((_, i) => i !== index);
-        const updatedAnswers = answers
+        const updatedOptions = question.options.filter((_, i) => i !== index);
+        const updatedAnswers = question.answers
             .filter((answerIndex) => answerIndex !== index)
             .map((answerIndex) => (answerIndex > index ? answerIndex - 1 : answerIndex));
-
-        setOptions(updatedOptions);
-        setAnswers(updatedAnswers);
+    
+        handleChange("options", updatedOptions);
+        handleChange("answers", updatedAnswers);
     };
 
     const handleOptionChange = (index, value) => {
-        const updatedOptions = [...options];
+        const updatedOptions = [...question.options];
         updatedOptions[index] = value;
-        setOptions(updatedOptions);
+        
+        handleChange("options", updatedOptions);
     };
 
     const handleAnswerClick = (index) => {
-        if (questionType === QuestionTypes.DROPDOWN) {
-            const newAnswers = [index];
-            setAnswers(newAnswers);
-        } else {
-            setAnswers((prevAnswers) =>
-                prevAnswers.includes(index)
-                    ? prevAnswers.filter((answer) => answer !== index)
-                    : [...prevAnswers, index]
-            );
-        }
+        setQuestion((prev) => {
+            let newAnswers;
+    
+            if (question.type === QuestionTypes.DROPDOWN) {
+                newAnswers = [index]; 
+            } else {
+                if (prev.answers.includes(index)) {
+                    newAnswers = prev.answers.filter((answer) => answer !== index); 
+                } else {
+                    newAnswers = [...prev.answers, index];
+                }
+            }
+    
+            console.log("Updated answers:", newAnswers); 
+    
+            return {
+                ...prev,
+                answers: newAnswers,
+            };
+        });
     };
 
-    const handleTrueFalseAnswerSelect = (index) => {
-        setAnswers([index]);
+    const handleRadioAnswerSelect = (index) => {
+        handleChange("answers", [index]);
     };
 
     const resetForm = () => {
-        setQuestionType("");
-        setQuestionText("");
-        setOptions([]);
-        setAnswers([]);
+        setQuestion(DefaultNewQuestion);
+        handleChange("type", "");
+
         setShowDescription(false);
-        setDescription("");
-        setValidateAll(false);
+        setShowImageUpload(false);
+
         setValidationErrors({});
+        setValidateAll(false);
     };
 
     const validateForm = () => {
         const errors = {};
 
-        if (!questionType) {
+        if (!question.type) {
             errors.questionType = "Question type is required";
         }
-        if (!questionText.trim()) {
+        if (!question.question.trim()) {
             errors.questionText = "Question text cannot be empty";
         }
-        if ((questionType === QuestionTypes.MULTICHOICE || questionType === QuestionTypes.DROPDOWN) && options.length === 0) {
+        if ((question.type === QuestionTypes.MULTICHOICE || question.type === QuestionTypes.DROPDOWN) && question.options.length === 0) {
             errors.options = "At least one option is required";
         }
-        if ((questionType === QuestionTypes.MULTICHOICE || questionType === QuestionTypes.DROPDOWN) && answers.length === 0) {
-            if (questionType === QuestionTypes.DROPDOWN) {
+        if ((question.type === QuestionTypes.MULTICHOICE || question.type === QuestionTypes.DROPDOWN) && question.answers.length === 0) {
+            if (question.type === QuestionTypes.DROPDOWN) {
                 errors.answers = "One answer must be selected";
             } else {
                 errors.answers = "At least one answer must be selected";
             }
         }
-        if (options.some(option => option.trim() === "")) {
+        if (question.options.some(option => option.trim() === "")) {
             errors.options = "All options must have text";
         }
 
@@ -145,22 +149,22 @@ const QuestionForm = ({ visible, onClose, onSave, editingQuestion }) => {
             validateForm();
         }
 
-    }, [questionType, questionText, options, answers, validateAll]);
+    }, [question, validateAll]);
 
     const handleSubmit = () => {
         setValidateAll(true);
         if (!validateForm()) return;
-
-        const newQuestion = {
-            id: editingQuestion?.id || Date.now().toString(),
-            type: questionType,
-            question: questionText,
-            description,
-            options,
-            answers,
-            imageFile,
-        };
-        onSave(newQuestion);
+    
+        let updatedQuestion = { ...question };
+    
+        // Set the id for new questions
+        if (!editingQuestion) {
+            updatedQuestion.id = Date.now().toString();
+        }
+    
+        console.log(updatedQuestion);
+    
+        onSave(updatedQuestion);
         resetForm();
         onClose();
     };
@@ -177,7 +181,7 @@ const QuestionForm = ({ visible, onClose, onSave, editingQuestion }) => {
                 <label className="font-semibold">Question Type:</label>
                 <Select
                     className="w-full"
-                    value={questionType}
+                    value={question.type}
                     onChange={handleQuestionTypeChange}
                     autoFocus
                 >
@@ -185,19 +189,22 @@ const QuestionForm = ({ visible, onClose, onSave, editingQuestion }) => {
                     <Select.Option value={QuestionTypes.TRUE_FALSE}>True/False</Select.Option>
                     <Select.Option value={QuestionTypes.DROPDOWN}>Dropdown</Select.Option>
                     <Select.Option value={QuestionTypes.FILE_UPLOAD}>File Upload</Select.Option>
+                    <Select.Option value={QuestionTypes.YES_NO}>Yes/No</Select.Option>
+                    <Select.Option value={QuestionTypes.SHORT_ANSWER}>Short Answer</Select.Option>
+                    <Select.Option value={QuestionTypes.INFORMATION}>Information</Select.Option>
                 </Select>
                 {validationErrors.questionType && <p className="text-red-500 text-sm">{validationErrors.questionType}</p>}
             </div>
 
-            {questionType && (
+            {question.type && (
                 <>
                     {/*Question Text Input*/}
                     <div className="mt-4">
                         <label className="block mb-0 font-semibold">Question:</label>
                         {validationErrors.questionText && <p className="text-red-500 text-sm mb-1">{validationErrors.questionText}</p>}
                         <Input
-                            value={questionText}
-                            onChange={(e) => setQuestionText(e.target.value)}
+                            value={question.question}
+                            onChange={(e) => handleChange("question",e.target.value)}
                             placeholder="Enter your question"
                         />
                     </div>
@@ -217,7 +224,7 @@ const QuestionForm = ({ visible, onClose, onSave, editingQuestion }) => {
 
                         {/* Hidden input field for description */}
                         {showDescription && (
-                            <TiptapEditor description={description} handleChange={(value) => setDescription(value)} />
+                            <TiptapEditor description={question.description} handleChange={(value) => handleChange("description", value)} />
                         )}
                     </div>
 
@@ -249,27 +256,27 @@ const QuestionForm = ({ visible, onClose, onSave, editingQuestion }) => {
                 </>
             )}
 
-            {(questionType === QuestionTypes.MULTICHOICE || questionType === QuestionTypes.DROPDOWN) && (
+            {(question.type === QuestionTypes.MULTICHOICE || question.type === QuestionTypes.DROPDOWN) && (
                 <div className="mt-4">
                     <div className="flex justify-between items-center">
                         <label className="font-semibold">Options:</label>
                         <Button
                             onClick={handleAddOption}
                             className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
-                            title={options.length >= 10 ? "Maximum options reached" : "Add Option"}
-                            disabled={options.length >= 10}
+                            title={question.options.length >= 10 ? "Maximum options reached" : "Add Option"}
+                            disabled={question.options.length >= 10}
                         >
-                            {options.length >= 10 ? "Max Options" : "Add Option"}
+                            {question.options.length >= 10 ? "Max Options" : "Add Option"}
                         </Button>
                     </div>
                     {validationErrors.options && <p className="text-red-500 text-sm">{validationErrors.options}</p>}
                     {validationErrors.answers && <p className="text-red-500 text-sm">{validationErrors.answers}</p>}
 
                     {/* Option inputs */}
-                    {options.map((option, index) => (
+                    {question.options.map((option, index) => (
                         <div
                             key={index}
-                            className={`flex items-center gap-2 mt-2 p-2 rounded-md border-2 transition-colors ${answers.includes(index)
+                            className={`flex items-center gap-2 mt-2 p-2 rounded-md border-2 transition-colors ${question.answers.includes(index)
                                 ? "bg-green-100 border-green-500"
                                 : "bg-gray-200 border-gray-400"
                                 }`}
@@ -277,18 +284,18 @@ const QuestionForm = ({ visible, onClose, onSave, editingQuestion }) => {
                             <button
                                 type="button"
                                 onClick={() => handleAnswerClick(index)}
-                                className={`relative w-7 h-7 flex items-center justify-center rounded-md cursor-pointer transition-all ${answers.includes(index) ? "bg-green-500" : "bg-gray-400"
+                                className={`relative w-7 h-7 flex items-center justify-center rounded-md cursor-pointer transition-all ${question.answers.includes(index) ? "bg-green-500" : "bg-gray-400"
                                     }`}
                             >
                                 <span className="group">
-                                    {answers.includes(index) ? (
+                                    {question.answers.includes(index) ? (
                                         <FaCheck className="text-white w-5 h-5" />
                                     ) : (
                                         <FaTimes className="text-white w-5 h-5" />
                                     )}
                                     {/* Tooltip */}
                                     <span className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black text-white text-xs rounded px-2 py-1 whitespace-nowrap">
-                                        {answers.includes(index) ? "Correct answer" : "Incorrect answer"}
+                                        {question.answers.includes(index) ? "Correct answer" : "Incorrect answer"}
                                     </span>
                                 </span>
                             </button>
@@ -311,27 +318,27 @@ const QuestionForm = ({ visible, onClose, onSave, editingQuestion }) => {
                 </div>
             )}
 
-            {questionType === QuestionTypes.TRUE_FALSE && (
+            {(question.type === QuestionTypes.TRUE_FALSE || question.type === QuestionTypes.YES_NO)&& (
                 <div className="mt-4">
                     <div className="flex justify-between items-center">
                         <label className="font-semibold">Options:</label>
                         <p className="text-sm text-gray-500">Choose correct answer.</p>
                     </div>
 
-                    {options.map((option, index) => (
+                    {question.options.map((option, index) => (
                         <div
                             key={index}
-                            className={`flex items-center gap-2 mt-2 p-2 rounded-md cursor-pointer border-2 ${answers.length > 0 && answers[0] === index
+                            className={`flex items-center gap-2 mt-2 p-2 rounded-md cursor-pointer border-2 ${question.answers.length > 0 && question.answers[0] === index
                                 ? 'bg-green-100 border-green-500'
                                 : 'bg-gray-200 border-gray-400'
                                 }`}
                         >
                             <input
                                 type="radio"
-                                name="trueFalseAnswer"
+                                name="radioAnswer"
                                 value={index}
-                                checked={answers.length > 0 ? answers[0] === index : index === 0}
-                                onChange={() => handleTrueFalseAnswerSelect(index)}
+                                checked={question.answers.length > 0 ? question.answers[0] === index : index === 0}
+                                onChange={() => handleRadioAnswerSelect(index)}
                                 className="cursor-pointer"
                             />
                             <label className="text-gray-700 text-sm">{option}</label>
