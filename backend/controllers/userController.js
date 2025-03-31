@@ -1,5 +1,6 @@
 import admin from "firebase-admin";
 import { db } from "../firebase.js";
+import Positions from "../models/Positions.js";
 import { sendEmail } from "../utils/mailjet.js";
 import { format } from "date-fns";
 
@@ -33,12 +34,18 @@ export const getUser = async (req, res) => {
     
     // Validate UID parameter
     if (!uid) {
-      return res.status(400).json({ message: "User ID is required" });
+      return res.status(400).json({ 
+        message: "User ID is required",
+        success: false
+      });
     }
     
     // Validate UID format (assuming Firebase UIDs are strings with length > 5)
     if (typeof uid !== 'string' || uid.length < 5) {
-      return res.status(400).json({ message: "Invalid user ID format" });
+      return res.status(400).json({ 
+        message: "Invalid user ID format",
+        success: false
+      });
     }
 
     // Get user from Firebase Auth
@@ -48,6 +55,7 @@ export const getUser = async (req, res) => {
     } catch (authError) {
       return res.status(404).json({ 
         message: "User not found in authentication system",
+        success: false,
         error: authError.message
       });
     }
@@ -67,7 +75,7 @@ export const getUser = async (req, res) => {
       email: userResult.email,
       permission: userResult.customClaims
         ? userResult.customClaims.role
-        : "user",
+        : Permissions.USER,
       position: userDoc.exists ? userDoc.data().position : "",
       department: userDoc.exists ? userDoc.data().department : "",
       locations: userDoc.exists ? userDoc.data().locations : [],
@@ -75,11 +83,15 @@ export const getUser = async (req, res) => {
       // Removed assignedInductions as they are now stored in the userInductions collection
     };
 
-    res.json(userData);
+    res.json({
+      success: true,
+      data: userData
+    });
   } catch (error) {
     console.error("Error fetching user:", error);
     res.status(500).json({
       message: "Server error while fetching user data",
+      success: false,
       error: error.message
     });
   }
@@ -127,6 +139,7 @@ export const createUser = async (req, res) => {
     // Return validation errors if any
     if (validationErrors.length > 0) {
       return res.status(400).json({
+        success: false,
         message: "Validation failed",
         errors: validationErrors
       });
@@ -137,11 +150,11 @@ export const createUser = async (req, res) => {
       const existingUser = await admin.auth().getUserByEmail(email);
       if (existingUser) {
         return res.status(409).json({
+          success: false,
           message: "User with this email already exists"
         });
       }
     } catch (error) {
-      // Error code auth/user-not-found means the user doesn't exist, which is what we want
       if (error.code !== 'auth/user-not-found') {
         throw error;
       }
@@ -169,6 +182,7 @@ export const createUser = async (req, res) => {
         department: department || "", // Default to empty string if not provided
         locations: Array.isArray(locations) ? locations : [],
         createdAt: admin.firestore.FieldValue.serverTimestamp()
+        // Removed assignedInductions as they are now stored in the userInductions collection
       });
     } catch (firestoreError) {
       // If Firestore creation fails, attempt to delete the Auth user to maintain consistency
@@ -179,6 +193,7 @@ export const createUser = async (req, res) => {
         console.error("Failed to clean up Auth user after Firestore error:", deleteError);
       }
       return res.status(500).json({ 
+        success: false,
         message: "Error writing to Firestore.",
         error: firestoreError.message
       });
@@ -208,10 +223,9 @@ export const createUser = async (req, res) => {
     `;
 
     const replyToEmail = 'autevents@brears.xyz'; // reply to aut events
-    const ccEmails = ['manager@brears.xyz']; // Cc Rinus
 
     // Send welcome email with ReplyTo and CC, using the default template
-    await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
+    await sendEmail(email, emailSubject, emailBody, replyToEmail);
     
     res.status(201).json({
       uid: userRecord.uid,
@@ -268,6 +282,7 @@ export const updateUser = async (req, res) => {
     // Return validation errors if any
     if (validationErrors.length > 0) {
       return res.status(400).json({
+        success: false,
         message: "Validation failed",
         errors: validationErrors
       });
@@ -277,7 +292,10 @@ export const updateUser = async (req, res) => {
     const userRef = db.collection("users").doc(uid);
     const userDoc = await userRef.get();
     if (!userDoc.exists) {
-      return res.status(404).json({ message: "User not found in database" });
+      return res.status(404).json({ 
+        success: false,
+        message: "User not found in database" 
+      });
     }
 
     // Check if email is being changed and if it's already in use by another user
@@ -285,11 +303,11 @@ export const updateUser = async (req, res) => {
       const existingUser = await admin.auth().getUserByEmail(email);
       if (existingUser && existingUser.uid !== uid) {
         return res.status(409).json({
+          success: false,
           message: "Email address is already in use by another user"
         });
       }
     } catch (error) {
-      // Error code auth/user-not-found means the email is not in use, which is fine
       if (error.code !== 'auth/user-not-found') {
         throw error;
       }
@@ -320,6 +338,7 @@ export const updateUser = async (req, res) => {
     await userRef.update(updateData);
 
     res.json({
+      success: true,
       message: "User updated successfully",
       data: {
         uid: userResult.uid,
@@ -331,6 +350,7 @@ export const updateUser = async (req, res) => {
   } catch (error) {
     console.error("Error updating user:", error);
     res.status(500).json({
+      success: false,
       message: "Failed to update user",
       error: error.message || "Unknown error occurred",
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
@@ -345,7 +365,10 @@ export const deleteUser = async (req, res) => {
     
     // Validate UID parameter
     if (!uid) {
-      return res.status(400).json({ message: "User ID is required" });
+      return res.status(400).json({ 
+        success: false,
+        message: "User ID is required" 
+      });
     }
     
     // Check if user exists before attempting deletion
@@ -354,6 +377,7 @@ export const deleteUser = async (req, res) => {
     } catch (authError) {
       if (authError.code === 'auth/user-not-found') {
         return res.status(404).json({
+          success: false,
           message: "User not found in authentication system"
         });
       }
@@ -384,12 +408,14 @@ export const deleteUser = async (req, res) => {
     await admin.auth().deleteUser(uid);
 
     res.status(200).json({
+      success: true,
       message: "User and all associated data deleted successfully",
       deletedUserInductions: userInductionsSnapshot.size
     });
   } catch (error) {
     console.error("Error deleting user:", error);
     res.status(500).json({
+      success: false,
       message: "Failed to delete user",
       error: error.message
     });
@@ -403,7 +429,10 @@ export const deactivateUser = async (req, res) => {
     
     // Validate UID parameter
     if (!uid) {
-      return res.status(400).json({ message: "User ID is required" });
+      return res.status(400).json({ 
+        success: false,
+        message: "User ID is required" 
+      });
     }
     
     // Check if user exists before attempting deactivation
@@ -413,12 +442,14 @@ export const deactivateUser = async (req, res) => {
       // Check if user is already disabled
       if (userRecord.disabled) {
         return res.status(400).json({
+          success: false,
           message: "User is already deactivated"
         });
       }
     } catch (authError) {
       if (authError.code === 'auth/user-not-found') {
         return res.status(404).json({
+          success: false,
           message: "User not found in authentication system"
         });
       }
@@ -436,11 +467,13 @@ export const deactivateUser = async (req, res) => {
     });
 
     res.status(200).json({
+      success: true,
       message: "User deactivated successfully"
     });
   } catch (error) {
     console.error("Error deactivating user:", error);
     res.status(500).json({
+      success: false,
       message: "Failed to deactivate user",
       error: error.message
     });
@@ -454,7 +487,10 @@ export const reactivateUser = async (req, res) => {
     
     // Validate UID parameter
     if (!uid) {
-      return res.status(400).json({ message: "User ID is required" });
+      return res.status(400).json({ 
+        success: false,
+        message: "User ID is required" 
+      });
     }
     
     // Check if user exists before attempting reactivation
@@ -464,12 +500,14 @@ export const reactivateUser = async (req, res) => {
       // Check if user is already enabled
       if (!userRecord.disabled) {
         return res.status(400).json({
+          success: false,
           message: "User is already active"
         });
       }
     } catch (authError) {
       if (authError.code === 'auth/user-not-found') {
         return res.status(404).json({
+          success: false,
           message: "User not found in authentication system"
         });
       }
@@ -487,11 +525,13 @@ export const reactivateUser = async (req, res) => {
     });
 
     res.status(200).json({
+      success: true,
       message: "User reactivated successfully"
     });
   } catch (error) {
     console.error("Error reactivating user:", error);
     res.status(500).json({
+      success: false,
       message: "Failed to reactivate user",
       error: error.message
     });
