@@ -2,12 +2,13 @@ import React, { useEffect, useState } from 'react';
 
 // Array of the background images
 const backgrounds = [
-    '/images/header-bg-1.jpg',
-    '/images/header-bg-2.jpg',
-    '/images/header-bg-3.jpg',
-    '/images/header-bg-4.jpg',
-    '/images/header-bg-5.jpg',
-    '/images/header-bg-6.jpg',
+    '/images/new-header-bg-1.jpg',
+    '/images/new-header-bg-2.jpg',
+    '/images/new-header-bg-3.jpg',
+    '/images/new-header-bg-4.jpg',
+    '/images/new-header-bg-5.jpg',
+    '/images/new-header-bg-6.jpg',
+    '/images/new-header-bg-7.jpg',
     '/images/WG_OUTSIDE_AUT.jpg',
 ];
 

@@ -7,6 +7,7 @@ import Loading from '../components/Loading';
 import QuestionTypes from '../models/QuestionTypes';
 import { notifyError, notifySuccess, messageError, messageSuccess } from '../utils/notificationService';
 import InductionFeedbackModal from '../components/InductionFeedbackModal';
+import { updateUserInduction, getUserInductionById } from '../api/UserInductionApi';
 
 const STATES = {
   LOADING: 'LOADING',
@@ -25,12 +26,14 @@ const InductionFormPage = () => {
   
   // Use refs to avoid intermediate state updates
   const stateRef = useRef(STATES.LOADING);
-  const inducRef = useRef(null);
+  const inductionRef = useRef(null);
+  const userInductionRef = useRef(null);
   const errorMessageRef = useRef(null);
   
   // These states will ONLY be updated once we're certain of their final values
   const [viewState, setViewState] = useState(STATES.LOADING);
   const [induction, setInduction] = useState(null);
+  const [userInduction, setUserInduction] = useState(null);
   
   // Missing state variables that were causing errors
   const [loading, setLoading] = useState(true);
@@ -88,24 +91,78 @@ const InductionFormPage = () => {
         setLoading(true);
         setNotFound(false);
 
-        const data = await getInduction(user, idParam);
+        // First, get the user induction assignment
+        const userInductionData = await getUserInductionById(user, idParam);
         
-        // If we got valid data, always show it immediately
-        if (data) {
-          console.log("✅ Got valid data");
+        if (userInductionData) {
+          // Make a clean copy to normalise any data if needed
+          const normalizedUserInduction = { ...userInductionData };
           
-          // Update refs first (these never cause renders)
-          inducRef.current = data;
-          stateRef.current = STATES.SUCCESS;
+          // Check for Firestore timestamp formats and normalize them
+          const normalizeTimestamp = (field) => {
+            const value = normalizedUserInduction[field];
+            if (value && typeof value === 'object') {
+              // Handle Firestore timestamps with seconds
+              if (value._seconds !== undefined || value.seconds !== undefined) {
+                const seconds = value._seconds !== undefined ? value._seconds : value.seconds;
+                normalizedUserInduction[field] = new Date(seconds * 1000);
+              }
+              // Handle objects with toDate method
+              else if (typeof value.toDate === 'function') {
+                normalizedUserInduction[field] = value.toDate();
+              }
+            }
+          };
           
-          // Only update state if still mounted
-          if (mounted) {
-            // Use requestAnimationFrame to batch these updates together
-            window.requestAnimationFrame(() => {
-              setInduction(data);
-              setViewState(STATES.SUCCESS);
-              setLoading(false);
-            });
+          // Normalize all potential timestamp fields
+          normalizeTimestamp('assignedAt');
+          normalizeTimestamp('availableFrom');
+          normalizeTimestamp('dueDate');
+          normalizeTimestamp('completedAt');
+          normalizeTimestamp('startedAt');
+          
+          userInductionRef.current = normalizedUserInduction;
+          
+          // Now get the detailed induction content using the inductionId from user induction
+          if (normalizedUserInduction.induction) {
+            // If the induction details are already embedded in the response
+            inductionRef.current = normalizedUserInduction.induction;
+            stateRef.current = STATES.SUCCESS;
+            
+            if (mounted) {
+              window.requestAnimationFrame(() => {
+                setUserInduction(normalizedUserInduction);
+                setInduction(normalizedUserInduction.induction);
+                setViewState(STATES.SUCCESS);
+                setLoading(false);
+              });
+            }
+          } else if (normalizedUserInduction.inductionId) {
+            // Otherwise fetch the induction details
+            const inductionData = await getInduction(user, normalizedUserInduction.inductionId);
+            
+            if (inductionData) {
+              inductionRef.current = inductionData;
+              stateRef.current = STATES.SUCCESS;
+              
+              if (mounted) {
+                window.requestAnimationFrame(() => {
+                  setUserInduction(normalizedUserInduction);
+                  setInduction(inductionData);
+                  setViewState(STATES.SUCCESS);
+                  setLoading(false);
+                });
+              }
+            } else {
+              throw new Error('Failed to load induction content');
+            }
+          } else {
+            throw new Error('Induction assignment does not contain induction ID');
+          }
+          
+          // Check if induction is already in progress
+          if (normalizedUserInduction.status === 'in_progress') {
+            setStarted(true);
           }
         } 
         // If we got null data and haven't changed state yet
@@ -184,7 +241,20 @@ const InductionFormPage = () => {
     };
   }, [idParam, user, navigate, loadAttempts]);
 
-  const handleStart = () => {
+  const handleStart = async () => {
+    // Mark induction as in progress in the database
+    if (userInduction && userInduction.status === 'assigned') {
+      try {
+        await updateUserInduction(user, userInduction.id, {
+          status: 'in_progress',
+          startedAt: new Date().toISOString()
+        });
+      } catch (error) {
+        console.error("Error updating induction status:", error);
+        // Continue anyway - the UI state is more important
+      }
+    }
+    
     setStarted(true);
     const initialAnswers = {};
     induction.questions.forEach(question => {
@@ -311,32 +381,43 @@ const InductionFormPage = () => {
     }
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     
-    const submissionData = {
-      inductionId: induction.id,
-      userId: user?.id,
-      answers: answers,
-      completedAt: new Date().toISOString()
-    };
-    
-    console.log('Form submitted', submissionData);
-    
-    // Show success message
-    messageSuccess('Induction completed successfully!');
-    
-    // Show feedback modal
-    setShowFeedbackModal(true);
-    
-    // Reset the form submission state
-    //setIsSubmitting(false);
+    try {
+      // Mark induction as complete in the database
+      if (userInduction) {
+        await updateUserInduction(user, userInduction.id, {
+          status: 'complete',
+          completedAt: new Date().toISOString(),
+          progress: 100,
+          feedback: null // This will be filled by the feedback modal
+        });
+      }
+      
+      // Show success message
+      messageSuccess('Induction completed successfully!');
+      
+      // Show feedback modal
+      setShowFeedbackModal(true);
+    } catch (error) {
+      console.error("Error completing induction:", error);
+      notifyError('Error', 'Failed to save induction completion. Please try again.');
+      setIsSubmitting(false);
+    }
   };
 
   // Handle feedback modal close
-  const handleFeedbackModalClose = () => {
+  const handleFeedbackModalClose = (feedback) => {
     setShowFeedbackModal(false);
+    
+    // If feedback was provided, save it
+    if (feedback && userInduction) {
+      updateUserInduction(user, userInduction.id, { feedback })
+        .catch(error => console.error("Error saving feedback:", error));
+    }
+    
     // Navigate away after closing the modal
     navigate('/inductions/my-inductions');
   };
@@ -429,10 +510,10 @@ const InductionFormPage = () => {
           <div className="bg-white shadow-md rounded-lg overflow-hidden">
             <h1 className="text-2xl font-bold p-6 break-words border-b">{induction.name}</h1>
             
-            {induction.questions.length > 0 ? (
-              <div className="flex flex-col md:flex-row">
-                {/* Mobile toggle button for question navigation */}
-                <div className="md:hidden p-4 border-b">
+            {induction.questions && induction.questions.length > 0 ? (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                {/* View Mode Toggle */}
+                <div className="mb-4 flex justify-end">
                   <button
                     onClick={toggleMobileMenu}
                     className="w-full flex items-center justify-between px-4 py-2 bg-gray-100 rounded-md text-gray-700"
@@ -685,8 +766,9 @@ const InductionFormPage = () => {
       <InductionFeedbackModal
         visible={showFeedbackModal}
         onClose={handleFeedbackModalClose}
-        inductionId={induction?.id}
+        inductionId={userInduction?.inductionId || induction?.id}
         inductionName={induction?.name}
+        userInductionId={userInduction?.id}
       />
     </>
   );
