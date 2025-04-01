@@ -511,7 +511,7 @@ const InductionFormPage = () => {
             <h1 className="text-2xl font-bold p-6 break-words border-b">{induction.name}</h1>
             
             {induction.questions && induction.questions.length > 0 ? (
-              <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-6">
                 {/* View Mode Toggle */}
                 <div className="mb-4 flex justify-end">
                   <button
