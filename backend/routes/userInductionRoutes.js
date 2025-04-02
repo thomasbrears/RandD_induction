@@ -6,19 +6,26 @@ import {
   updateUserInduction,
   deleteUserInduction,
   getUsersByInduction,
-  getInductionStats
+  getInductionStats,
+  getUserInductionResults,
+  getInductionResults,
+  getResultsStats,
+  sendInductionReminder
 } from "../controllers/userInductionController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
-
 
 const router = express.Router();
 
 router.post("/assign", authMiddleware, assignInductionToUser);
+router.get("/by-induction", authMiddleware, getUsersByInduction);
+router.get("/stats", authMiddleware, getInductionStats);
+router.get("/results-stats", authMiddleware, getResultsStats);
+router.get("/results/:id", authMiddleware, getUserInductionResults);
+router.get("/induction-results/:inductionId", authMiddleware, getInductionResults);
+router.post("/send-reminder/:id", authMiddleware, sendInductionReminder);
 router.get("/user/:userId", authMiddleware, getUserInductions);
 router.get("/:id", authMiddleware, getUserInductionById);
 router.put("/:id", authMiddleware, updateUserInduction);
 router.delete("/:id", authMiddleware, deleteUserInduction);
-router.get("/by-induction", authMiddleware, getUsersByInduction);
-router.get("/stats", authMiddleware, getInductionStats);
 
 export default router;

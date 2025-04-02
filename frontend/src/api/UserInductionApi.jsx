@@ -155,3 +155,102 @@ export const getInductionStats = async (user, inductionId) => {
     throw error;
   }
 };
+
+// Get results for a specific user induction
+export const getUserInductionResults = async (user, id) => {
+  try {
+    const token = user?.token;
+    const headers = token ? { authtoken: token } : {};
+    
+    const response = await axios.get(
+      `${API_URL}/user-inductions/results/${id}`,
+      { headers }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching user induction results:", error);
+    throw error;
+  }
+};
+
+// Get all results for a specific induction
+export const getInductionResults = async (user, inductionId) => {
+  try {
+    const token = user?.token;
+    const headers = token ? { authtoken: token } : {};
+    
+    const response = await axios.get(
+      `${API_URL}/user-inductions/induction-results/${inductionId}`,
+      { headers }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching induction results:", error);
+    throw error;
+  }
+};
+
+// Get detailed statistics for a specific induction
+export const getResultsStats = async (user, inductionId) => {
+  try {
+    const token = user?.token;
+    const headers = token ? { authtoken: token } : {};
+    
+    const response = await axios.get(
+      `${API_URL}/user-inductions/results-stats`,
+      { 
+        headers,
+        params: { inductionId }
+      }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching results stats:", error);
+    throw error;
+  }
+};
+
+// Export induction results to Excel (placeholder)
+export const exportInductionResultsToExcel = async (user, inductionId) => {
+  try {
+    console.log("Export to Excel functionality coming soon!");
+    return { success: false, message: "Export feature coming soon" };
+  } catch (error) {
+    console.error("Error exporting to Excel:", error);
+    throw error;
+  }
+};
+
+// Export induction results to PDF (placeholder)
+export const exportInductionResultsToPDF = async (user, inductionId) => {
+  try {
+    console.log("Export to PDF functionality coming soon!");
+    return { success: false, message: "Export feature coming soon" };
+  } catch (error) {
+    console.error("Error exporting to PDF:", error);
+    throw error;
+  }
+};
+
+
+// Send reminder email for a user induction
+export const sendInductionReminder = async (user, userInductionId) => {
+  try {
+    const token = user?.token;
+    const headers = token ? { authtoken: token } : {};
+    
+    const response = await axios.post(
+      `${API_URL}/user-inductions/send-reminder/${userInductionId}`,
+      {},
+      { headers }
+    );
+    
+    return response.data;
+  } catch (error) {
+    console.error("Error sending reminder:", error);
+    throw error;
+  }
+};

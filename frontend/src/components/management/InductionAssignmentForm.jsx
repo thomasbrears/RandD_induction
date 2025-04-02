@@ -218,12 +218,13 @@ const InductionAssignmentForm = ({
     <>
       <div className="bg-white shadow-lg rounded-lg overflow-hidden w-full max-w-4xl mx-auto">
         {/* Header with gradient background */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
-          <h1 className="text-xl font-bold text-white flex items-center">
+        <div className="bg-gradient-to-r from-white to-white px-6 py-4">
+          <h1 className="text-xl font-bold text-black flex items-center">
             <PlusOutlined className="mr-2 text-xl" />
             Assign New Inductions
           </h1>
-          <p className="text-blue-100 text-sm mt-1">Select inductions to assign to this user</p>
+          <p className="text-gray-500 text-sm mt-1 mb-2">Select inductions to assign to this user</p>
+          <hr />
         </div>
         
         <div className="p-6">
@@ -231,7 +232,7 @@ const InductionAssignmentForm = ({
             <form onSubmit={methods.handleSubmit(handleSubmit)} className="w-full">
               {/* Empty state when no inductions added */}
               {newAssignments.length === 0 ? (
-                <div className="flex justify-center py-6">
+                <div className="flex justify-center py-2">
                   <button
                     type="button"
                     onClick={handleAddInduction}

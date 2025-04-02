@@ -23,13 +23,16 @@ import ManageUserInductionsPage from './pages/management/ManageUserInductionsPag
 import InductionList from './pages/management/InductionList';
 import InductionEdit from './pages/management/InductionEdit';
 import InductionCreate from './pages/management/InductionCreate';
-import InductionResults from './pages/management/InductionResults';
+import InductionResults from './pages/management/ResultsPage.jsx';
 import InductionViewResults from './pages/management/InductionViewResults.jsx';
 import EditUser from './pages/management/EditUser';
 import Settings from './pages/management/Settings';
 import ContactSubmissions from './pages/management/ContactSubmissions.jsx';
 import ManageAccount from './pages/ManageAccountPage';
 import FeedbackTestPage from './pages/FeedbackTestPage.jsx';
+import Results from './pages/management/ResultsPage';
+import InductionResultsPage from './pages/management/InductionResultsPage';
+import StaffInductionResultsPage from './pages/management/StaffInductionResultsPage';
 
 // Auth hook and components
 import useAuth from './hooks/useAuth';
@@ -123,8 +126,9 @@ const App = () => {
                 <Route path="/management/inductions/view" element={<PrivateRoute component={InductionList} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
                 <Route path="/management/inductions/edit" element={<PrivateRoute component={InductionEdit} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
                 <Route path="/management/inductions/create" element={<PrivateRoute component={InductionCreate} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
-                <Route path="/management/inductions/results" element={<PrivateRoute component={InductionResults} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
-                <Route path="/management/inductions/results/view" element={<PrivateRoute component={InductionViewResults} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+                <Route path="/management/results" element={<PrivateRoute component={Results} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+                <Route path="/management/results/induction/:inductionId" element={<PrivateRoute component={InductionResultsPage} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+                <Route path="/management/results/user/:userId/:assignmentId" element={<PrivateRoute component={StaffInductionResultsPage} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
               </Routes>
             </div>
             <Footer />

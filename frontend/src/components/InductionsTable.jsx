@@ -43,7 +43,7 @@ const InductionsTable = () => {
   };
 
   const handleViewInductionResults = async (id) => {
-    navigate("/management/inductions/results/view", { state: { id } });
+    navigate(`/management/results/induction/${id}`);
   };
 
   const handleInductionAssignment = async (id) => {

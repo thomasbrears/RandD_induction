@@ -34,7 +34,7 @@ const ManagementSidebar = () => {
     { path: '/management/users/create', label: 'Create User', icon: <FaUserPlus /> },
     { path: '/management/inductions/view', label: 'View Inductions', icon: <FaClipboardList /> },
     { path: '/management/inductions/create', label: 'Create Induction', icon: <IoCreate /> },
-    { path: '/management/inductions/results', label: 'View Results', icon: <FaChartBar /> },
+    { path: '/management/results', label: 'View Results', icon: <FaChartBar /> },
     { path: '/management/contact-submissions', label: 'Submissions', icon: <GrContact /> },
     { path: '/admin/settings', label: 'Settings', icon: <FaCog />, adminOnly: true }
   ];
