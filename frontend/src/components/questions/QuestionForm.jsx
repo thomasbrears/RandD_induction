@@ -1,359 +1,377 @@
-import { useState, useEffect } from "react";
-import { Modal, Select, Input, Button } from "antd";
+import { useEffect } from "react";
+import { Modal, Form, Select, Input, Button, Collapse, Switch, Radio } from "antd";
 import QuestionTypes from "../../models/QuestionTypes";
 import TiptapEditor from "../TiptapEditor";
 import { FaCheck, FaTimes } from "react-icons/fa";
 import { DefaultNewQuestion } from "../../models/Question";
+import { UpOutlined, PlusOutlined } from "@ant-design/icons";
+import "../../style/AntdOverride.css";
+import { v4 as uuidv4 } from 'uuid';
 
-const QuestionForm = ({ visible, onClose, onSave, editingQuestion }) => {
-    const [question, setQuestion] = useState(DefaultNewQuestion);
+const { Option } = Select;
 
-    const [showDescription, setShowDescription] = useState(false);
-    const [showImageUpload, setShowImageUpload] = useState(false);
-
-    const [validationErrors, setValidationErrors] = useState({});
-    const [validateAll, setValidateAll] = useState(false);
-
-    useEffect(() => {
-        setQuestion(editingQuestion || DefaultNewQuestion);
-        if(!editingQuestion) handleChange("type", "");
-    }, [editingQuestion]);
-
-    const handleChange = (field, value) => {
-        setQuestion((prev) => ({
-            ...prev,
-            [field]: value,
-        }));
-    };
+const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
+    const [form] = Form.useForm();
+    const selectedType = Form.useWatch('type', form);
+    const requiresValidation = Form.useWatch('requiresValidation', form);
+    const answers = Form.useWatch('answers', form);
 
     const handleQuestionTypeChange = (value) => {
-        if (validateAll) {//Reset validation if form changes
-            setValidateAll(false);
-            setValidationErrors({});
-        }
-        handleChange("type", value);
+        let newOptions = [];
+        let newAnswers = [];
+
         switch (value) {
             case QuestionTypes.TRUE_FALSE:
-                handleChange("options",["True", "False"]);
-                handleChange("answers",[0]);
+                newOptions = ["True", "False"];
+                newAnswers = [0];
                 break;
             case QuestionTypes.DROPDOWN:
             case QuestionTypes.MULTICHOICE:
-                handleChange("options",[]);
-                handleChange("answers",[]);
+                newOptions = [""];
+                newAnswers = [];
                 break;
             case QuestionTypes.FILE_UPLOAD:
             case QuestionTypes.YES_NO:
             case QuestionTypes.INFORMATION:
             case QuestionTypes.SHORT_ANSWER:
-                handleChange("options",["Yes", "No"]);
-                handleChange("answers",[0]);
+                newOptions = ["Yes", "No"];
+                newAnswers = [1];
                 break;
             default:
-                handleChange("options",[]);
-                handleChange("answers",[]);
+                newOptions = [];
+                newAnswers = [];
         }
-    };
 
-    const handleAddOption = () => {
-        if (question.options.length < 10) {
-            handleChange("options", [...question.options, ""]);
-        }
-    };
-
-    const handleRemoveOption = (index) => {
-        const updatedOptions = question.options.filter((_, i) => i !== index);
-        const updatedAnswers = question.answers
-            .filter((answerIndex) => answerIndex !== index)
-            .map((answerIndex) => (answerIndex > index ? answerIndex - 1 : answerIndex));
-    
-        handleChange("options", updatedOptions);
-        handleChange("answers", updatedAnswers);
-    };
-
-    const handleOptionChange = (index, value) => {
-        const updatedOptions = [...question.options];
-        updatedOptions[index] = value;
-        
-        handleChange("options", updatedOptions);
-    };
-
-    const handleAnswerClick = (index) => {
-        setQuestion((prev) => {
-            let newAnswers;
-    
-            if (question.type === QuestionTypes.DROPDOWN) {
-                newAnswers = [index]; 
-            } else {
-                if (prev.answers.includes(index)) {
-                    newAnswers = prev.answers.filter((answer) => answer !== index); 
-                } else {
-                    newAnswers = [...prev.answers, index];
-                }
-            }
-    
-            console.log("Updated answers:", newAnswers); 
-    
-            return {
-                ...prev,
-                answers: newAnswers,
-            };
+        form.setFieldsValue({
+            type: value,
+            options: newOptions,
+            answers: newAnswers,
         });
     };
 
-    const handleRadioAnswerSelect = (index) => {
-        handleChange("answers", [index]);
-    };
-
-    const resetForm = () => {
-        setQuestion(DefaultNewQuestion);
-        handleChange("type", "");
-
-        setShowDescription(false);
-        setShowImageUpload(false);
-
-        setValidationErrors({});
-        setValidateAll(false);
-    };
-
-    const validateForm = () => {
-        const errors = {};
-
-        if (!question.type) {
-            errors.questionType = "Question type is required";
-        }
-        if (!question.question.trim()) {
-            errors.questionText = "Question text cannot be empty";
-        }
-        if ((question.type === QuestionTypes.MULTICHOICE || question.type === QuestionTypes.DROPDOWN) && question.options.length === 0) {
-            errors.options = "At least one option is required";
-        }
-        if ((question.type === QuestionTypes.MULTICHOICE || question.type === QuestionTypes.DROPDOWN) && question.answers.length === 0) {
-            if (question.type === QuestionTypes.DROPDOWN) {
-                errors.answers = "One answer must be selected";
-            } else {
-                errors.answers = "At least one answer must be selected";
-            }
-        }
-        if (question.options.some(option => option.trim() === "")) {
-            errors.options = "All options must have text";
-        }
-
-        setValidationErrors(errors);
-        return Object.keys(errors).length === 0;
-    };
-
     useEffect(() => {
-        if (validateAll) {
-            setValidationErrors({});
-            validateForm();
+        if (visible) {
+            form.resetFields();
+            form.setFieldsValue(DefaultNewQuestion);
+            form.setFieldsValue(questionData || { type: undefined });
+        }
+    }, [questionData, visible]);
+
+    const onFinish = (formData) => {
+        const newQuestion = {
+            id: form.getFieldValue('id') || uuidv4(),
+            question: form.getFieldValue('question') || "",
+            description: form.getFieldValue('description') || "",
+            type: form.getFieldValue('type') || QuestionTypes.MULTICHOICE,
+            options: form.getFieldValue('options') || [],
+            answers: form.getFieldValue('answers') || [],
+            requiresValidation: form.getFieldValue('requiresValidation') || true,
+            hint: form.getFieldValue('hint') || "",
+            imageFile: form.getFieldValue('imageFile') || null,
         }
 
-    }, [question, validateAll]);
-
-    const handleSubmit = () => {
-        setValidateAll(true);
-        if (!validateForm()) return;
-    
-        let updatedQuestion = { ...question };
-    
-        // Set the id for new questions
-        if (!editingQuestion) {
-            updatedQuestion.id = Date.now().toString();
-        }
-    
-        console.log(updatedQuestion);
-    
-        onSave(updatedQuestion);
-        resetForm();
+        onSave(newQuestion);
         onClose();
     };
 
+    const handleAnswerClick = (index) => {
+        let answers = form.getFieldValue("answers") || [];
+
+        if (selectedType === QuestionTypes.DROPDOWN || selectedType === QuestionTypes.YES_NO || selectedType === QuestionTypes.TRUE_FALSE) {
+            answers = [index];
+        } else {
+            answers = answers.includes(index)
+                ? answers.filter((answer) => answer !== index)
+                : [...answers, index];
+        }
+
+        form.setFieldsValue({ answers });
+        form.validateFields(["options"]);
+    };
+
     const handleCancel = () => {
-        resetForm();
         onClose();
     };
 
     return (
         <Modal open={visible} title="Add Question" onCancel={handleCancel} footer={null}>
-            {/*Question Type Dropdown */}
-            <div>
-                <label className="font-semibold">Question Type:</label>
-                <Select
-                    className="w-full"
-                    value={question.type}
-                    onChange={handleQuestionTypeChange}
-                    autoFocus
-                >
-                    <Select.Option value={QuestionTypes.MULTICHOICE}>Multiple Choice</Select.Option>
-                    <Select.Option value={QuestionTypes.TRUE_FALSE}>True/False</Select.Option>
-                    <Select.Option value={QuestionTypes.DROPDOWN}>Dropdown</Select.Option>
-                    <Select.Option value={QuestionTypes.FILE_UPLOAD}>File Upload</Select.Option>
-                    <Select.Option value={QuestionTypes.YES_NO}>Yes/No</Select.Option>
-                    <Select.Option value={QuestionTypes.SHORT_ANSWER}>Short Answer</Select.Option>
-                    <Select.Option value={QuestionTypes.INFORMATION}>Information</Select.Option>
-                </Select>
-                {validationErrors.questionType && <p className="text-red-500 text-sm">{validationErrors.questionType}</p>}
-            </div>
 
-            {question.type && (
-                <>
-                    {/*Question Text Input*/}
-                    <div className="mt-4">
-                        <label className="block mb-0 font-semibold">Question:</label>
-                        {validationErrors.questionText && <p className="text-red-500 text-sm mb-1">{validationErrors.questionText}</p>}
-                        <Input
-                            value={question.question}
-                            onChange={(e) => handleChange("question",e.target.value)}
-                            placeholder="Enter your question"
+            <Form
+                form={form}
+                initialValues={questionData}
+                onValuesChange={(changedValues) => {
+                    if (changedValues.type) handleQuestionTypeChange(changedValues.type);
+                }}
+                onFinish={onFinish}
+                layout="vertical"
+                scrollToFirstError={{ behavior: 'auto', block: 'end', focus: true }}
+            >
+
+                {/* Question Type Dropdown */}
+                <Form.Item name="type" className="mb-2" label={<span className="font-semibold">Question Type:</span>} rules={[{ required: true }]} >
+                    <Select autoFocus>
+                        <Option value={QuestionTypes.MULTICHOICE}>Multiple Choice</Option>
+                        <Option value={QuestionTypes.TRUE_FALSE}>True/False</Option>
+                        <Option value={QuestionTypes.DROPDOWN}>Dropdown</Option>
+                        <Option value={QuestionTypes.FILE_UPLOAD}>File Upload</Option>
+                        <Option value={QuestionTypes.YES_NO}>Yes/No</Option>
+                        <Option value={QuestionTypes.SHORT_ANSWER}>Short Answer</Option>
+                        <Option value={QuestionTypes.INFORMATION}>Information</Option>
+                    </Select>
+                </Form.Item>
+
+                {selectedType && (
+                    <>
+                        {/* Question Input */}
+                        <Form.Item
+                            name="question"
+                            label={<span className="font-semibold">Question:</span>}
+                            rules={[
+                                { required: true, message: 'Question is required' },
+                            ]}
+                            className="mb-6 mt-2"
+                        >
+                            <Input.TextArea placeholder="Enter your question" maxLength={200} autoSize={{ minRows: 1, maxRows: 3 }} showCount={true} />
+                        </Form.Item>
+
+                        {/* Collapsible Additional Fields*/}
+                        <Collapse
+                            expandIconPosition="end"
+                            expandIcon={({ isActive }) => (
+                                <UpOutlined className={`transition-transform ${isActive ? 'rotate-180' : ''}`}
+                                    style={{ transform: isActive ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                                    title={isActive ? "Collapse Details" : "Expand Details"} />
+                            )}
+                            className="border border-gray-300 rounded-md mt-4 p-0 mb-2"
+                            items={[
+                                {
+                                    key: "1",
+                                    label: (
+                                        <div className="font-semibold">
+                                            Optional Fields
+                                        </div>
+                                    ),
+                                    children: (
+                                        <div>
+                                            {/* Description Section */}
+                                            <div className="mt-3">
+                                                <span className="font-semibold">Add a Question Description (Optional):</span>
+                                                <Form.Item name="description" className="mt-2">
+                                                    <TiptapEditor
+                                                        description={form.getFieldValue('description')}
+                                                        handleChange={(value) => form.setFieldsValue({ description: value })}
+                                                    />
+                                                </Form.Item>
+                                            </div>
+
+                                            {/* Image Upload Section */}
+                                            <div className="mt-6 pt-2 border-t border-gray-300">
+                                                <span className="font-semibold">Add an Image (Optional):</span>
+                                                <Form.Item className="mt-2">
+                                                    <Button type="primary" onClick={() => alert("Image upload feature coming soon!")}>
+                                                        Upload Image
+                                                    </Button>
+                                                </Form.Item>
+                                            </div>
+                                        </div>
+                                    ),
+                                }
+                            ]}
                         />
-                    </div>
 
-                    <div className="mt-4">
-                        {/* Checkbox to toggle description input */}
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <span className="text-gray-700">Add a Question Description:</span>
-                            <input
-                                type="checkbox"
-                                checked={showDescription}
-                                onChange={() => setShowDescription(!showDescription)}
-                                className="cursor-pointer"
-                            />
-
-                        </label>
-
-                        {/* Hidden input field for description */}
-                        {showDescription && (
-                            <TiptapEditor description={question.description} handleChange={(value) => handleChange("description", value)} />
-                        )}
-                    </div>
-
-                    {/* Checkbox to toggle image upload input */}
-                    <div className="mt-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                            <span className="text-gray-700">Add an Image:</span>
-                            <input
-                                type="checkbox"
-                                checked={showImageUpload}
-                                onChange={() => setShowImageUpload(!showImageUpload)}
-                                className="cursor-pointer"
-                            />
-                        </label>
-
-                        {/* Hidden input field for image upload, to be implemented */}
-                        {showImageUpload && (
-                            <div className="flex flex-col mt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => alert("Image upload feature coming soon!")}
-                                    className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
-                                >
-                                    Upload Image
-                                </button>
-                            </div>
-                        )}
-                    </div>
-                </>
-            )}
-
-            {(question.type === QuestionTypes.MULTICHOICE || question.type === QuestionTypes.DROPDOWN) && (
-                <div className="mt-4">
-                    <div className="flex justify-between items-center">
-                        <label className="font-semibold">Options:</label>
-                        <Button
-                            onClick={handleAddOption}
-                            className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md"
-                            title={question.options.length >= 10 ? "Maximum options reached" : "Add Option"}
-                            disabled={question.options.length >= 10}
-                        >
-                            {question.options.length >= 10 ? "Max Options" : "Add Option"}
-                        </Button>
-                    </div>
-                    {validationErrors.options && <p className="text-red-500 text-sm">{validationErrors.options}</p>}
-                    {validationErrors.answers && <p className="text-red-500 text-sm">{validationErrors.answers}</p>}
-
-                    {/* Option inputs */}
-                    {question.options.map((option, index) => (
-                        <div
-                            key={index}
-                            className={`flex items-center gap-2 mt-2 p-2 rounded-md border-2 transition-colors ${question.answers.includes(index)
-                                ? "bg-green-100 border-green-500"
-                                : "bg-gray-200 border-gray-400"
-                                }`}
-                        >
-                            <button
-                                type="button"
-                                onClick={() => handleAnswerClick(index)}
-                                className={`relative w-7 h-7 flex items-center justify-center rounded-md cursor-pointer transition-all ${question.answers.includes(index) ? "bg-green-500" : "bg-gray-400"
-                                    }`}
-                            >
-                                <span className="group">
-                                    {question.answers.includes(index) ? (
-                                        <FaCheck className="text-white w-5 h-5" />
-                                    ) : (
-                                        <FaTimes className="text-white w-5 h-5" />
+                        {/* Collapsible Validation Settings */}
+                        {(selectedType === QuestionTypes.MULTICHOICE ||
+                            selectedType === QuestionTypes.TRUE_FALSE ||
+                            selectedType === QuestionTypes.DROPDOWN ||
+                            selectedType === QuestionTypes.YES_NO) && (
+                                <Collapse
+                                    expandIconPosition="end"
+                                    expandIcon={({ isActive }) => (
+                                        <UpOutlined className={`transition-transform ${isActive ? 'rotate-180' : ''}`}
+                                            style={{ transform: isActive ? 'rotate(180deg)' : 'rotate(0deg)' }}
+                                            title={isActive ? "Collapse Details" : "Expand Details"} />
                                     )}
-                                    {/* Tooltip */}
-                                    <span className="absolute left-1/2 transform -translate-x-1/2 bottom-full mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-black text-white text-xs rounded px-2 py-1 whitespace-nowrap">
-                                        {question.answers.includes(index) ? "Correct answer" : "Incorrect answer"}
-                                    </span>
-                                </span>
-                            </button>
+                                    className="border border-gray-300 rounded-md mt-4 p-0 mb-2"
+                                    items={[
+                                        {
+                                            key: "2",
+                                            label: "Validation Settings",
+                                            children: (
+                                                <div >
+                                                    <div className="flex items-center justify-between mb-2 mt-3">
+                                                        <span className="font-semibold">Requires Validation:</span>
+                                                        <Form.Item name="requiresValidation" valuePropName="checked" noStyle>
+                                                            <Switch
+                                                                title={form.getFieldValue("requiresValidation") ? "On" : "Off"}
+                                                            />
+                                                        </Form.Item>
+                                                    </div>
 
-                            <Input
-                                value={option}
-                                onChange={(e) => handleOptionChange(index, e.target.value)}
-                                placeholder="Enter your answer option"
-                                className="flex-1"
-                            />
+                                                    {/* Show Hint only if Requires Validation is enabled */}
+                                                    {requiresValidation && (
+                                                        <Form.Item name="hint" label={<span className="font-semibold">Hint (Optional):</span>} className="mt-6 pt-2 border-t border-gray-300">
+                                                            <TiptapEditor
+                                                                description={form.getFieldValue('hint')}
+                                                                handleChange={(value) => form.setFieldsValue({ hint: value })}
+                                                            />
+                                                        </Form.Item>
+                                                    )}
+                                                </div>
+                                            ),
+                                        }
+                                    ]}
+                                />
+                            )}
 
-                            <Button
-                                onClick={() => handleRemoveOption(index)}
-                                className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md"
+                        {/* Dynamic Form List for Options */}
+                        {(selectedType === QuestionTypes.MULTICHOICE || selectedType === QuestionTypes.DROPDOWN) && (
+                            <Form.Item
+                                className="!mb-2"
+                                label={<span className="font-semibold">Options:</span>}
+                                name="options"
+                                dependencies={["options"]}
+                                rules={[
+                                    {
+                                        validator: async (_, options) => {
+                                            const answers = form.getFieldValue("answers") || [];
+                                            if (options.length === 0) {
+                                                return Promise.reject(new Error("At least one option is required."));
+                                            }
+                                            if (answers.length === 0) {
+                                                return Promise.reject(new Error("At least one option must be correct."));
+                                            }
+                                            return Promise.resolve();
+                                        }
+                                    }
+                                ]}
                             >
-                                Remove
-                            </Button>
-                        </div>
-                    ))}
-                </div>
-            )}
+                                <Form.List name="options">
+                                    {(fields, { add, remove }) => {
+                                        const options = form.getFieldValue("options") || [];
+                                        const answers = form.getFieldValue("answers") || [];
 
-            {(question.type === QuestionTypes.TRUE_FALSE || question.type === QuestionTypes.YES_NO)&& (
-                <div className="mt-4">
-                    <div className="flex justify-between items-center">
-                        <label className="font-semibold">Options:</label>
-                        <p className="text-sm text-gray-500">Choose correct answer.</p>
-                    </div>
+                                        const handleRemove = (index) => {
+                                            const newAnswers = answers
+                                                .filter(answerIndex => answerIndex !== index)
+                                                .map(answerIndex => (answerIndex > index ? answerIndex - 1 : answerIndex));
 
-                    {question.options.map((option, index) => (
-                        <div
-                            key={index}
-                            className={`flex items-center gap-2 mt-2 p-2 rounded-md cursor-pointer border-2 ${question.answers.length > 0 && question.answers[0] === index
-                                ? 'bg-green-100 border-green-500'
-                                : 'bg-gray-200 border-gray-400'
-                                }`}
-                        >
-                            <input
-                                type="radio"
-                                name="radioAnswer"
-                                value={index}
-                                checked={question.answers.length > 0 ? question.answers[0] === index : index === 0}
-                                onChange={() => handleRadioAnswerSelect(index)}
-                                className="cursor-pointer"
-                            />
-                            <label className="text-gray-700 text-sm">{option}</label>
-                        </div>
-                    ))}
-                </div>
-            )}
+                                            remove(index);
+                                            form.setFieldsValue({ answers: newAnswers });
+                                            form.validateFields(["options"]);
+                                        };
 
-            {/*Save button */}
-            <div className="mt-6 flex justify-end">
-                <Button onClick={handleCancel} className="mr-2">Cancel</Button>
-                <Button type="primary" onClick={handleSubmit} disabled={Object.keys(validationErrors).length > 0}>
-                    {editingQuestion ? "Save Changes" : "Add Question"}
-                </Button>
-            </div>
+                                        return (
+                                            <>
+                                                {fields.map(({ key, name, ...restField }, index) => (
+                                                    <div
+                                                        key={key}
+                                                        className={`flex gap-2 p-2 pb-0 rounded-md border-2 transition-colors mb-2
+                                                        ${answers.includes(index) ? "bg-green-100 border-green-500" : "bg-gray-200 border-gray-400"}`}
+                                                    >
+                                                        {/* Answer Selection Button */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleAnswerClick(index)}
+                                                            className={`relative w-7 h-7 flex items-center justify-center rounded-md cursor-pointer transition-all  ${answers.includes(index) ? "bg-green-500" : "bg-gray-400"}`}
+                                                            title={answers.includes(index) ? "Correct Answer" : "Incorrect Answer"}
+                                                        >
+                                                            {answers.includes(index) ? (
+                                                                <FaCheck className="text-white w-5 h-5" />
+                                                            ) : (
+                                                                <FaTimes className="text-white w-5 h-5" />
+                                                            )}
+                                                        </button>
+
+                                                        {/* Option Input */}
+                                                        <Form.Item
+                                                            {...restField}
+                                                            name={[name]}
+                                                            rules={[{ required: true, message: "Option cannot be empty" }]}
+                                                            className="flex-1"
+                                                        >
+                                                            <Input.TextArea
+                                                                placeholder="Enter option"
+                                                                autoSize={{ minRows: 1, maxRows: 3 }}
+                                                                maxLength={150}
+                                                                showCount
+                                                            />
+                                                        </Form.Item>
+
+                                                        {/* Remove Option Button */}
+                                                        <Button
+                                                            onClick={() => handleRemove(index)}
+                                                            className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md"
+                                                            title="Remove Option"
+                                                        >
+                                                            Remove
+                                                        </Button>
+                                                    </div>
+                                                ))}
+
+                                                {/* Add Option Button*/}
+                                                <div className="flex items-center justify-center">
+                                                    <Button
+                                                        type="dashed"
+                                                        onClick={() => add("")}
+                                                        disabled={options.length >= 10}
+                                                        className={`mt-2 text-gray px-4 py-2 rounded-md gap-2 ${options.length >= 10 ? "cursor-not-allowed" : "hover:bg-gray-900"
+                                                            }`}
+                                                        title={options.length >= 10 ? "Maximum 10 options allowed" : "Add Option"}
+                                                        style={{ width: '60%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                                        icon={<PlusOutlined />}
+                                                    >
+                                                        {options.length >= 10 ? "Max Options Reached" : "Add Option"}
+                                                    </Button>
+                                                </div>
+                                            </>
+                                        );
+                                    }}
+                                </Form.List>
+                            </Form.Item>
+                        )}
+
+                        {/*Radio for options*/}
+                        {(selectedType === QuestionTypes.TRUE_FALSE || selectedType === QuestionTypes.YES_NO) && (
+                            <Form.Item
+                                label={<span className="font-semibold">Options:</span>}
+                                name="answers"
+                            >
+                                <div>
+                                    <p className="text-sm text-gray-500">Choose correct answer.</p>
+                                    <Radio.Group onChange={(e) => {
+                                        form.setFieldsValue({ answers: [e.target.value] });
+                                    }}
+                                        value={form.getFieldValue("answers")?.[0]} className="w-full">
+                                        <div className="mt-2 flex flex-col gap-2">
+                                            {form.getFieldValue("options")?.map((option, index) => (
+                                                <div
+                                                    key={index}
+                                                    className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border-2 transition-colors  
+                                            ${form.getFieldValue("answers")?.[0] === index ? "bg-green-100 border-green-500" : "bg-gray-200 border-gray-400"}`}
+                                                >
+                                                    <Radio key={index} value={index}>
+                                                        <span className="text-gray-700 text-sm">{option}</span>
+                                                    </Radio>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </Radio.Group>
+                                </div>
+                            </Form.Item>
+                        )}
+
+                        <Form.Item className="!mb-0 mt-4">
+                            <div className="flex justify-end">
+                                <Button onClick={handleCancel} className="mr-2">Cancel</Button>
+                                <Button type="primary" htmlType="submit" title={questionData ? "Save Changes" : "Create Question"}>
+                                    {questionData ? "Save Changes" : "Create Question"}
+                                </Button>
+                            </div>
+                        </Form.Item>
+                    </>
+                )}
+            </Form>
+
         </Modal>
     );
 };

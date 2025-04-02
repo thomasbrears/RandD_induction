@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from "react";
-import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 import { getAllDepartments } from "../api/DepartmentApi";
 import QuestionList from "../components/questions/QuestionList";
 import QuestionForm from "../components/questions/QuestionForm";
@@ -100,7 +99,7 @@ const InductionFormContent = ({ induction, setInduction }) => {
                 visible={showQuestionModal}
                 onClose={handleCloseModal}
                 onSave={handleSaveQuestion}
-                editingQuestion={editingQuestion}
+                questionData={editingQuestion}
             />
 
             <div className="bg-white p-6 rounded-lg shadow-md space-y-6">

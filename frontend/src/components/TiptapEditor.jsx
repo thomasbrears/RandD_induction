@@ -40,6 +40,7 @@ export default function TiptapEditor({ description, handleChange }) {
                     <button
                         onClick={() => editor.chain().focus().toggleBold().run()}
                         className={`p-2 rounded ${editor?.isActive("bold") ? "text-blue-600" : "text-gray-700"}`}
+                        title="Bold"
                     >
                         <Bold className="size-4" />
                     </button>
@@ -48,14 +49,16 @@ export default function TiptapEditor({ description, handleChange }) {
                     <button
                         onClick={() => editor.chain().focus().toggleItalic().run()}
                         className={`p-2 rounded ${editor?.isActive("italic") ? "text-blue-600" : "text-gray-700"}`}
+                        title="Italic"
                     >
-                        <Italic className="size-4" />
+                        <Italic className="size-4"/>
                     </button>
 
                     {/* Underline Button */}
                     <button
                         onClick={() => editor.chain().focus().toggleUnderline().run()}
                         className={`p-2 rounded ${editor?.isActive("underline") ? "text-blue-600" : "text-gray-700"}`}
+                        title="Underline"
                     >
                         <UnderlineIcon className="size-4" />
                     </button>
