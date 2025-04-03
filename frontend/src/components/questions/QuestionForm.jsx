@@ -215,9 +215,9 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
                                                             className="mt-6 pt-2 border-t border-gray-300"
                                                         >
                                                             <Input.TextArea
-                                                                maxLength={150} 
-                                                                showCount 
-                                                                rows={3} 
+                                                                maxLength={150}
+                                                                showCount
+                                                                rows={3}
                                                                 className="w-full text-sm resize-y"
                                                                 placeholder="Enter a hint (max 150 characters)"
                                                             />
@@ -342,21 +342,25 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
                             <Form.Item
                                 label={<span className="font-semibold">Options:</span>}
                                 name="answers"
+                                normalize={(value) => (Array.isArray(value) ? value.map(Number) : [Number(value)])} 
                             >
                                 <div>
                                     <p className="text-sm text-gray-500">Choose correct answer.</p>
-                                    <Radio.Group onChange={(e) => {
-                                        form.setFieldsValue({ answers: [e.target.value] });
-                                    }}
-                                        value={form.getFieldValue("answers")?.[0]} className="w-full">
+                                    <Radio.Group
+                                        onChange={(e) => {
+                                            form.setFieldsValue({ answers: [Number(e.target.value)] }); 
+                                        }}
+                                        value={Number(form.getFieldValue("answers")?.[0])}
+                                        className="w-full"
+                                    >
                                         <div className="mt-2 flex flex-col gap-2">
                                             {form.getFieldValue("options")?.map((option, index) => (
                                                 <div
                                                     key={index}
                                                     className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border-2 transition-colors  
-                                            ${form.getFieldValue("answers")?.[0] === index ? "bg-green-100 border-green-500" : "bg-gray-200 border-gray-400"}`}
+                                                ${Number(form.getFieldValue("answers")?.[0]) === index ? "bg-green-100 border-green-500" : "bg-gray-200 border-gray-400"}`}
                                                 >
-                                                    <Radio key={index} value={index}>
+                                                    <Radio key={index} value={index}> 
                                                         <span className="text-gray-700 text-sm">{option}</span>
                                                     </Radio>
                                                 </div>
