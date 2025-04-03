@@ -42,11 +42,13 @@ const QuestionList = ({ questions = [], setQuestions, onQuestionEdit}) => {
     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd} sensors={sensors}>
       <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
         <ul className="space-y-2">
-          {questions.map((question) => (
-            <QuestionItem key={question.id}
+          {questions.map((question, index) => (
+            <QuestionItem
+              key={question.id}
               question={question}
               onDeleteQuestion={handleQuestionDelete}
               onQuestionEdit={onQuestionEdit}
+              index={index} 
             />
           ))}
         </ul>

@@ -16,7 +16,7 @@ import QuestionTypes from "../../models/QuestionTypes";
 import ConfirmationModal from "../ConfirmationModal";
 import { Trash } from "lucide-react";
 
-const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit }) => {
+const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index }) => {
     const [hasExpandedBefore, setHasExpandedBefore] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const contentRef = useRef(null);
@@ -158,38 +158,40 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit }) => {
                 cancelLabel="Cancel"
             />
 
-            <li ref={setNodeRef} style={style} {...attributes} className="p-3 bg-white shadow-md rounded-md flex flex-col border w-full">
+            <li ref={setNodeRef} style={style} {...attributes} className="p-4 bg-white shadow-md rounded-md flex flex-col border w-full">
                 {/* Header Section */}
-                <div className="flex items-start gap-2 mt-2 p-2 w-full gap-4">
+                <div className="flex items-center gap-4 p-3 w-full">
                     {/* Drag Icon */}
-                    <span {...listeners} className="text-gray-600 cursor-grab flex py-2 items-center" title="Drag to change question order" style={{ fontSize: '1.125rem', height: '1.25rem' }}>
-                        <FaBars />
+                    <span {...listeners} className="text-gray-600 cursor-grab flex items-center" title="Drag to change question order">
+                        <FaBars size={18} />
                     </span>
 
+                    {/* Question Index */}
+                    <span className="text-gray-500 font-semibold">{index + 1}.</span>
+
                     {/* Question Type and Text */}
-                    <span className="text-lg font-bold min-w-max">{renderQuestionType()}</span>
-                    <div className="flex flex-wrap items-center flex-grow gap-4 min-w-0">
+                    <span className="text-lg font-semibold text-gray-800">{renderQuestionType()}</span>
+
+                    <div className="flex flex-wrap items-center flex-grow min-w-0">
                         <div className="flex-1 min-w-0">
-                            <div className="text-gray-600 break-words text-base">
-                                {question.question}
-                            </div>
+                            <div className="text-gray-700 break-words text-base">{question.question}</div>
                         </div>
                     </div>
 
                     {/* Question Edit Button */}
                     <button
                         type="button"
-                        className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-md flex items-center gap-2"
+                        className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-2 rounded-md flex items-center gap-2"
                         onClick={handleQuestionEdit}
                         title="Edit Question"
                     >
-                        <FaEdit />Edit Question
+                        <FaEdit size={16} /> Edit
                     </button>
 
                     {/* Expand/Collapse Button */}
                     <button
                         type="button"
-                        className="text-gray-700 items-center shrink-0"
+                        className="text-gray-700 hover:text-gray-900 items-center shrink-0"
                         onClick={toggleExpand}
                         title={isExpanded ? "Hide Question Details" : "Show Question Details"}
                     >
@@ -206,12 +208,13 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit }) => {
                         transition: isAnimating ? "max-height 0.3s ease-in-out" : "none",
                     }}
                 >
-                    <div className="p-3 mt-3 border-t border-gray-300">{renderQuestion()}</div>
+                    <div className="p-4 mt-2 border-t border-gray-300">{renderQuestion()}</div>
+
                     {/* Delete Question button */}
-                    <div className="flex justify-end mr-6 mb-2">
+                    <div className="flex justify-end  pr-4 pb-4">
                         <Button
-                            onClick={() => handleConfirmDelete()}
-                            className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md flex items-center gap-2"
+                            onClick={handleConfirmDelete}
+                            className="text-white bg-red-500 hover:bg-red-600 px-3 py-2 rounded-md flex items-center gap-2"
                             title="Delete Question"
                         >
                             <Trash className="w-4 h-4" /> Delete Question

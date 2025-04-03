@@ -35,7 +35,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
             case QuestionTypes.INFORMATION:
             case QuestionTypes.SHORT_ANSWER:
                 newOptions = ["Yes", "No"];
-                newAnswers = [1];
+                newAnswers = [0];
                 break;
             default:
                 newOptions = [];
@@ -209,10 +209,17 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
 
                                                     {/* Show Hint only if Requires Validation is enabled */}
                                                     {requiresValidation && (
-                                                        <Form.Item name="hint" label={<span className="font-semibold">Hint (Optional):</span>} className="mt-6 pt-2 border-t border-gray-300">
-                                                            <TiptapEditor
-                                                                description={form.getFieldValue('hint')}
-                                                                handleChange={(value) => form.setFieldsValue({ hint: value })}
+                                                        <Form.Item
+                                                            name="hint"
+                                                            label={<span className="font-semibold">Hint (Optional):</span>}
+                                                            className="mt-6 pt-2 border-t border-gray-300"
+                                                        >
+                                                            <Input.TextArea
+                                                                maxLength={150} 
+                                                                showCount 
+                                                                rows={3} 
+                                                                className="w-full text-sm resize-y"
+                                                                placeholder="Enter a hint (max 150 characters)"
                                                             />
                                                         </Form.Item>
                                                     )}

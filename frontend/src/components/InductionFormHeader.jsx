@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { FaSave} from 'react-icons/fa';
-import { Input} from 'antd';
+import { FaSave } from 'react-icons/fa';
+import { Input } from 'antd';
 import ConfirmationModal from './ConfirmationModal';
 import { Trash } from "lucide-react";
 
@@ -17,12 +17,12 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduct
     const errors = {};
 
     if (typeof induction.name !== "string" || induction.name.trim() === "") {
-        errors.inductionName = "Induction must have a name";
+      errors.inductionName = "Induction must have a name";
     }
 
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
-};
+  };
 
   useEffect(() => {
     setValidationErrors({});
@@ -59,14 +59,13 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduct
         cancelLabel="Cancel"
       />
 
-      <div className="flex flex-col sm:flex-row items-start justify-between p-4 mx-auto max-w-6xl bg-gray-50">
-        <div className="flex-1 min-w-0 w-full mb-4 sm:mb-0 max-w-full">
-          {/* Induction Name Section */}
-          <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-bold text-gray-700 flex items-center">
+      <div className="flex flex-col sm:flex-row items-center justify-between p-4 mx-auto max-w-6xl bg-gray-50">
+        {/* Induction Name Section */}
+        <div className="flex-1 min-w-0 w-full max-w-full">
+          <div className="space-y-2 mb-4">
+            <label htmlFor="name" className="text-base font-semibold flex items-center">
               Induction Name:
             </label>
-
             {validationErrors.inductionName && (
               <p className="text-red-500 text-sm">{validationErrors.inductionName}</p>
             )}
@@ -84,7 +83,8 @@ const InductionForm = ({ induction, setInduction, handleSubmit, isCreatingInduct
           </div>
         </div>
 
-        <div className="flex items-center space-x-4 sm:ml-6 sm:mt-0 mt-4">
+        {/* Button Group*/}
+        <div className="flex items-center space-x-4 sm:ml-6">
           <button
             type="button"
             onClick={handleSubmit}
