@@ -23,8 +23,6 @@ import ManageUserInductionsPage from './pages/management/ManageUserInductionsPag
 import InductionList from './pages/management/InductionList';
 import InductionEdit from './pages/management/InductionEdit';
 import InductionCreate from './pages/management/InductionCreate';
-import InductionResults from './pages/management/ResultsPage.jsx';
-import InductionViewResults from './pages/management/InductionViewResults.jsx';
 import EditUser from './pages/management/EditUser';
 import Settings from './pages/management/Settings';
 import ContactSubmissions from './pages/management/ContactSubmissions.jsx';

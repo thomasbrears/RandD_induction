@@ -10,7 +10,11 @@ import {
   getUserInductionResults,
   getInductionResults,
   getResultsStats,
-  sendInductionReminder
+  sendInductionReminder,
+  exportInductionResultsToExcel,
+  exportInductionResultsToPDF,
+  exportStaffInductionResultsToPDF,
+  exportStaffInductionResultsToExcel
 } from "../controllers/userInductionController.js";
 import { authMiddleware } from "../middleware/authMiddleware.js";
 
@@ -27,5 +31,9 @@ router.get("/user/:userId", authMiddleware, getUserInductions);
 router.get("/:id", authMiddleware, getUserInductionById);
 router.put("/:id", authMiddleware, updateUserInduction);
 router.delete("/:id", authMiddleware, deleteUserInduction);
+router.get("/export-excel/:inductionId", authMiddleware, exportInductionResultsToExcel);
+router.get('/export-pdf/:inductionId', authMiddleware, exportInductionResultsToPDF);
+router.get("/export-excel/staff/:userInductionId", authMiddleware, exportStaffInductionResultsToExcel);
+router.get('/export-pdf/staff/:userInductionId', authMiddleware, exportStaffInductionResultsToPDF);
 
 export default router;

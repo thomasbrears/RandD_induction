@@ -327,6 +327,7 @@ const StaffInductionResults = ({ userId, assignmentId, pageTitle, compactHeader 
         userData={userData}
         sections={sections}
         answers={answers}
+        isStaffContext={true}
       />
 
       {isCompleted ? (

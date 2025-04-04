@@ -213,28 +213,32 @@ export const getResultsStats = async (user, inductionId) => {
   }
 };
 
-// Export induction results to Excel (placeholder)
-export const exportInductionResultsToExcel = async (user, inductionId) => {
+// Export induction results to Excel
+export const exportInductionResultsToExcel = async (user, inductionId, exportType = 'full') => {
   try {
-    console.log("Export to Excel functionality coming soon!");
-    return { success: false, message: "Export feature coming soon" };
+    const token = user?.token;
+    
+    if (!token) {
+      throw new Error("Authentication required for export");
+    }
+    
+    // Set up the API URL
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://dev-aut-events-induction.vercel.app/api'
+      : 'http://localhost:8000/api';
+    
+    const url = `${baseUrl}/user-inductions/export-excel/${inductionId}?type=${exportType}&token=${encodeURIComponent(token)}`;
+
+    return {
+      url,
+      exportType,
+      inductionId
+    };
   } catch (error) {
-    console.error("Error exporting to Excel:", error);
+    console.error("Error preparing Excel export:", error);
     throw error;
   }
 };
-
-// Export induction results to PDF (placeholder)
-export const exportInductionResultsToPDF = async (user, inductionId) => {
-  try {
-    console.log("Export to PDF functionality coming soon!");
-    return { success: false, message: "Export feature coming soon" };
-  } catch (error) {
-    console.error("Error exporting to PDF:", error);
-    throw error;
-  }
-};
-
 
 // Send reminder email for a user induction
 export const sendInductionReminder = async (user, userInductionId) => {
@@ -252,5 +256,281 @@ export const sendInductionReminder = async (user, userInductionId) => {
   } catch (error) {
     console.error("Error sending reminder:", error);
     throw error;
+  }
+};
+
+// Export induction results to PDF
+export const exportInductionResultsToPDF = async (user, inductionId, exportType = 'full') => {
+  try {
+    const token = user?.token;
+    
+    if (!token) {
+      throw new Error("Authentication required for export");
+    }
+    
+    // Set up the API URL
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://dev-aut-events-induction.vercel.app/api'
+      : 'http://localhost:8000/api';
+    
+    const url = `${baseUrl}/user-inductions/export-pdf/${inductionId}?type=${exportType}&token=${encodeURIComponent(token)}`;
+
+    return {
+      url,
+      exportType,
+      inductionId
+    };
+  } catch (error) {
+    console.error("Error preparing PDF export:", error);
+    throw error;
+  }
+};
+
+// Handle PDF export using axios
+export const handlePDFExport = async (user, inductionId, inductionName, exportType) => {
+  try {
+    const { url } = await exportInductionResultsToPDF(user, inductionId, exportType);
+    
+    // Make the request with axios
+    const response = await axios({
+      url,
+      method: 'GET',
+      responseType: 'blob',
+      validateStatus: false // Don't throw error on non-2xx responses
+    });
+    
+    // Handle error responses
+    if (response.status !== 200) {
+      // If the error response is a blob, convert it to text to read the error message
+      if (response.data instanceof Blob) {
+        const errorText = await response.data.text();
+        console.error("Export API error response:", errorText);
+        
+        try {
+          // Try to parse as JSON to get a structured error
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || errorJson.message || "Server error during export");
+        } catch (e) {
+          // If its not valid JSON, use the text as is
+          throw new Error(`Export failed with status ${response.status}: ${errorText.slice(0, 150)}...`);
+        }
+      } else {
+        throw new Error(`Export failed with status ${response.status}`);
+      }
+    }
+    
+    // Create a blob URL and trigger download
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const blobUrl = window.URL.createObjectURL(blob);
+    
+    // Create a temporary anchor to trigger download
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `${inductionName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${exportType}_report.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Clean up
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+    
+    return true;
+  } catch (error) {
+    console.error("PDF Export failed:", error);
+    
+    // Display a more helpful error message
+    let errorMessage = error.message || "Could not generate PDF file";
+    
+    if (errorMessage.includes("500") || errorMessage.includes("Internal Server Error")) {
+      errorMessage = `Server error during ${exportType} PDF export. This might be due to missing data or an issue with the export template. Try the Excel export instead.`;
+    }
+    
+    throw new Error(errorMessage);
+  }
+};
+
+// Get URL for exporting staff induction results to Excel
+export const exportStaffInductionResultsToExcel = async (user, userInductionId, exportType = 'full') => {
+  try {
+    const token = user?.token;
+    
+    if (!token) {
+      throw new Error("Authentication required for export");
+    }
+    
+    // Set up the API URL
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://dev-aut-events-induction.vercel.app/api'
+      : 'http://localhost:8000/api';
+    
+    const url = `${baseUrl}/user-inductions/export-excel/staff/${userInductionId}?type=${exportType}&token=${encodeURIComponent(token)}`;
+
+    return {
+      url,
+      exportType,
+      userInductionId
+    };
+  } catch (error) {
+    console.error("Error preparing staff Excel export:", error);
+    throw error;
+  }
+};
+
+// Get URL for exporting staff induction results to PDF
+export const exportStaffInductionResultsToPDF = async (user, userInductionId, exportType = 'full') => {
+  try {
+    const token = user?.token;
+    
+    if (!token) {
+      throw new Error("Authentication required for export");
+    }
+    
+    // Set up the API URL
+    const baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://dev-aut-events-induction.vercel.app/api'
+      : 'http://localhost:8000/api';
+    
+    const url = `${baseUrl}/user-inductions/export-pdf/staff/${userInductionId}?type=${exportType}&token=${encodeURIComponent(token)}`;
+
+    return {
+      url,
+      exportType,
+      userInductionId
+    };
+  } catch (error) {
+    console.error("Error preparing staff PDF export:", error);
+    throw error;
+  }
+};
+
+// Handle staff induction Excel export using axios
+export const handleStaffExcelExport = async (user, userInductionId, staffName, inductionName, exportType) => {
+  try {
+    const { url } = await exportStaffInductionResultsToExcel(user, userInductionId, exportType);
+    
+    // Make the request with axios
+    const response = await axios({
+      url,
+      method: 'GET',
+      responseType: 'blob',
+      validateStatus: false // Don't throw error on non-2xx responses
+    });
+    
+    // Handle error responses
+    if (response.status !== 200) {
+      // If the error response is a blob, convert it to text to read the error message
+      if (response.data instanceof Blob) {
+        const errorText = await response.data.text();
+        console.error("Export API error response:", errorText);
+        
+        try {
+          // Try to parse as JSON to get a structured error
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || errorJson.message || "Server error during export");
+        } catch (e) {
+          // If its not valid JSON, use the text as is
+          throw new Error(`Export failed with status ${response.status}: ${errorText.slice(0, 150)}...`);
+        }
+      } else {
+        throw new Error(`Export failed with status ${response.status}`);
+      }
+    }
+    
+    // Create a sanitised filename
+    const fileName = `${staffName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${inductionName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${exportType}_report.xlsx`;
+    
+    // Create a blob URL and trigger download
+    const blob = new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const blobUrl = window.URL.createObjectURL(blob);
+    
+    // Create a temporary anchor to trigger download
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Clean up
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+    
+    return true;
+  } catch (error) {
+    console.error("Excel Export failed:", error);
+    
+    // Display a more helpful error message
+    let errorMessage = error.message || "Could not generate Excel file";
+    
+    if (errorMessage.includes("500") || errorMessage.includes("Internal Server Error")) {
+      errorMessage = `Server error during ${exportType} Excel export. This might be due to missing data or an issue with the export template. Try the PDF export instead.`;
+    }
+    
+    throw new Error(errorMessage);
+  }
+};
+
+// Handle staff induction PDF export using axios
+export const handleStaffPDFExport = async (user, userInductionId, staffName, inductionName, exportType) => {
+  try {
+    const { url } = await exportStaffInductionResultsToPDF(user, userInductionId, exportType);
+    
+    // Make the request with axios
+    const response = await axios({
+      url,
+      method: 'GET',
+      responseType: 'blob',
+      validateStatus: false // Dont throw error on non-2xx responses
+    });
+    
+    // Handle error responses
+    if (response.status !== 200) {
+      // If the error response is a blob, convert it to text to read the error message
+      if (response.data instanceof Blob) {
+        const errorText = await response.data.text();
+        console.error("Export API error response:", errorText);
+        
+        try {
+          // Try to parse as JSON to get a structured error
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || errorJson.message || "Server error during export");
+        } catch (e) {
+          // If its not valid JSON, use the text as is
+          throw new Error(`Export failed with status ${response.status}: ${errorText.slice(0, 150)}...`);
+        }
+      } else {
+        throw new Error(`Export failed with status ${response.status}`);
+      }
+    }
+    
+    // Create a sanitised filename
+    const fileName = `${staffName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${inductionName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${exportType}_report.pdf`;
+    
+    // Create a blob URL and trigger download
+    const blob = new Blob([response.data], { type: 'application/pdf' });
+    const blobUrl = window.URL.createObjectURL(blob);
+    
+    // Create a temporary anchor to trigger download
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    
+    // Clean up
+    window.URL.revokeObjectURL(blobUrl);
+    document.body.removeChild(a);
+    
+    return true;
+  } catch (error) {
+    console.error("PDF Export failed:", error);
+    
+    // Display a more helpful error message
+    let errorMessage = error.message || "Could not generate PDF file";
+    
+    if (errorMessage.includes("500") || errorMessage.includes("Internal Server Error")) {
+      errorMessage = `Server error during ${exportType} PDF export. This might be due to missing data or an issue with the export template. Try the Excel export instead.`;
+    }
+    
+    throw new Error(errorMessage);
   }
 };
