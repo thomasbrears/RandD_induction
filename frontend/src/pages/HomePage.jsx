@@ -57,8 +57,7 @@ const HomePage = () => {
                 setInductionsCount(incompleteInductions);
                 setOverdueInductionsCount(overdueInductions); 
 
-                // Show a notification with a button if there are overdue inductions
-                // and notification hasn't been shown recently
+                // Show a notification with a button if there are overdue inductions and notification hasn't been shown recently
                 if (overdueInductions > 0 && shouldShowNotification()) {
                     const key = `overdue-${Date.now()}`;
                     const notificationTitle = overdueInductions === 1 ? 'Overdue Induction' : 'Overdue Inductions';
@@ -126,7 +125,7 @@ const HomePage = () => {
                 {!isAuthenticated ? (
                     <>
                         {/* Not logged in content */}
-                        <h3 className="text-3xl text-center font-semibold mb-4">Let's get started</h3>
+                        <h3 className="text-3xl text-center font-semibold mb-4">Kia ora, let's get started</h3>
                         <p className="text-lg text-center mb-6">Please sign in to view and complete your inductions.</p>
                         <div className="flex justify-center gap-6">
                             <Link to="/auth/signin" className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md text-center w-auto mx-auto">Sign in</Link>
@@ -138,7 +137,7 @@ const HomePage = () => {
                         {userRole === 'admin' || userRole === 'manager' ? (
                             <>
                                 {/* Manager or Admin content */}
-                                <h2 className="text-3xl text-center font-semibold mb-4">Hi {user.displayName ? user.displayName.split(" ")[0] : ""}, let's get started</h2>
+                                <h2 className="text-3xl text-center font-semibold mb-4">Kia ora {user.displayName ? user.displayName.split(" ")[0] : ""}</h2>
                                 <p className="text-xl text-center mb-6">How should we get started today?</p>
 
                                 {/* Show overdue inductions message if applicable */}
@@ -167,13 +166,13 @@ const HomePage = () => {
                         ) : (
                             <>
                                 {/* Standard user content */}
-                                <h2 className="text-3xl text-center font-semibold mb-4">Hi {user.displayName ? user.displayName.split(" ")[0] : ""}, let's get started</h2>
+                                <h2 className="text-3xl text-center font-semibold mb-4">Kia ora {user.displayName ? user.displayName.split(" ")[0] : ""}</h2>
                                 <p className="text-xl text-center mb-6">
                                     {loading ? "Loading your inductions..." : 
                                     (error ? `Error: ${error}` : `You currently have ${inductionsCount > 0 ? inductionsCount : "no"} induction${inductionsCount === 1 ? '' : 's'} to complete...`)}
                                 </p>
 
-                                {/* Show overdue inductions message if applicable - fixed pluralization */}
+                                {/* Show overdue inductions message if applicable */}
                                 {overdueInductionsCount > 0 && (
                                     <div className="bg-red-50 border-l-4 border-red-500 p-4 mx-auto max-w-2xl mb-8 rounded-md shadow-sm">
                                         <div className="flex items-center">

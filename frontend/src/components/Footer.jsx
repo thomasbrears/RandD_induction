@@ -58,7 +58,7 @@ const Footer = () => {
                     <>
                       <li><Link to="/management/dashboard" className="hover:text-blue-400">Dashboard</Link></li>
                       <li><Link to="/management/inductions/view" className="hover:text-blue-400">Manage Inductions</Link></li>
-                      <li><Link to="/management/inductions/results" className="hover:text-blue-400">View Induction Results</Link></li>
+                      <li><Link to="/management/results" className="hover:text-blue-400">View Induction Results</Link></li>
                       <li><Link to="/management/users/view" className="hover:text-blue-400">Manage Users</Link></li>
                       <li><Link to="/management/contact-submissions" className="hover:text-blue-400">Contact Submissions</Link></li>
                     </>
@@ -69,7 +69,7 @@ const Footer = () => {
               )}
               
               {!IS_AUTHENTICATED && (
-                <li><Link to="/auth/signin" className="hover:text-blue-400">Sign-in</Link></li>
+                <li><Link to="/auth/signin" className="hover:text-blue-400">Sign in</Link></li>
               )}
             </ul>
           </nav>

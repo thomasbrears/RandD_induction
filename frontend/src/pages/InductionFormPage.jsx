@@ -381,18 +381,102 @@ const InductionFormPage = () => {
     }
   };
 
+  // Submit the induction
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsSubmitting(true);
     
     try {
-      // Mark induction as complete in the database
+      // Format answers as an array for storage
+      const formattedAnswers = [];
+      
+      // Get all questions to determine their types
+      const questions = induction.questions || [];
+      
+      // Process each answer based on its question type
+      questions.forEach(question => {
+        const answer = answers[question.id];
+        const answerObj = {
+          questionId: question.id,
+          questionType: question.type,
+          // Save question title/text for context
+          questionTitle: question.title || question.question || `Question ${questions.indexOf(question) + 1}`,
+          questionText: question.text || '',
+          description: question.description || ''
+        };
+        
+        // Format differently based on question type
+        switch (question.type) {
+          case 'multichoice':
+            // Save all options and which ones were selected
+            answerObj.allOptions = question.options || [];
+            answerObj.selectedOptions = Array.isArray(answer) ? answer : [];
+            
+            // Evaluate if the answer is correct (only for questions with defined correct answers)
+            if (question.correctOptions) {
+              // Check if selected options match correct options
+              const isCorrect = JSON.stringify(answerObj.selectedOptions.sort()) === 
+                              JSON.stringify(question.correctOptions.sort());
+              answerObj.isCorrect = isCorrect;
+            }
+            break;
+            
+          case 'true_false':
+          case 'yes_no':
+            answerObj.selectedOption = answer !== undefined ? answer : null;
+            answerObj.allOptions = question.options || [];
+            // Check correctness (only if a correct answer is defined)
+            if (question.correctOption !== undefined) {
+              answerObj.isCorrect = answerObj.selectedOption === question.correctOption;
+            }
+            break;
+            
+          case 'dropdown':
+            answerObj.selectedOption = answer !== undefined ? answer : null;
+            answerObj.allOptions = question.options || [];
+            // Check correctness (only if a correct answer is defined)
+            if (question.correctOption !== undefined) {
+              answerObj.isCorrect = answerObj.selectedOption === question.correctOption;
+            }
+            break;
+            
+          case 'short_answer':
+            answerObj.textValue = answer || '';
+            // Don't set isCorrect - these need manual review
+            answerObj.flaggedForReview = true;
+            break;
+            
+          case 'file_upload':
+            answerObj.fileUploaded = !!answer;
+            answerObj.fileReference = answer || null;
+            // Don't set isCorrect - these need manual review
+            answerObj.flaggedForReview = true;
+            break;
+            
+          case 'info_block':
+            answerObj.acknowledged = !!answer;
+            break;
+            
+          default:
+            answerObj.value = answer;
+        }
+        
+        // Flag important questions for review
+        if (question.isImportant || question.important) {
+          answerObj.flaggedForReview = true;
+        }
+        
+        formattedAnswers.push(answerObj);
+      });
+      
+      // Mark induction as complete in the database with answers
       if (userInduction) {
         await updateUserInduction(user, userInduction.id, {
-          status: 'complete',
-          completedAt: new Date().toISOString(),
-          progress: 100,
-          feedback: null // This will be filled by the feedback modal
+          status: 'complete', // Mark as complete with status change
+          completedAt: new Date().toISOString(), // Set completion date
+          progress: 100, // Assuming 100% completion
+          feedback: null, // This will be filled by the feedback modal
+          answers: formattedAnswers // Save formatted answers
         });
       }
       

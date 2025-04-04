@@ -4,6 +4,7 @@ import ManageInductionModal from './ManageInductionModal';
 import { messageError } from "../../utils/notificationService";
 import { Skeleton } from "antd";
 import { FileOutlined, InboxOutlined } from '@ant-design/icons';
+import { formatDate } from '../../utils/dateUtils'; // Import formatDate utility
 
 const AssignedInductionsList = ({ 
   userInductions = [], 
@@ -62,34 +63,6 @@ const AssignedInductionsList = ({
     };
   }, [isLoading, userInductions]);
 
-  // format a date for display
-  const formatDate = (date) => {
-    if (!date) return "N/A";
-    
-    try {
-      if (date && typeof date === 'object' && (date._seconds !== undefined || date.seconds !== undefined)) {
-        const seconds = date._seconds !== undefined ? date._seconds : date.seconds;
-        return new Date(seconds * 1000).toLocaleDateString();
-      }
-      
-      // Check if it's a regular Date object
-      if (date instanceof Date) {
-        return date.toLocaleDateString();
-      }
-      
-      // If it has a toDate method
-      if (date && typeof date.toDate === 'function') {
-        return date.toDate().toLocaleDateString();
-      }
-      
-      // Handle ISO string dates
-      return new Date(date).toLocaleDateString();
-    } catch (e) {
-      console.error("Error formatting date:", e, date);
-      return "Invalid Date";
-    }
-  };
-
   // Get induction name
   const getInductionName = (induction) => {
     return induction.name || induction.inductionName || (induction.induction?.name) || "Induction";
@@ -101,7 +74,6 @@ const AssignedInductionsList = ({
   };
 
   const handleManageInduction = (induction) => {
-
     // Make a deep copy to avoid reference issues
     const inductionCopy = { ...induction };
         
@@ -191,9 +163,7 @@ const AssignedInductionsList = ({
 
   // Function to handle viewing results
   const handleViewResults = (induction) => {
-    // TEMP: For now redirect to the results page
-    window.location.href = `/management/inductions/results?inductionId=${induction.inductionId || induction.id}`;
-
+    window.location.href = `/management/results/user/${userId}/${induction.id}`;
   };
 
   const StatusBadge = ({ status }) => {
@@ -222,7 +192,6 @@ const AssignedInductionsList = ({
           <Skeleton.Input active style={{ width: '180px', height: '24px' }} />
         </div>
         <Skeleton.Input active style={{ width: '180px', height: '24px' }} />
-
       </div>
     );
   };
@@ -254,7 +223,7 @@ const AssignedInductionsList = ({
       );
     }
     
-    // Display state is conten
+    // Display state is content
     return (
       <div className="space-y-6">
         {/* Active Inductions */}
@@ -359,12 +328,13 @@ const AssignedInductionsList = ({
   return (
     <div className="bg-white shadow-lg rounded-lg overflow-hidden w-full max-w-4xl mx-auto">
       {/* Header with gradient background */}
-      <div className="bg-gradient-to-r from-blue-600 to-blue-800 px-6 py-4">
-        <h1 className="text-xl font-bold text-white flex items-center">
+      <div className="bg-white px-6 py-4">
+        <h1 className="text-xl font-bold text-black flex items-center">
           <FileOutlined className="mr-2 text-xl" />
           Assigned Inductions
         </h1>
-        <p className="text-blue-100 text-sm mt-1">Manage existing inductions assigned to this user</p>
+        <p className="text-gray-500 text-sm mt-1 mb-2">Manage existing inductions assigned to this user</p>
+        <hr />
       </div>
 
       <div className="p-6">

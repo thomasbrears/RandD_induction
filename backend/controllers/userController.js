@@ -31,36 +31,9 @@ export const getAllUsers = async (req, res) => {
 export const getUser = async (req, res) => {
   try {
     const uid = req.query.uid;
-    
-    // Validate UID parameter
-    if (!uid) {
-      return res.status(400).json({ 
-        message: "User ID is required",
-        success: false
-      });
-    }
-    
-    // Validate UID format (assuming Firebase UIDs are strings with length > 5)
-    if (typeof uid !== 'string' || uid.length < 5) {
-      return res.status(400).json({ 
-        message: "Invalid user ID format",
-        success: false
-      });
-    }
+    const userResult = await admin.auth().getUser(uid);
 
-    // Get user from Firebase Auth
-    let userResult;
-    try {
-      userResult = await admin.auth().getUser(uid);
-    } catch (authError) {
-      return res.status(404).json({ 
-        message: "User not found in authentication system",
-        success: false,
-        error: authError.message
-      });
-    }
-
-    // Get user data from Firestore
+    //Firestore
     const userRef = db.collection("users").doc(uid);
     const userDoc = await userRef.get();
 
@@ -80,20 +53,15 @@ export const getUser = async (req, res) => {
       department: userDoc.exists ? userDoc.data().department : "",
       locations: userDoc.exists ? userDoc.data().locations : [],
       disabled: userResult.disabled,
-      // Removed assignedInductions as they are now stored in the userInductions collection
+      assignedInductions: userDoc.exists
+        ? userDoc.data().assignedInductions
+        : [],
     };
 
-    res.json({
-      success: true,
-      data: userData
-    });
+    res.json(userData);
   } catch (error) {
     console.error("Error fetching user:", error);
-    res.status(500).json({
-      message: "Server error while fetching user data",
-      success: false,
-      error: error.message
-    });
+    res.status(500).send(error);
   }
 };
 
@@ -107,60 +75,16 @@ export const createUser = async (req, res) => {
       permission,
       position,
       department,
-      locations
+      locations,
+      assignedInductions,
     } = req.body;
 
-    // Input validation
-    const validationErrors = [];
-    
-    // Check required fields
-    if (!email) validationErrors.push("Email is required");
-    if (!permission) validationErrors.push("Permission role is required");
-    if (!firstName) validationErrors.push("First name is required");
-    if (!lastName) validationErrors.push("Last name is required");
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (email && !emailRegex.test(email)) {
-      validationErrors.push("Invalid email format");
-    }
-    
-    // Validate permission value (assuming you have predefined roles)
-    const validPermissions = ["admin", "manager", "user"]; // Add your valid roles here
-    if (permission && !validPermissions.includes(permission.toLowerCase())) {
-      validationErrors.push(`Invalid permission role. Must be one of: ${validPermissions.join(", ")}`);
-    }
-    
-    // Check locations is an array if provided
-    if (locations && !Array.isArray(locations)) {
-      validationErrors.push("Locations must be an array");
-    }
-    
-    // Return validation errors if any
-    if (validationErrors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        errors: validationErrors
-      });
+    if (!email || !permission) {
+      return res
+        .status(400)
+        .json({ message: "Email and permission are required." });
     }
 
-    // Check if user already exists
-    try {
-      const existingUser = await admin.auth().getUserByEmail(email);
-      if (existingUser) {
-        return res.status(409).json({
-          success: false,
-          message: "User with this email already exists"
-        });
-      }
-    } catch (error) {
-      if (error.code !== 'auth/user-not-found') {
-        throw error;
-      }
-    }
-
-    // Create the user in Firebase Auth
     const userRecord = await admin.auth().createUser({
       email: email,
       displayName: `${firstName} ${lastName}`,
@@ -168,35 +92,26 @@ export const createUser = async (req, res) => {
       disabled: false,
     });
 
-    // Set custom claims for role/permissions
-    await admin.auth().setCustomUserClaims(userRecord.uid, { role: permission });
+    //Custom Claim Token
+    admin.auth().setCustomUserClaims(userRecord.uid, { role: permission });
 
-    // Create user document in Firestore
+    //FireStore
     try {
       const userRef = db.collection("users").doc(userRecord.uid);
       await userRef.set({
         userFirstName: firstName,
         userLastName: lastName,
         permission: permission,
-        position: position || "",  // Default to empty string if not provided
-        department: department || "", // Default to empty string if not provided
+        position: position,
+        department: department,
         locations: Array.isArray(locations) ? locations : [],
-        createdAt: admin.firestore.FieldValue.serverTimestamp()
-        // Removed assignedInductions as they are now stored in the userInductions collection
+        assignedInductions: Array.isArray(assignedInductions)
+          ? assignedInductions
+          : [],
       });
     } catch (firestoreError) {
-      // If Firestore creation fails, attempt to delete the Auth user to maintain consistency
       console.error("Firestore error: ", firestoreError);
-      try {
-        await admin.auth().deleteUser(userRecord.uid);
-      } catch (deleteError) {
-        console.error("Failed to clean up Auth user after Firestore error:", deleteError);
-      }
-      return res.status(500).json({ 
-        success: false,
-        message: "Error writing to Firestore.",
-        error: firestoreError.message
-      });
+      return res.status(500).json({ message: "Error writing to Firestore." });
     }
 
     // Prepare email content
@@ -223,9 +138,10 @@ export const createUser = async (req, res) => {
     `;
 
     const replyToEmail = 'autevents@brears.xyz'; // reply to aut events
+    const ccEmails = ['manager@brears.xyz']; // Cc Rinus
 
     // Send welcome email with ReplyTo and CC, using the default template
-    await sendEmail(email, emailSubject, emailBody, replyToEmail);
+    await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
     
     res.status(201).json({
       uid: userRecord.uid,
@@ -249,69 +165,40 @@ export const updateUser = async (req, res) => {
       permission,
       position,
       department,
-      locations
+      locations,
+      assignedInductions = [],
     } = req.body;
 
-    // Input validation
-    const validationErrors = [];
-    
-    // Check required fields
-    if (!uid) validationErrors.push("User ID is required");
-    if (!email) validationErrors.push("Email is required");
-    if (!permission) validationErrors.push("Permission role is required");
-    if (!firstName) validationErrors.push("First name is required");
-    if (!lastName) validationErrors.push("Last name is required");
-    
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (email && !emailRegex.test(email)) {
-      validationErrors.push("Invalid email format");
-    }
-    
-    // Validate permission value
-    const validPermissions = ["admin", "manager", "user"];
-    if (permission && !validPermissions.includes(permission.toLowerCase())) {
-      validationErrors.push(`Invalid permission role. Must be one of: ${validPermissions.join(", ")}`);
-    }
-    
-    // Check locations is an array if provided
-    if (locations && !Array.isArray(locations)) {
-      validationErrors.push("Locations must be an array");
-    }
-    
-    // Return validation errors if any
-    if (validationErrors.length > 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Validation failed",
-        errors: validationErrors
-      });
-    }
-
-    // Fetch existing user data to verify the user exists
+    // Fetch existing user data
     const userRef = db.collection("users").doc(uid);
     const userDoc = await userRef.get();
     if (!userDoc.exists) {
-      return res.status(404).json({ 
-        success: false,
-        message: "User not found in database" 
-      });
+      return res.status(404).json({ message: "User not found" });
     }
 
-    // Check if email is being changed and if it's already in use by another user
-    try {
-      const existingUser = await admin.auth().getUserByEmail(email);
-      if (existingUser && existingUser.uid !== uid) {
-        return res.status(409).json({
-          success: false,
-          message: "Email address is already in use by another user"
-        });
+    const existingData = userDoc.data();
+    const existingInductions = existingData.assignedInductions || [];
+
+    // Identify new inductions (not already assigned by assignmentID)
+    const newInductions = assignedInductions.filter(
+      (induction) =>
+        !existingInductions.some((existing) => existing.assignmentID === induction.assignmentID)
+    );
+
+    // Preserve existing inductions, ensuring updates are assignment-specific
+    const updatedInductions = assignedInductions.map((induction) => {
+      const existing = existingInductions.find((ex) => ex.assignmentID === induction.assignmentID);
+
+      if (existing) {
+        return { ...existing, ...induction }; // Merge updates while keeping assignment reference
       }
-    } catch (error) {
-      if (error.code !== 'auth/user-not-found') {
-        throw error;
-      }
-    }
+
+      // Ensure unique assignmentID
+      return {
+        ...induction,
+        assignmentID: `${uid}_${induction.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, // assignmentID is the user's ID, the induction's ID, the date, and a random string of 5 characters to ensure uniqueness
+      };
+    });
 
     // Update user in Firebase Auth
     const userResult = await admin.auth().updateUser(uid, {
@@ -322,36 +209,79 @@ export const updateUser = async (req, res) => {
     // Set custom user claims
     await admin.auth().setCustomUserClaims(uid, { role: permission });
 
-    // Prepare update object for Firestore
-    const updateData = {
-      userFirstName: firstName,
-      userLastName: lastName,
+    // Update Firestore
+    await userRef.update({
       usersName: `${firstName} ${lastName}`,
       permission: permission,
-      position: position || "",
-      department: department || "",
+      position: position,
+      department: department,
       locations: Array.isArray(locations) ? locations : [],
-      updatedAt: admin.firestore.FieldValue.serverTimestamp()
-    };
+      assignedInductions: updatedInductions,
+    });
 
-    // Update Firestore
-    await userRef.update(updateData);
+    // Send emails for newly assigned inductions
+    const emailResults = [];
+    for (const induction of newInductions) {
+      try {
+        const formattedAvailableFrom = induction.availableFrom
+          ? format(new Date(induction.availableFrom), "d MMMM yyyy")
+          : "Unavailable";
+        const formattedDueDate = induction.dueDate
+          ? format(new Date(induction.dueDate), "d MMMM yyyy")
+          : "Unavailable";
+        const description = induction.description || "No description available.";
+
+        const emailSubject = `You have a new induction to complete: ${induction.name || "Unnamed Induction"}`;
+        const emailBody = `
+          <h1>Kia ora ${firstName} ${lastName}!</h1>
+          <p>You have been assigned a new induction module to complete.</p>
+          <br>
+          
+          <h3>Here are the details:</h3>
+          <p><strong>Induction Name:</strong> ${induction.name || "Unnamed Induction"}</p>
+          <p><strong>Available from:</strong> ${formattedAvailableFrom}</p>
+          <p><strong>Due Date:</strong> ${formattedDueDate}</p>
+
+          <br>
+          <h3>How to complete the induction?</h3>
+          <p>Simply head to our induction portal website (${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://your-portal-url.com'}) and log in using this email address. Navigate to the "My Inductions" tab, find this induction, and click "Start".</p>
+          <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://your-portal-url.com'}/inductions/my-inductions" class="button">AUT Events Induction Portal</a>
+
+          <p>If you have any questions, please feel free to reach out to your manager or reply to this email.</p>
+
+          <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
+        `;
+
+        const replyToEmail = "autevents@brears.xyz";
+        const ccEmails = ["manager@brears.xyz"];
+
+        // Attempt to send email and capture result
+        const emailResult = await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
+        emailResults.push({
+          induction: induction.name || "Unnamed Induction",
+          result: emailResult,
+          success: true
+        });
+        
+      } catch (emailError) {
+        console.error(`Failed to send email for induction "${induction.name || "Unnamed"}":`, emailError);
+        emailResults.push({
+          induction: induction.name || "Unnamed Induction",
+          error: emailError.message || "Unknown error",
+          success: false
+        });
+        // Continue the loop to try sending other emails even if one fails
+      }
+    }
 
     res.json({
-      success: true,
+      data: userResult,
       message: "User updated successfully",
-      data: {
-        uid: userResult.uid,
-        email: userResult.email,
-        displayName: userResult.displayName,
-        role: permission
-      }
+      emailResults: emailResults
     });
   } catch (error) {
     console.error("Error updating user:", error);
     res.status(500).json({
-      success: false,
-      message: "Failed to update user",
       error: error.message || "Unknown error occurred",
       stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
     });
@@ -362,63 +292,15 @@ export const updateUser = async (req, res) => {
 export const deleteUser = async (req, res) => {
   try {
     const uid = req.query.uid;
-    
-    // Validate UID parameter
-    if (!uid) {
-      return res.status(400).json({ 
-        success: false,
-        message: "User ID is required" 
-      });
-    }
-    
-    // Check if user exists before attempting deletion
-    try {
-      await admin.auth().getUser(uid);
-    } catch (authError) {
-      if (authError.code === 'auth/user-not-found') {
-        return res.status(404).json({
-          success: false,
-          message: "User not found in authentication system"
-        });
-      }
-      throw authError; // Re-throw other auth errors
-    }
-    
-    // Begin a Firestore batch to ensure atomicity
-    const batch = db.batch();
-    
-    // Get any userInductions for this user to delete
-    const userInductionsSnapshot = await db.collection("userInductions")
-      .where("userId", "==", uid)
-      .get();
-    
-    // Add deletion operations to the batch
-    userInductionsSnapshot.docs.forEach(doc => {
-      batch.delete(doc.ref);
-    });
-    
-    // Add user document deletion to batch
-    const userRef = db.collection("users").doc(uid);
-    batch.delete(userRef);
-    
-    // Execute the batch (all or nothing)
-    await batch.commit();
-    
-    // Finally delete the authentication user
     await admin.auth().deleteUser(uid);
+    await db.collection("users").doc(uid).delete();
 
     res.status(200).json({
-      success: true,
-      message: "User and all associated data deleted successfully",
-      deletedUserInductions: userInductionsSnapshot.size
+      message: "User deleted successfully",
     });
   } catch (error) {
     console.error("Error deleting user:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to delete user",
-      error: error.message
-    });
+    res.status(500).send(error);
   }
 };
 
@@ -427,56 +309,15 @@ export const deactivateUser = async (req, res) => {
   try {
     const uid = req.query.uid;
     
-    // Validate UID parameter
-    if (!uid) {
-      return res.status(400).json({ 
-        success: false,
-        message: "User ID is required" 
-      });
-    }
-    
-    // Check if user exists before attempting deactivation
-    try {
-      const userRecord = await admin.auth().getUser(uid);
-      
-      // Check if user is already disabled
-      if (userRecord.disabled) {
-        return res.status(400).json({
-          success: false,
-          message: "User is already deactivated"
-        });
-      }
-    } catch (authError) {
-      if (authError.code === 'auth/user-not-found') {
-        return res.status(404).json({
-          success: false,
-          message: "User not found in authentication system"
-        });
-      }
-      throw authError; // Re-throw other auth errors
-    }
-    
     // Disable the user in Firebase Authentication
     await admin.auth().updateUser(uid, { disabled: true });
-    
-    // Update user record in Firestore to reflect deactivation
-    const userRef = db.collection("users").doc(uid);
-    await userRef.update({
-      disabled: true,
-      disabledAt: admin.firestore.FieldValue.serverTimestamp()
-    });
 
     res.status(200).json({
-      success: true,
-      message: "User deactivated successfully"
+      message: "User deactivated successfully",
     });
   } catch (error) {
     console.error("Error deactivating user:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to deactivate user",
-      error: error.message
-    });
+    res.status(500).send(error);
   }
 };
 
@@ -484,56 +325,92 @@ export const deactivateUser = async (req, res) => {
 export const reactivateUser = async (req, res) => {
   try {
     const uid = req.query.uid;
-    
-    // Validate UID parameter
-    if (!uid) {
-      return res.status(400).json({ 
-        success: false,
-        message: "User ID is required" 
-      });
-    }
-    
-    // Check if user exists before attempting reactivation
-    try {
-      const userRecord = await admin.auth().getUser(uid);
-      
-      // Check if user is already enabled
-      if (!userRecord.disabled) {
-        return res.status(400).json({
-          success: false,
-          message: "User is already active"
-        });
-      }
-    } catch (authError) {
-      if (authError.code === 'auth/user-not-found') {
-        return res.status(404).json({
-          success: false,
-          message: "User not found in authentication system"
-        });
-      }
-      throw authError; // Re-throw other auth errors
-    }
 
     // Reactivate the user in Firebase Authentication
     await admin.auth().updateUser(uid, { disabled: false });
-    
-    // Update user record in Firestore to reflect reactivation
-    const userRef = db.collection("users").doc(uid);
-    await userRef.update({
-      disabled: false,
-      reactivatedAt: admin.firestore.FieldValue.serverTimestamp()
-    });
 
     res.status(200).json({
-      success: true,
-      message: "User reactivated successfully"
+      message: "User reactivated successfully",
     });
   } catch (error) {
     console.error("Error reactivating user:", error);
-    res.status(500).json({
-      success: false,
-      message: "Failed to reactivate user",
-      error: error.message
-    });
+    res.status(500).send(error);
+  }
+};
+
+// Get assigned inductions for a user
+export const getAssignedInductions = async (req, res) => {
+  try {
+    const uid = req.query.uid;
+
+    // Firestore
+    const userRef = db.collection("users").doc(uid);
+    const userDoc = await userRef.get();
+
+    const userData = {
+      assignedInductions: userDoc.exists
+        ? userDoc.data().assignedInductions
+        : [],
+    };
+
+    res.json(userData);
+  } catch (error) {
+    console.error("Error fetching assigned inductions:", error);
+    res.status(500).send(error);
+  }
+};
+
+// Get a specific assigned induction by its assignmentID
+export const getAssignedInduction = async (req, res) => {
+  try {
+    const assignmentID = req.query.assignmentID;
+    
+    if (!assignmentID) {
+      return res.status(400).json({ message: "No assignment ID provided" });
+    }
+
+    // Find the user with this assignment
+    // First get all users (in a real app, you'd optimize this with an index/query)
+    const usersSnapshot = await db.collection("users").get();
+    
+    let foundInduction = null;
+
+    // Iterate through users to find the matching assignmentID
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = userDoc.data();
+      if (userData.assignedInductions) {
+        const foundAssignment = userData.assignedInductions.find(
+          assignment => assignment.assignmentID === assignmentID
+        );
+        
+        if (foundAssignment) {
+          // Now get the actual induction details
+          const inductionRef = db.collection("inductions").doc(foundAssignment.id);
+          const inductionDoc = await inductionRef.get();
+          
+          if (inductionDoc.exists) {
+            foundInduction = {
+              ...inductionDoc.data(),
+              id: inductionDoc.id,
+              assignmentID: assignmentID, // Include the assignmentID for reference
+              status: foundAssignment.status,
+              dueDate: foundAssignment.dueDate,
+              availableFrom: foundAssignment.availableFrom,
+              completionDate: foundAssignment.completionDate
+            };
+            break;
+          }
+        }
+      }
+    }
+
+    if (!foundInduction) {
+      return res.status(404).json({ message: "Assigned induction not found" });
+    }
+
+    res.json({ induction: foundInduction });
+  } catch (error) {
+    console.error("Error fetching assigned induction:", error);
+    res.status(500).send(error);
   }
 };

@@ -65,7 +65,7 @@ const Navbar = () => {
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 py-2">
                       <Link to="/management/dashboard" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Dashboard</Link>
                       <Link to="/management/users/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Manage Users</Link>
-                      <Link to="/management/inductions/results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
+                      <Link to="/management/results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
                       <Link to="/management/inductions/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Inductions</Link>
                       <Link to="/management/contact-submissions" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Contact Submissions</Link>
                       <Link to="/admin/settings" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Settings</Link>
@@ -87,7 +87,7 @@ const Navbar = () => {
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-50 py-2">
                       <Link to="/management/dashboard" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Dashboard</Link>
                       <Link to="/management/users/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Manage Users</Link>
-                      <Link to="/management/inductions/results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
+                      <Link to="/management/results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
                       <Link to="/management/inductions/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Inductions</Link>
                       <Link to="/management/contact-submissions" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Contact Submissions</Link>
                       </div>
@@ -149,7 +149,7 @@ const Navbar = () => {
                     <p className="text-blue-400">Administrator</p>
                     <Link to="/management/dashboard" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Dashboard</Link>
                     <Link to="/management/users/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage Users</Link>
-                    <Link to="/management/inductions/results" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Results</Link>
+                    <Link to="/management/results" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Results</Link>
                     <Link to="/management/inductions/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Inductions</Link>
                     <Link to="/admin/settings" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Settings</Link>
                   </div>
@@ -161,7 +161,7 @@ const Navbar = () => {
                     <p className="text-blue-400">Manager</p>
                       <Link to="/management/dashboard" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Dashboard</Link>
                       <Link to="/management/users/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage Users</Link>
-                      <Link to="/management/inductions/results" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Results</Link>
+                      <Link to="/management/results" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Results</Link>
                       <Link to="/management/inductions/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Inductions</Link>
                     </div>
                 )}
