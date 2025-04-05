@@ -3227,6 +3227,16 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
         console.log("No answer provided");
         return "No answer provided";
       }
+
+      if (answer.type === 'short_answer' || answer.questionType === 'short_answer' || 
+        answer.type === 'text' || answer.questionType === 'text') {
+      
+        // Check if its likely an unanswered text input
+        if (!answer.value && !answer.textValue && !answer.text && !answer.response) {
+          console.log("No answer provided for text input");
+          return "No answer provided for this text input";
+        }
+      }
       
       try {
         // Standardize answer object through normalization
