@@ -1273,9 +1273,7 @@ export const exportInductionResultsToExcel = async (req, res) => {
         });
       }
     } else {
-      try {
-        console.log("Starting full report export...");
-        
+      try {        
         // FULL REPORT
 
         // Main sheet with all information
@@ -2219,9 +2217,7 @@ export const exportInductionResultsToPDF = async (req, res) => {
 const getAnswerValue = (answer) => {
   if (!answer) return "No answer provided";
   
-  try {
-    console.log("Processing answer:", JSON.stringify(answer).substring(0, 200) + "...");
-    
+  try {    
     // For multichoice with selectedOptions
     if (answer.selectedOptions) {
       if (Array.isArray(answer.selectedOptions)) {
@@ -2402,6 +2398,15 @@ export const exportStaffInductionResultsToExcel = async (req, res) => {
     // Function to format answers with options
     const formatAnswerWithOptions = (answer) => {
       if (!answer) return "No answer provided";
+
+      if (answer.type === 'short_answer' || answer.questionType === 'short_answer' || 
+        answer.type === 'text' || answer.questionType === 'text') {
+      
+        // Check if its likely an unanswered text input
+        if (!answer.value && !answer.textValue && !answer.text && !answer.response) {
+          return "No answer provided for this text input";
+        }
+      }
       
       try {
         // For questions with options (multichoice, dropdown, true/false)
@@ -2688,8 +2693,6 @@ export const exportStaffInductionResultsToExcel = async (req, res) => {
       }
     } else {
       try {
-        console.log("Starting full staff report export...");
-        
         // FULL REPORT EXPORT
 
         const mainSheet = workbook.addWorksheet('Staff Induction Report');
@@ -3112,9 +3115,6 @@ export const exportStaffInductionResultsToExcel = async (req, res) => {
 // Export staff induction results to PDF
 export const exportStaffInductionResultsToPDF = async (req, res) => {
   try {
-    // Add debugging to check data structure in production
-    console.log("Starting PDF export process");
-
     // Helper function to safely extract question text
     const getQuestionText = (question) => {
       if (!question) return 'Unknown question';
@@ -3149,9 +3149,7 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
              key.toLowerCase().includes('text'))) {
           return question[key];
         }
-      }
-      
-      console.log("Could not identify question text, keys:", Object.keys(question));
+      }      
       return 'Unable to retrieve question text';
     };
 
@@ -3224,7 +3222,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
     // Enhanced function to render answer with all options and highlight selected ones
     const renderAnswerWithOptions = (answer) => {
       if (!answer) {
-        console.log("No answer provided");
         return "No answer provided";
       }
 
@@ -3233,7 +3230,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
       
         // Check if its likely an unanswered text input
         if (!answer.value && !answer.textValue && !answer.text && !answer.response) {
-          console.log("No answer provided for text input");
           return "No answer provided for this text input";
         }
       }
@@ -3241,15 +3237,8 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
       try {
         // Standardize answer object through normalization
         const normalizedAnswer = normalizeFirestoreData(answer);
-        
-        // Log the structure for debugging in production
-        console.log("Processing answer:", {
-          type: normalizedAnswer.type || normalizedAnswer.questionType || 'unknown',
-          keys: Object.keys(normalizedAnswer),
-          questionId: normalizedAnswer.questionId
-        });
-        
-        // Initialize fallback values for when specific formats fail
+
+        // Initialise fallback values for when specific formats fail
         let fallbackValue = null;
         let fallbackRendered = false;
         
@@ -3276,7 +3265,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
         // Case 1: Most common format - allOptions array with selectedOptions indexes
         if (normalizedAnswer.allOptions && Array.isArray(normalizedAnswer.allOptions) && 
             normalizedAnswer.selectedOptions && Array.isArray(normalizedAnswer.selectedOptions)) {
-          console.log("Processing multi-choice with selectedOptions indexes");
           let result = "";
           
           // Convert string indexes to numbers if needed
@@ -3298,7 +3286,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
         // Case 2: Multi-choice with selectedOption (single selection)
         if (normalizedAnswer.allOptions && Array.isArray(normalizedAnswer.allOptions) && 
             normalizedAnswer.selectedOption !== undefined) {
-          console.log("Processing single selection with selectedOption");
           let result = "";
           
           const selectedIndex = typeof normalizedAnswer.selectedOption === 'string' ? 
@@ -3320,7 +3307,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
         // Case 3: Multi-choice where selection is in value array
         if (normalizedAnswer.allOptions && Array.isArray(normalizedAnswer.allOptions) && 
             normalizedAnswer.value && Array.isArray(normalizedAnswer.value)) {
-          console.log("Processing multi-choice with value array");
           let result = "";
           
           normalizedAnswer.allOptions.forEach((option) => {
@@ -3337,13 +3323,11 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
         
         // Case 4: Text representation (short_answer, textarea)
         if (normalizedAnswer.textValue !== undefined) {
-          console.log("Using textValue property");
           return String(normalizedAnswer.textValue);
         }
         
         // Case 5: Direct value representation (common format)
         if (normalizedAnswer.value !== undefined) {
-          console.log("Using direct value property");
           if (Array.isArray(normalizedAnswer.value)) {
             return normalizedAnswer.value.join(', ');
           } else if (typeof normalizedAnswer.value === 'object' && normalizedAnswer.value !== null) {
@@ -3356,7 +3340,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
         const commonTextProperties = ['text', 'answer', 'response', 'content', 'selected', 'input'];
         for (const prop of commonTextProperties) {
           if (normalizedAnswer[prop] !== undefined) {
-            console.log(`Using ${prop} property as answer`);
             if (Array.isArray(normalizedAnswer[prop])) {
               return normalizedAnswer[prop].join(', ');
             } else if (typeof normalizedAnswer[prop] === 'object' && normalizedAnswer[prop] !== null) {
@@ -3370,7 +3353,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
         // Try to construct selection logic from properties
         if ((normalizedAnswer.type === 'multichoice' || normalizedAnswer.type === 'dropdown' || 
             normalizedAnswer.questionType === 'multichoice' || normalizedAnswer.questionType === 'dropdown')) {
-          console.log("Attempting to infer selection from arbitrary properties");
           
           // Look for properties that might contain selection info
           const allProperties = Object.keys(normalizedAnswer);
@@ -3395,13 +3377,10 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
         
         // Case 8: Use the fallback if we've identified a likely value
         if (fallbackRendered && fallbackValue) {
-          console.log("Using fallback value:", fallbackValue);
           return fallbackValue;
         }
         
         // Case 9: Last resort - try to extract useful information from answer object
-        console.log("Final fallback: Dumping answer properties");
-        
         let result = [];
         const propertiesToSkip = ['id', 'questionId', 'type', 'questionType', 'createdAt', 'updatedAt'];
         
@@ -3433,7 +3412,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
     // Function to find the best matching answer for a question
     const findMatchingAnswer = (question, answers) => {
       if (!answers || !Array.isArray(answers) || answers.length === 0) {
-        console.log(`No answers array found for question ${question.id}`);
         return null;
       }
       
@@ -3477,17 +3455,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
       id: userInductionDoc.id,
       ...userInductionDoc.data()
     };
-    
-    // Debug logging for production diagnostics
-    console.log("userInduction structure:", {
-      hasAnswers: !!userInduction.answers,
-      answerCount: userInduction.answers ? userInduction.answers.length : 0,
-      status: userInduction.status
-    });
-    
-    if (userInduction.answers && userInduction.answers.length > 0) {
-      console.log("Sample answer keys:", Object.keys(userInduction.answers[0]));
-    }
     
     // Get the induction details
     const inductionRef = db.collection("inductions").doc(userInduction.inductionId);
@@ -3854,14 +3821,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
       
       // Responses Section
       addSectionTitle('Responses');
-     
-      if (userInduction.answers && userInduction.answers.length > 0) {
-        console.log("Answers available:", userInduction.answers.length);
-        console.log("Sample answer structure:", 
-          JSON.stringify(userInduction.answers.slice(0, 1)));
-      } else {
-        console.log("No answers found in userInduction!");
-      }
 
       // Process sections and questions
       if (induction.sections && Array.isArray(induction.sections)) {
@@ -3894,9 +3853,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
               
               // Find answer for this question using the enhanced function
               const answer = findMatchingAnswer(question, userInduction.answers);
-              
-              // Log if answer was found or not for debugging
-              console.log(`Question ${question.id} (${questionIndex+1}/${section.questions.length}): Answer found: ${answer ? 'YES' : 'NO'}`);
               
               // Question number (count within the section)
               const questionNumber = `${sectionIndex + 1}.${questionIndex + 1}`;
@@ -3957,9 +3913,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
           
           // Find answer for this question using the enhanced function
           const answer = findMatchingAnswer(question, userInduction.answers);
-          
-          // Log if answer was found or not for debugging
-          console.log(`Question ${question.id} (${questionIndex+1}/${induction.questions.length}): Answer found: ${answer ? 'YES' : 'NO'}`);
           
           // Question number
           const questionNumber = `${questionIndex + 1}`;
