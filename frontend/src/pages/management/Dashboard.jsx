@@ -35,7 +35,7 @@ const Dashboard = () => {
       title: "Results",
       description: "View induction results",
       links: [
-        { text: "View all Results", path: "/management/inductions/results" }
+        { text: "View all Results", path: "/management/results" }
       ]
     },
     {

@@ -2220,7 +2220,9 @@ const getAnswerValue = (answer) => {
   if (!answer) return "No answer provided";
   
   try {
-    // First check if the answer has selectedOptions (for multi-choice)
+    console.log("Processing answer:", JSON.stringify(answer).substring(0, 200) + "...");
+    
+    // For multichoice with selectedOptions
     if (answer.selectedOptions) {
       if (Array.isArray(answer.selectedOptions)) {
         return answer.selectedOptions.join(', ');
@@ -2228,16 +2230,28 @@ const getAnswerValue = (answer) => {
       return String(answer.selectedOptions);
     }
     
-    // For multichoice, check for array value too
-    if (answer.type === 'multichoice' || answer.type === 'multi' || answer.type === 'multiple') {
+    // Direct value access - expanded check
+    if (answer.value !== undefined) {
       if (Array.isArray(answer.value)) {
         return answer.value.join(', ');
+      } else if (typeof answer.value === 'object' && answer.value !== null) {
+        return JSON.stringify(answer.value);
       }
+      return String(answer.value);
     }
     
-    // Check for various answer value properties
-    const possibleValueProps = ['value', 'selectedOption', 'selected', 'answer', 'text'];
-    for (const prop of possibleValueProps) {
+    // Text value for short answers
+    if (answer.textValue !== undefined) {
+      return String(answer.textValue);
+    }
+    
+    // Try all common property names
+    const valuePropNames = [
+      'selectedOption', 'selected', 'answer', 'text', 'response', 
+      'content', 'input', 'data', 'result'
+    ];
+    
+    for (const prop of valuePropNames) {
       if (answer[prop] !== undefined) {
         if (Array.isArray(answer[prop])) {
           return answer[prop].join(', ');
@@ -2248,16 +2262,24 @@ const getAnswerValue = (answer) => {
       }
     }
     
-    // If no value props found but we have type info, give a better message
-    if (answer.type) {
-      return `No ${answer.type} answer data`;
+    // Last attempt: find any non-metadata property that might contain the answer
+    for (const key in answer) {
+      // Skip common metadata properties
+      if (['id', 'questionId', 'type', 'questionType', 'createdAt', 'updatedAt'].includes(key)) {
+        continue;
+      }
+      
+      const val = answer[key];
+      if (val !== undefined && val !== null && typeof val !== 'object') {
+        return String(val);
+      }
     }
     
-    // Last resort: return the stringified answer
+    // If we reach here, return a debug-friendly message
     return `Answer data: ${JSON.stringify(answer)}`;
     
   } catch (err) {
-    console.error("Error processing answer:", err, "for answer:", answer);
+    console.error("Error processing answer:", err);
     return "Error processing answer";
   }
 };
@@ -3090,49 +3112,47 @@ export const exportStaffInductionResultsToExcel = async (req, res) => {
 // Export staff induction results to PDF
 export const exportStaffInductionResultsToPDF = async (req, res) => {
   try {
+    // Add debugging to check data structure in production
+    console.log("Starting PDF export process");
+
     // Helper function to safely extract question text
     const getQuestionText = (question) => {
       if (!question) return 'Unknown question';
       
-      // First, check for the most common property names
-      if (question.title) return question.title;
-      if (question.question) return question.question;
-      if (question.questionTitle) return question.questionTitle;
-      if (question.text) return question.text;
-      
-      // Additional checks for nested properties
-      if (question.content) return question.content;
-      if (question.prompt) return question.prompt;
-      
-      // Special case check - in some formats the question might be directly a string
+      // Simple string case
       if (typeof question === 'string') return question;
       
-      // Debug
-      const textProperties = ['title', 'question', 'questionTitle', 'text', 'content', 'prompt'];
-      for (const key of Object.keys(question)) {
+      // Direct properties, in order of likelihood
+      const directProps = ['title', 'question', 'questionTitle', 'text', 'content', 'prompt'];
+      for (const prop of directProps) {
+        if (question[prop] && typeof question[prop] === 'string') {
+          return question[prop];
+        }
+      }
+      
+      // Deeper object properties
+      for (const key in question) {
+        if (typeof question[key] === 'object' && question[key] !== null) {
+          for (const prop of directProps) {
+            if (question[key][prop] && typeof question[key][prop] === 'string') {
+              return question[key][prop];
+            }
+          }
+        }
+      }
+      
+      // Last resort: use any string property that might be the question
+      for (const key in question) {
         if (typeof question[key] === 'string' && 
             (key.toLowerCase().includes('question') || 
-            key.toLowerCase().includes('title') || 
-            key.toLowerCase().includes('text'))) {
+             key.toLowerCase().includes('title') || 
+             key.toLowerCase().includes('text'))) {
           return question[key];
         }
       }
       
-      // Debug fallback
-      try {
-        // Only include a few key properties to avoid overwhelming logs
-        const debugObj = {
-          id: question.id,
-          type: question.type,
-          keys: Object.keys(question)
-        };
-        
-        console.log("DEBUG - Question structure:", JSON.stringify(debugObj));
-        
-        return `Question data: ${JSON.stringify(debugObj)}`;
-      } catch (e) {
-        return 'Unable to retrieve question text';
-      }
+      console.log("Could not identify question text, keys:", Object.keys(question));
+      return 'Unable to retrieve question text';
     };
 
     // Helper to get a readable question type label
@@ -3168,74 +3188,263 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
       }
     };
 
-    // Function to render answer with all options and highlight selected ones
-    const renderAnswerWithOptions = (answer) => {
-      if (!answer) return "No answer provided";
+    // Function to normalize Firestore data to prevent issues with Timestamps and references
+    const normalizeFirestoreData = (data) => {
+      if (!data) return null;
       
       try {
-        // For questions with options (multichoice, dropdown, true/false)
-        if (answer.allOptions && Array.isArray(answer.allOptions)) {
+        // Handle simple values
+        if (typeof data !== 'object') return data;
+        
+        // Handle arrays
+        if (Array.isArray(data)) {
+          return data.map(item => normalizeFirestoreData(item));
+        }
+        
+        // Handle Firestore Timestamp
+        if (data.toDate && typeof data.toDate === 'function') {
+          return data.toDate().toISOString();
+        }
+        
+        // Handle plain objects recursively
+        const normalized = {};
+        Object.keys(data).forEach(key => {
+          if (data[key] !== null && data[key] !== undefined) {
+            normalized[key] = normalizeFirestoreData(data[key]);
+          }
+        });
+        
+        return normalized;
+      } catch (err) {
+        console.error("Error normalizing Firestore data:", err);
+        return data; // Return original on error
+      }
+    };
+
+    // Enhanced function to render answer with all options and highlight selected ones
+    const renderAnswerWithOptions = (answer) => {
+      if (!answer) {
+        console.log("No answer provided");
+        return "No answer provided";
+      }
+      
+      try {
+        // Standardize answer object through normalization
+        const normalizedAnswer = normalizeFirestoreData(answer);
+        
+        // Log the structure for debugging in production
+        console.log("Processing answer:", {
+          type: normalizedAnswer.type || normalizedAnswer.questionType || 'unknown',
+          keys: Object.keys(normalizedAnswer),
+          questionId: normalizedAnswer.questionId
+        });
+        
+        // Initialize fallback values for when specific formats fail
+        let fallbackValue = null;
+        let fallbackRendered = false;
+        
+        // Try to extract ANY value that might be the answer for fallback
+        for (const key in normalizedAnswer) {
+          // Skip common metadata properties
+          if (['id', 'questionId', 'type', 'questionType', 'createdAt', 'updatedAt'].includes(key)) {
+            continue; 
+          }
+          
+          if (normalizedAnswer[key] !== undefined && normalizedAnswer[key] !== null) {
+            if (Array.isArray(normalizedAnswer[key])) {
+              fallbackValue = normalizedAnswer[key].join(', ');
+              fallbackRendered = true;
+            } else if (typeof normalizedAnswer[key] !== 'object') {
+              fallbackValue = String(normalizedAnswer[key]);
+              fallbackRendered = true;
+            }
+          }
+        }
+        
+        // HANDLE MULTI-CHOICE ANSWERS
+        
+        // Case 1: Most common format - allOptions array with selectedOptions indexes
+        if (normalizedAnswer.allOptions && Array.isArray(normalizedAnswer.allOptions) && 
+            normalizedAnswer.selectedOptions && Array.isArray(normalizedAnswer.selectedOptions)) {
+          console.log("Processing multi-choice with selectedOptions indexes");
           let result = "";
           
-          // For multichoice with multiple selections
-          if (answer.selectedOptions && Array.isArray(answer.selectedOptions)) {
-            // Convert string indexes to numbers if needed
-            const selectedIndexes = answer.selectedOptions.map(idx => 
-              typeof idx === 'string' ? parseInt(idx, 10) : idx);
-            
-            // Show all options, marking selected ones
-            answer.allOptions.forEach((option, index) => {
-              const isSelected = selectedIndexes.includes(index);
-              if (isSelected) {
-                result += `• ${option} (Selected)\n`;
-              } else {
-                result += `• ${option}\n`;
-              }
-            });
-            
-            return result.trim();
-          }
+          // Convert string indexes to numbers if needed
+          const selectedIndexes = normalizedAnswer.selectedOptions.map(idx => 
+            typeof idx === 'string' ? parseInt(idx, 10) : idx);
           
-          // For dropdown or true/false with single selection
-          if (answer.selectedOption !== undefined) {
-            // Convert to number if needed
-            const selectedIndex = typeof answer.selectedOption === 'string' ? 
-                                parseInt(answer.selectedOption, 10) : 
-                                answer.selectedOption;
-            
-            // Show all options, marking the selected one
-            answer.allOptions.forEach((option, index) => {
-              const isSelected = index === selectedIndex;
-              if (isSelected) {
-                result += `• ${option} (Selected)\n`;
-              } else {
-                result += `• ${option}\n`;
-              }
-            });
-            
-            return result.trim();
-          }
+          normalizedAnswer.allOptions.forEach((option, index) => {
+            const isSelected = selectedIndexes.includes(index);
+            if (isSelected) {
+              result += `• ${option} (Selected)\n`;
+            } else {
+              result += `• ${option}\n`;
+            }
+          });
           
-          // If no selection found but we have options, just list them
-          return answer.allOptions.map(opt => `• ${opt}`).join('\n');
+          return result.trim();
         }
         
-        // For other answer types
-        if (answer.value !== undefined) {
-          if (Array.isArray(answer.value)) {
-            return answer.value.join(', ');
-          } else if (typeof answer.value === 'object' && answer.value !== null) {
-            return JSON.stringify(answer.value);
-          }
-          return String(answer.value);
+        // Case 2: Multi-choice with selectedOption (single selection)
+        if (normalizedAnswer.allOptions && Array.isArray(normalizedAnswer.allOptions) && 
+            normalizedAnswer.selectedOption !== undefined) {
+          console.log("Processing single selection with selectedOption");
+          let result = "";
+          
+          const selectedIndex = typeof normalizedAnswer.selectedOption === 'string' ? 
+                              parseInt(normalizedAnswer.selectedOption, 10) : 
+                              normalizedAnswer.selectedOption;
+          
+          normalizedAnswer.allOptions.forEach((option, index) => {
+            const isSelected = index === selectedIndex;
+            if (isSelected) {
+              result += `• ${option} (Selected)\n`;
+            } else {
+              result += `• ${option}\n`;
+            }
+          });
+          
+          return result.trim();
         }
         
-        // Fallback
-        return "No specific answer format detected";
+        // Case 3: Multi-choice where selection is in value array
+        if (normalizedAnswer.allOptions && Array.isArray(normalizedAnswer.allOptions) && 
+            normalizedAnswer.value && Array.isArray(normalizedAnswer.value)) {
+          console.log("Processing multi-choice with value array");
+          let result = "";
+          
+          normalizedAnswer.allOptions.forEach((option) => {
+            const isSelected = normalizedAnswer.value.includes(option);
+            if (isSelected) {
+              result += `• ${option} (Selected)\n`;
+            } else {
+              result += `• ${option}\n`;
+            }
+          });
+          
+          return result.trim();
+        }
+        
+        // Case 4: Text representation (short_answer, textarea)
+        if (normalizedAnswer.textValue !== undefined) {
+          console.log("Using textValue property");
+          return String(normalizedAnswer.textValue);
+        }
+        
+        // Case 5: Direct value representation (common format)
+        if (normalizedAnswer.value !== undefined) {
+          console.log("Using direct value property");
+          if (Array.isArray(normalizedAnswer.value)) {
+            return normalizedAnswer.value.join(', ');
+          } else if (typeof normalizedAnswer.value === 'object' && normalizedAnswer.value !== null) {
+            return JSON.stringify(normalizedAnswer.value);
+          }
+          return String(normalizedAnswer.value);
+        }
+        
+        // Case 6: Look for properties that might contain text answers
+        const commonTextProperties = ['text', 'answer', 'response', 'content', 'selected', 'input'];
+        for (const prop of commonTextProperties) {
+          if (normalizedAnswer[prop] !== undefined) {
+            console.log(`Using ${prop} property as answer`);
+            if (Array.isArray(normalizedAnswer[prop])) {
+              return normalizedAnswer[prop].join(', ');
+            } else if (typeof normalizedAnswer[prop] === 'object' && normalizedAnswer[prop] !== null) {
+              return JSON.stringify(normalizedAnswer[prop]);
+            }
+            return String(normalizedAnswer[prop]);
+          }
+        }
+        
+        // Case 7: For enumeration/multiple-choice without structure
+        // Try to construct selection logic from properties
+        if ((normalizedAnswer.type === 'multichoice' || normalizedAnswer.type === 'dropdown' || 
+            normalizedAnswer.questionType === 'multichoice' || normalizedAnswer.questionType === 'dropdown')) {
+          console.log("Attempting to infer selection from arbitrary properties");
+          
+          // Look for properties that might contain selection info
+          const allProperties = Object.keys(normalizedAnswer);
+          
+          // Find options that might be selected (have truthy values)
+          const selectedOptions = [];
+          for (const prop of allProperties) {
+            // Skip common metadata properties
+            if (['id', 'questionId', 'type', 'questionType', 'createdAt', 'updatedAt'].includes(prop)) {
+              continue;
+            }
+            
+            if (normalizedAnswer[prop] === true || normalizedAnswer[prop] === 'selected' || normalizedAnswer[prop] === 'true') {
+              selectedOptions.push(prop);
+            }
+          }
+          
+          if (selectedOptions.length > 0) {
+            return selectedOptions.map(opt => `• ${opt} (Selected)`).join('\n');
+          }
+        }
+        
+        // Case 8: Use the fallback if we've identified a likely value
+        if (fallbackRendered && fallbackValue) {
+          console.log("Using fallback value:", fallbackValue);
+          return fallbackValue;
+        }
+        
+        // Case 9: Last resort - try to extract useful information from answer object
+        console.log("Final fallback: Dumping answer properties");
+        
+        let result = [];
+        const propertiesToSkip = ['id', 'questionId', 'type', 'questionType', 'createdAt', 'updatedAt'];
+        
+        for (const [key, value] of Object.entries(normalizedAnswer)) {
+          if (propertiesToSkip.includes(key)) continue;
+          
+          if (value !== null && value !== undefined) {
+            if (typeof value === 'object' && !Array.isArray(value)) {
+              result.push(`${key}: ${JSON.stringify(value)}`);
+            } else {
+              result.push(`${key}: ${value}`);
+            }
+          }
+        }
+        
+        if (result.length > 0) {
+          return result.join('\n');
+        }
+        
+        // Ultimate fallback with verbose answer data
+        return `No recognizable answer format. Raw data: ${JSON.stringify(normalizedAnswer)}`;
+        
       } catch (err) {
         console.error("Error rendering answer with options:", err);
-        return "Error processing answer";
+        return "Error processing answer. Please check server logs.";
       }
+    };
+
+    // Function to find the best matching answer for a question
+    const findMatchingAnswer = (question, answers) => {
+      if (!answers || !Array.isArray(answers) || answers.length === 0) {
+        console.log(`No answers array found for question ${question.id}`);
+        return null;
+      }
+      
+      // Try exact match first
+      const exactMatch = answers.find(a => a.questionId === question.id);
+      if (exactMatch) return exactMatch;
+      
+      // Try string/number conversion match
+      const numberIdMatch = answers.find(a => 
+        String(a.questionId) === String(question.id)
+      );
+      if (numberIdMatch) return numberIdMatch;
+      
+      // Try matching by questionId nested in question object
+      const nestedMatch = answers.find(a => 
+        a.question && a.question.id === question.id
+      );
+      if (nestedMatch) return nestedMatch;
+      
+      console.log(`Could not find answer for question ${question.id}`);
+      return null;
     };
 
     const userInductionId = req.params.userInductionId;
@@ -3253,10 +3462,22 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
       return res.status(404).json({ message: "User Induction not found" });
     }
     
+    // Extract and normalize the user induction data
     const userInduction = {
       id: userInductionDoc.id,
       ...userInductionDoc.data()
     };
+    
+    // Debug logging for production diagnostics
+    console.log("userInduction structure:", {
+      hasAnswers: !!userInduction.answers,
+      answerCount: userInduction.answers ? userInduction.answers.length : 0,
+      status: userInduction.status
+    });
+    
+    if (userInduction.answers && userInduction.answers.length > 0) {
+      console.log("Sample answer keys:", Object.keys(userInduction.answers[0]));
+    }
     
     // Get the induction details
     const inductionRef = db.collection("inductions").doc(userInduction.inductionId);
@@ -3369,8 +3590,10 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
       }
     });
     
-    // Set response headers for PDF download
+    // Set response headers for PDF download - with explicit content type and headers
     res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Transfer-Encoding', 'binary');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     
     // Create a sanitised filename
     const fileName = `${userData.displayName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${induction.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_${exportType}_report.pdf`;
@@ -3623,7 +3846,11 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
       addSectionTitle('Responses');
      
       if (userInduction.answers && userInduction.answers.length > 0) {
-        console.log("Sample:", JSON.stringify(userInduction.answers.slice(0, 2)));
+        console.log("Answers available:", userInduction.answers.length);
+        console.log("Sample answer structure:", 
+          JSON.stringify(userInduction.answers.slice(0, 1)));
+      } else {
+        console.log("No answers found in userInduction!");
       }
 
       // Process sections and questions
@@ -3655,10 +3882,11 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
                 pageNumber++;
               }
               
-              // Find answer for this question
-              const answer = userInduction.answers && Array.isArray(userInduction.answers) 
-                ? userInduction.answers.find(a => a.questionId === question.id)
-                : null;
+              // Find answer for this question using the enhanced function
+              const answer = findMatchingAnswer(question, userInduction.answers);
+              
+              // Log if answer was found or not for debugging
+              console.log(`Question ${question.id} (${questionIndex+1}/${section.questions.length}): Answer found: ${answer ? 'YES' : 'NO'}`);
               
               // Question number (count within the section)
               const questionNumber = `${sectionIndex + 1}.${questionIndex + 1}`;
@@ -3717,10 +3945,11 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
             pageNumber++;
           }
           
-          // Find answer for this question
-          const answer = userInduction.answers && Array.isArray(userInduction.answers) 
-            ? userInduction.answers.find(a => a.questionId === question.id)
-            : null;
+          // Find answer for this question using the enhanced function
+          const answer = findMatchingAnswer(question, userInduction.answers);
+          
+          // Log if answer was found or not for debugging
+          console.log(`Question ${question.id} (${questionIndex+1}/${induction.questions.length}): Answer found: ${answer ? 'YES' : 'NO'}`);
           
           // Question number
           const questionNumber = `${questionIndex + 1}`;
@@ -3795,15 +4024,15 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
           
           switch(feedback.overallRating) {
             case 1:
-              ratingText = '😞 Not Satisfied';
+              ratingText = 'Not Satisfied';
               ratingColor = '#c62828'; // Red
               break;
             case 2:
-              ratingText = '😐 Neutral';
+              ratingText = 'Neutral';
               ratingColor = '#f57c00'; // Orange
               break;
             case 3:
-              ratingText = '😊 Satisfied';
+              ratingText = 'Satisfied';
               ratingColor = '#2e7d32'; // Green
               break;
             default:
@@ -3914,6 +4143,13 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
              .moveDown(1);
         }
       }
+    }
+    
+    // Add debug footer in development environments
+    if (process.env.NODE_ENV !== 'production') {
+      doc.fontSize(6)
+         .fillColor('#999999')
+         .text(`Debug: Generated from ${req.headers['host'] || 'unknown host'} with ${userInduction.answers ? userInduction.answers.length : 0} answers`, 50, doc.page.height - 20);
     }
     
     // Finalise the PDF document
