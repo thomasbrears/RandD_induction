@@ -5,12 +5,15 @@ import { DefaultNewUser } from '../../models/User';
 import useAuth from '../../hooks/useAuth';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { getUser, updateUser } from "../../api/UserApi";
+import { getUserInductions } from "../../api/UserInductionApi";
 import { notifyError, notifySuccess } from '../../utils/notificationService';
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
-import { MdManageAccounts } from 'react-icons/md';
-import { Result, Button } from 'antd';
-import Loading from "../../components/Loading";
+import UserInductionsList from '../../components/management/UserInductionsList';
+import { Result, Button, Typography, Space, Skeleton, Card, Divider, Form } from 'antd';
+import { EditOutlined, CheckCircleOutlined, ArrowRightOutlined, EditFilled, UsergroupAddOutlined } from '@ant-design/icons';
+
+const { Title } = Typography;
 
 const EditUser = () => {
   const [viewedUser, setViewedUser] = useState(DefaultNewUser);
@@ -18,11 +21,14 @@ const EditUser = () => {
   const [loadingMessage, setLoadingMessage] = useState('');
   const [userUpdated, setUserUpdated] = useState(false);
   const [updatedUser, setUpdatedUser] = useState(null);
+  const [userInductionsMap, setUserInductionsMap] = useState({});
+  const [loadingInductions, setLoadingInductions] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
   const { user, loading: authLoading } = useAuth();
   const uid = location.state?.uid;
 
+  // Fetch user data
   useEffect(() => {
     if (uid && !authLoading) {
       const fetchUser = async () => {
@@ -44,6 +50,43 @@ const EditUser = () => {
     }
   }, [uid, user, authLoading, navigate]);
 
+  // Fetch user inductions
+  useEffect(() => {
+    if (viewedUser?.uid && !authLoading && user) {
+      const fetchUserInductions = async () => {
+        try {
+          setLoadingInductions(true);
+          const userInductionsData = await getUserInductions(user, viewedUser.uid);
+          
+          const inductionsMap = {};
+          
+          // First try to match by assignmentId
+          userInductionsData.forEach(apiInduction => {
+            if (apiInduction.assignmentId) {
+              inductionsMap[apiInduction.assignmentId] = apiInduction;
+            }
+          });
+          
+          // Also index by inductionId for fallback matching
+          userInductionsData.forEach(apiInduction => {
+            if (apiInduction.inductionId) {
+              inductionsMap[`induction-${apiInduction.inductionId}`] = apiInduction;
+            }
+          });
+          
+          setUserInductionsMap(inductionsMap);
+          
+        } catch (err) {
+          console.error("Failed to load user inductions:", err);
+        } finally {
+          setLoadingInductions(false);
+        }
+      };
+      
+      fetchUserInductions();
+    }
+  }, [viewedUser, user, authLoading]);
+
   const handleSubmit = (userData) => {
     if (user) {
       updateUser(user, userData)
@@ -63,8 +106,39 @@ const EditUser = () => {
     }
   };
 
-  const handleManageInductions = (uid) => {
-    navigate("/management/users/inductions", { state: { uid } });
+  const handleManageInductions = () => {
+    navigate("/management/users/inductions", { state: { uid: viewedUser.uid } });
+  };
+
+  const handleViewResults = (induction) => {
+    // First try to find the corresponding userInduction by assignmentID
+    let userInductionId = null;
+    
+    if (induction.assignmentID && userInductionsMap[induction.assignmentID]) {
+      // If we have a match by assignmentID
+      userInductionId = userInductionsMap[induction.assignmentID].id;
+    } else if (userInductionsMap[`induction-${induction.id}`]) {
+      // Fallback to matching by induction ID
+      userInductionId = userInductionsMap[`induction-${induction.id}`].id;
+    }
+    
+    if (userInductionId) {
+      // If we found a matching userInduction, navigate to the results page
+      navigate(`/management/results/user/${viewedUser.uid}/${userInductionId}`);
+    } else {
+      // If we couldn't find a match, go to the results hub
+      notifyError(
+        "Results not available", 
+        "Could not find the results for this induction. Redirecting to the Results Hub."
+      );
+      setTimeout(() => {
+        navigate("/management/results", { 
+          state: { 
+            selectedUser: viewedUser.uid 
+          } 
+        });
+      }, 2000);
+    }
   };
 
   return (
@@ -83,45 +157,71 @@ const EditUser = () => {
           <ManagementSidebar />
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 mb-4 mx-4">
           {loading ? (
-            <Loading message={loadingMessage} />
+            <Card className="mx-auto max-w-4xl shadow-lg mt-6">
+              <Skeleton.Input active size="small" style={{ width: 150, marginBottom: 16 }} />
+              <Divider />
+              <Form layout="vertical">
+                <Skeleton.Input active style={{ width: '100%', height: 32, marginBottom: 24 }} />
+                <Skeleton.Input active style={{ width: '100%', height: 32, marginBottom: 24 }} />
+                <Skeleton.Input active style={{ width: '100%', height: 32, marginBottom: 24 }} />
+                <div className="text-center mt-6">
+                  <Skeleton.Button active style={{ width: 120, height: 40 }} />
+                </div>
+              </Form>
+            </Card>
           ) : userUpdated && updatedUser ? (
             // Success message screen with buttons
             <Result
               status="success"
-              title={`${updatedUser.displayName}'s details have been updated!`}
+              icon={<CheckCircleOutlined />}
+              title={<Title level={3}>{`${updatedUser.displayName}'s details have been updated!`}</Title>}
               subTitle="What would you like to do next?"
-              extra={[
-                <Button type="primary" key="assign" onClick={() => navigate("/management/users/inductions", { state: { uid: updatedUser.uid } })}>
-                  Manage {updatedUser.firstName}'s Inductions
-                </Button>,
-                <Button key="edit-again" onClick={() => setUserUpdated(false)}>
-                  Edit {updatedUser.firstName} again
-                </Button>,
-                <Button key="view-users" onClick={() => navigate("/management/users/view")}>
-                  View All Users
-                </Button>,
-              ]}
+              extra={
+                <Space direction="vertical" size="middle" style={{ width: '100%' }}>
+                  <Button
+                    type="primary"
+                    icon={<ArrowRightOutlined />}
+                    onClick={() => navigate("/management/users/inductions", { state: { uid: updatedUser.uid } })}
+                    size="large"
+                    block
+                  >
+                    Manage {updatedUser.firstName}'s Inductions
+                  </Button>
+                  <Button
+                    icon={<EditFilled />}
+                    onClick={() => setUserUpdated(false)}
+                    size="large"
+                    block
+                  >
+                    Edit {updatedUser.firstName} again
+                  </Button>
+                  <Button
+                    icon={<UsergroupAddOutlined />}
+                    onClick={() => navigate("/management/users/view")}
+                    size="large"
+                    block
+                  >
+                    View All Users
+                  </Button>
+                </Space>
+              }
             />
           ) : (
-            <>
-              {/* Edit User Form */}
+            <div className="space-y-6">
+              {/* User Form */}
               <UserForm userData={viewedUser} onSubmit={handleSubmit} />
-
-              {/* Large Manage Induction Button */}
-              <div className="flex justify-center mt-8">
-                <button
-                  onClick={() => handleManageInductions(viewedUser.uid)}
-                  className="mt-8 text-lg text-white text-bold px-6 py-3 border-2 rounded-lg bg-blue-500 
-                            transition-all duration-300 transform hover:border-blue-500 hover:bg-inherit  hover:text-gray-700 
-                            shadow-md"
-                >
-                  <MdManageAccounts className="inline mr-3 " />
-                  Click here to manage and assign inductions for {viewedUser.firstName || 'User'}
-                </button>
-              </div>
-            </>
+              
+              {/* Inductions List Section */}
+              <UserInductionsList
+                inductions={viewedUser.assignedInductions || []}
+                userId={viewedUser.uid}
+                onManageInductions={handleManageInductions}
+                onViewResults={handleViewResults}
+                loadingResults={loadingInductions}
+              />
+            </div>
           )}
         </div>
       </div>
