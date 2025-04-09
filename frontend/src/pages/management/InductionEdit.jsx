@@ -79,9 +79,9 @@ const InductionEdit = () => {
     if (user) {
       const result = await updateInduction(user, induction);
       setSavingInProgress(false);
-      if(result){
+      if (result) {
         notifySuccess("Induction updated successfully!");
-      }else{
+      } else {
         messageWarning("Error while updating induction.");
       }
     }
@@ -157,7 +157,7 @@ const InductionEdit = () => {
                       Continue Editing
                     </Button>
                   )}
-                  {(!(actionType === "prompt" )) && (
+                  {(!(actionType === "prompt")) && (
                     <Button key="cancel" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
                       Cancel
                     </Button>

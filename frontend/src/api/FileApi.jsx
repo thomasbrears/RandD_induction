@@ -16,6 +16,27 @@ export const getSignedUrl = async (user, fileName) => {
     return response.data;
   } catch (error) {
     console.error("Error fetching files:", error);
-    throw error; 
+    throw error;
+  }
+};
+
+export const uploadFile = async (user, file) => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const token = user?.token;
+    const headers = token
+      ? { authtoken: token, "Content-Type": "multipart/form-data" }
+      : { "Content-Type": "multipart/form-data" };
+
+    const response = await axios.post(`${API_URL}/files/upload`, formData, {
+      headers,
+    });
+
+    return response.data; // contains { url, gcsFileName }
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    throw error;
   }
 };

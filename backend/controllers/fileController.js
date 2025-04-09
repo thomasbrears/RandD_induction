@@ -28,16 +28,26 @@ export const uploadFile = async (req, res) => {
       return res.status(500).send("Something went wrong.");
     });
 
-    blobStream.on("finish", () => {
-      // Get the file URL after upload
-      const fileUrl = `https://storage.googleapis.com/${bucket.name}/${gcsFileName}`;
+    blobStream.on("finish", async () => {
+      try {
+        // Get the signed URL for the uploaded file
+        const options = {
+          version: "v4",
+          action: "read",
+          expires: Date.now() + 60 * 60 * 1000, // 1 hour expiration
+        };
 
-      // You can now store this URL in Firebase Firestore or another database
-      res.status(200).json({
-        message: "File uploaded successfully!",
-        fileUrl,
-        gcsFileName,
-      });
+        const [signedUrl] = await blob.getSignedUrl(options);
+
+        res.status(200).json({
+          message: "File uploaded successfully!",
+          url: signedUrl, 
+          gcsFileName,
+        });
+      } catch (error) {
+        console.error("Error generating signed URL:", error);
+        res.status(500).send("Error generating signed URL.");
+      }
     });
 
     blobStream.end(file.buffer);

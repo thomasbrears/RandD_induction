@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Modal, Form, Select, Input, Button, Collapse, Switch, Radio } from "antd";
 import QuestionTypes from "../../models/QuestionTypes";
 import TiptapEditor from "../TiptapEditor";
@@ -7,14 +7,45 @@ import { DefaultNewQuestion } from "../../models/Question";
 import { UpOutlined, PlusOutlined } from "@ant-design/icons";
 import "../../style/AntdOverride.css";
 import { v4 as uuidv4 } from 'uuid';
+import useAuth from "../../hooks/useAuth";
+import { getSignedUrl, uploadFile } from "../../api/FileApi";
+import { messageWarning, notifySuccess } from '../../utils/notificationService';
 
 const { Option } = Select;
 
 const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
+    const { user, loading: authLoading } = useAuth();
     const [form] = Form.useForm();
     const selectedType = Form.useWatch('type', form);
     const requiresValidation = Form.useWatch('requiresValidation', form);
     const answers = Form.useWatch('answers', form);
+
+    //File stuff
+    const [fileName, setFileName] = useState(null);
+    const [fileUrl, setFileUrl] = useState(null);
+    const [loading, setLoading] = useState(false)
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            setLoading(true);
+            try {
+                const result = await uploadFile(user, file);
+                setFileUrl(result.url);
+                setFileName(result.gcsFileName);
+                notifySuccess("File uploaded successfully!");
+            } catch (error) {
+                messageWarning("Error uploading file:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    const handleUploadButtonClick = (e) => {
+        e.stopPropagation();
+        document.getElementById("imageUploadInput").click();
+    };
 
     const handleQuestionTypeChange = (value) => {
         let newOptions = [];
@@ -47,6 +78,9 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
             options: newOptions,
             answers: newAnswers,
         });
+
+        setFileName(null);
+        setFileUrl(null);
     };
 
     useEffect(() => {
@@ -54,6 +88,23 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
             form.resetFields();
             form.setFieldsValue(DefaultNewQuestion);
             form.setFieldsValue(questionData || { type: undefined });
+            setFileName(null);
+            setFileUrl(null);
+            if (questionData && questionData.imageFile) {
+                setFileName(questionData.imageFile);
+
+                if (!authLoading) {
+                    const fetchImage = async () => {
+                        try {
+                            const result = await getSignedUrl(user, fileName);
+                            setFileUrl(result.url);
+                        } catch (err) {
+                            console.log(err.response?.data?.message || "An error occurred");
+                        }
+                    };
+                    fetchImage();
+                }
+            }
         }
     }, [questionData, visible]);
 
@@ -67,7 +118,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
             answers: form.getFieldValue('answers') || [],
             requiresValidation: form.getFieldValue('requiresValidation') || true,
             hint: form.getFieldValue('hint') || "",
-            imageFile: form.getFieldValue('imageFile') || null,
+            imageFile: fileName || null,
         }
 
         onSave(newQuestion);
@@ -89,7 +140,11 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
         form.validateFields(["options"]);
     };
 
-    const handleCancel = () => {
+    const handleCancel = (e) => {
+        if (e.target.id === "imageUploadButton") {
+            e.preventDefault();
+            return;
+        }
         onClose();
     };
 
@@ -167,11 +222,31 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
                                             {/* Image Upload Section */}
                                             <div className="mt-6 pt-2 border-t border-gray-300">
                                                 <span className="font-semibold">Add an Image (Optional):</span>
-                                                <Form.Item className="mt-2">
-                                                    <Button type="primary" onClick={() => alert("Image upload feature coming soon!")}>
-                                                        Upload Image
-                                                    </Button>
-                                                </Form.Item>
+                                                <div className="mt-2">
+                                                    <input
+                                                        type="file"
+                                                        accept="image/*, .png, .jpg, .jpeg"
+                                                        onChange={handleFileChange}
+                                                        style={{ display: "none" }}
+                                                        id="imageUploadInput"
+                                                    />
+                                                    <button
+                                                        id="imageUploadButton"
+                                                        type="button"
+                                                        onClick={(e) => { handleUploadButtonClick(e) }}
+                                                        className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-5 text-base rounded-md"
+                                                    >
+                                                        {loading ? <p>Uploading...</p> : <p>Upload Image</p>}
+                                                    </button>
+                                                </div>
+
+                                                {/* Display image after successful upload */}
+                                                {loading && <p>Uploading...</p>}
+                                                {fileUrl && !loading && (
+                                                    <div>
+                                                        <img src={fileUrl} alt="Uploaded" width="200" />
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ),
@@ -342,13 +417,13 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
                             <Form.Item
                                 label={<span className="font-semibold">Options:</span>}
                                 name="answers"
-                                normalize={(value) => (Array.isArray(value) ? value.map(Number) : [Number(value)])} 
+                                normalize={(value) => (Array.isArray(value) ? value.map(Number) : [Number(value)])}
                             >
                                 <div>
                                     <p className="text-sm text-gray-500">Choose correct answer.</p>
                                     <Radio.Group
                                         onChange={(e) => {
-                                            form.setFieldsValue({ answers: [Number(e.target.value)] }); 
+                                            form.setFieldsValue({ answers: [Number(e.target.value)] });
                                         }}
                                         value={Number(form.getFieldValue("answers")?.[0])}
                                         className="w-full"
@@ -360,7 +435,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
                                                     className={`flex items-center gap-2 p-2 rounded-md cursor-pointer border-2 transition-colors  
                                                 ${Number(form.getFieldValue("answers")?.[0]) === index ? "bg-green-100 border-green-500" : "bg-gray-200 border-gray-400"}`}
                                                 >
-                                                    <Radio key={index} value={index}> 
+                                                    <Radio key={index} value={index}>
                                                         <span className="text-gray-700 text-sm">{option}</span>
                                                     </Radio>
                                                 </div>
