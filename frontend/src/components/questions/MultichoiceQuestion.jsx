@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Input, Button } from "antd";
+import { Input, Button, Switch } from "antd";
 import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
 import TiptapEditor from "../TiptapEditor";
 
@@ -168,6 +168,116 @@ const MultichoiceQuestion = ({ question, onChange, isExpanded, setIsExpanded, ex
             <p className="text-base cursor-pointer text-gray-600" dangerouslySetInnerHTML={{ __html: question.description || "No description" }} />
           </div>
         )}
+      </div>
+
+      {/* Hint and Incorrect Answer Message fields */}
+      <div className="mt-4 space-y-4 bg-gray-50 p-3 rounded-md">
+        {/* Hint field */}
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <label className="font-semibold">Hint (Optional):</label>
+            <Button
+              onClick={() => startEditing("hint")}
+              className="text-gray-600"
+              type="link"
+              icon={<FaEdit />}
+            />
+          </div>
+          
+          {editingField === "hint" ? (
+            <div className="flex flex-col gap-2">
+              <Input.TextArea
+                autoFocus
+                rows={2}
+                value={localValues.hint || ""}
+                onChange={(e) => handleLocalChange("hint", e.target.value)}
+                placeholder="Add a hint to help users answer the question"
+              />
+              <div className="flex gap-1 justify-end">
+                <Button
+                  type="primary"
+                  onClick={() => stopEditing("hint", localValues.hint)}
+                  icon={<FaCheck />}
+                  className="bg-green-500 text-white"
+                />
+                <Button
+                  danger
+                  onClick={() => handleCancel("hint")}
+                  icon={<FaTimes />}
+                  className="bg-red-500 text-white"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gray-100 p-3 rounded-md">
+              {localValues.hint ? (
+                <p className="text-gray-700">{localValues.hint}</p>
+              ) : (
+                <p className="text-gray-400 italic">No hint provided</p>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Incorrect Answer Message field */}
+        <div>
+          <div className="flex justify-between items-center mb-2">
+            <label className="font-semibold">Incorrect Answer Message (Optional):</label>
+            <Button
+              onClick={() => startEditing("incorrectAnswerMessage")}
+              className="text-gray-600"
+              type="link"
+              icon={<FaEdit />}
+            />
+          </div>
+          
+          {editingField === "incorrectAnswerMessage" ? (
+            <div className="flex flex-col gap-2">
+              <Input.TextArea
+                autoFocus
+                rows={2}
+                value={localValues.incorrectAnswerMessage || ""}
+                onChange={(e) => handleLocalChange("incorrectAnswerMessage", e.target.value)}
+                placeholder="Message to display when an incorrect answer is selected"
+              />
+              <div className="flex gap-1 justify-end">
+                <Button
+                  type="primary"
+                  onClick={() => stopEditing("incorrectAnswerMessage", localValues.incorrectAnswerMessage)}
+                  icon={<FaCheck />}
+                  className="bg-green-500 text-white"
+                />
+                <Button
+                  danger
+                  onClick={() => handleCancel("incorrectAnswerMessage")}
+                  icon={<FaTimes />}
+                  className="bg-red-500 text-white"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="bg-gray-100 p-3 rounded-md">
+              {localValues.incorrectAnswerMessage ? (
+                <p className="text-gray-700">{localValues.incorrectAnswerMessage}</p>
+              ) : (
+                <p className="text-gray-400 italic">Default incorrect answer message will be used</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Required toggle */}
+      <div className="mt-4 flex items-center gap-2">
+        <span className="font-semibold">Required:</span>
+        <Switch
+          checked={localValues.isRequired !== false} // Default to true if undefined
+          onChange={(checked) => {
+            handleLocalChange("isRequired", checked);
+            onChange(question.id, "isRequired", checked);
+          }}
+          size="small"
+        />
       </div>
 
       {/* Options */}

@@ -290,14 +290,46 @@ const InductionFormPage = () => {
     console.log('Current Question:', currentQuestion);
     console.log('Current Answer:', currentAnswer);
     
-    // Check if answer is provided
-    if (currentAnswer === undefined || currentAnswer === '' || 
-        (Array.isArray(currentAnswer) && currentAnswer.length === 0)) {
+    // For information questions, always allow proceeding without an answer
+    if (currentQuestion.type === QuestionTypes.INFORMATION) {
+      // Mark this question as correctly answered
+      setAnsweredQuestions(prev => ({
+        ...prev,
+        [currentQuestion.id]: true
+      }));
+      
+      // Proceed to next question
+      if (currentQuestionIndex < induction.questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      }
+      return;
+    }
+    
+    // Check if answer is required and provided (except for information questions)
+    const isRequired = currentQuestion.isRequired !== false; // Default to true if not specified
+    if (isRequired && (currentAnswer === undefined || currentAnswer === '' || 
+        (Array.isArray(currentAnswer) && currentAnswer.length === 0))) {
       setAnswerFeedback({
         isCorrect: false,
         message: 'Please select an answer before proceeding.',
         showFeedback: true
       });
+      return;
+    }
+    
+    // If answer is not required and not provided, allow user to proceed
+    if (!isRequired && (currentAnswer === undefined || currentAnswer === '' || 
+        (Array.isArray(currentAnswer) && currentAnswer.length === 0))) {
+      // Mark this question as correctly answered
+      setAnsweredQuestions(prev => ({
+        ...prev,
+        [currentQuestion.id]: true
+      }));
+      
+      // Proceed to next question
+      if (currentQuestionIndex < induction.questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      }
       return;
     }
 
@@ -306,8 +338,9 @@ const InductionFormPage = () => {
     
     switch (currentQuestion.type) {
       case QuestionTypes.TRUE_FALSE:
-        // For TRUE_FALSE, the correct answer is stored in the answers array
-        console.log('Validating TRUE_FALSE answer:', currentQuestion.answers, currentAnswer);
+      case QuestionTypes.YES_NO:
+        // For TRUE_FALSE and YES_NO, the correct answer is stored in the answers array
+        console.log('Validating TRUE_FALSE/YES_NO answer:', currentQuestion.answers, currentAnswer);
         isCorrect = parseInt(currentAnswer) === currentQuestion.answers[0];
         break;
       
@@ -328,6 +361,11 @@ const InductionFormPage = () => {
         // For dropdown, answers array typically contains one correct index
         console.log('Validating DROPDOWN answer:', currentQuestion.answers, currentAnswer);
         isCorrect = parseInt(currentAnswer) === currentQuestion.answers[0];
+        break;
+        
+      case QuestionTypes.SHORT_ANSWER:
+        // For short answers, we don't validate correctness (manual review required)
+        isCorrect = true;
         break;
         
       case QuestionTypes.FILE_UPLOAD:
@@ -367,9 +405,12 @@ const InductionFormPage = () => {
         }
       }, 1000);
     } else {
+      // Use custom incorrect answer message if available
+      const incorrectMessage = currentQuestion.incorrectAnswerMessage || 'Incorrect. Please try again.';
+      
       setAnswerFeedback({
         isCorrect: false,
-        message: 'Incorrect. Please try again.',
+        message: incorrectMessage,
         showFeedback: true
       });
     }
@@ -384,6 +425,52 @@ const InductionFormPage = () => {
   // Submit the induction
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate all required fields have answers before submission
+    const missingRequiredAnswers = [];
+    
+    induction.questions.forEach((question, index) => {
+      // Skip validation for INFORMATION type questions
+      if (question.type === QuestionTypes.INFORMATION) return;
+      
+      // Check if question is required (default to true if not specified)
+      const isRequired = question.isRequired !== false;
+      
+      if (isRequired) {
+        const answer = answers[question.id];
+        
+        // Check if answer is missing
+        if (answer === undefined || answer === '' || 
+            (Array.isArray(answer) && answer.length === 0)) {
+          missingRequiredAnswers.push({
+            index: index + 1,
+            question: question.question
+          });
+        }
+      }
+    });
+    
+    // If there are missing required answers, show error and prevent submission
+    if (missingRequiredAnswers.length > 0) {
+      // Create error message with list of missing answers
+      let errorMessage = 'Please answer the following required questions:';
+      
+      missingRequiredAnswers.forEach(item => {
+        errorMessage += `\n• Question ${item.index}: ${item.question.length > 30 ? 
+          item.question.substring(0, 30) + '...' : item.question}`;
+      });
+      
+      // Show error notification
+      notifyError('Missing Required Answers', errorMessage);
+      
+      // If in slideshow view, switch to list view to make it easier to see all questions
+      if (!showAllQuestions) {
+        setShowAllQuestions(true);
+      }
+      
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
@@ -402,7 +489,10 @@ const InductionFormPage = () => {
           // Save question title/text for context
           questionTitle: question.title || question.question || `Question ${questions.indexOf(question) + 1}`,
           questionText: question.text || '',
-          description: question.description || ''
+          description: question.description || '',
+          isRequired: question.isRequired !== false,
+          hint: question.hint || '',
+          incorrectAnswerMessage: question.incorrectAnswerMessage || ''
         };
         
         // Format differently based on question type
@@ -421,7 +511,7 @@ const InductionFormPage = () => {
             }
             break;
             
-          case 'true_false':
+          case 'true or false':
           case 'yes_no':
             answerObj.selectedOption = answer !== undefined ? answer : null;
             answerObj.allOptions = question.options || [];
@@ -445,27 +535,30 @@ const InductionFormPage = () => {
             // Don't set isCorrect - these need manual review
             answerObj.flaggedForReview = true;
             break;
+
+          case 'information':
+            // For information questions, we don't need to store an answer
+            answerObj.noAnswerRequired = true;
+            break;
             
           case 'file_upload':
-            answerObj.fileUploaded = !!answer;
-            answerObj.fileReference = answer || null;
-            // Don't set isCorrect - these need manual review
+            // For file uploads, store the file name
+            if (answer) {
+              answerObj.fileName = answer.name;
+              answerObj.fileType = answer.type;
+              answerObj.fileSize = answer.size;
+            }
+            // Flag for review as we can't automatically verify
             answerObj.flaggedForReview = true;
             break;
             
-          case 'info_block':
-            answerObj.acknowledged = !!answer;
-            break;
-            
           default:
-            answerObj.value = answer;
+            // For any other question type, just store the raw answer
+            answerObj.rawAnswer = answer;
+            break;
         }
         
-        // Flag important questions for review
-        if (question.isImportant || question.important) {
-          answerObj.flaggedForReview = true;
-        }
-        
+        // Add the formatted answer to our array
         formattedAnswers.push(answerObj);
       });
       
@@ -863,10 +956,29 @@ const InductionFormPage = () => {
 
 // Helper function to render the appropriate question type
 function renderQuestionByType(question, answer, handleAnswerChange) {
+  // Determine if this question is required (default to true)
+  const isRequired = question.isRequired !== false;
+  
+  // Show hint if available
+  const hint = question.hint ? (
+    <div className="mt-2 text-xs italic text-gray-600 bg-gray-100 p-2 rounded-md">
+      <span className="font-semibold">Hint:</span> {question.hint}
+    </div>
+  ) : null;
+  
+  // Show required indicator if needed
+  const requiredIndicator = isRequired ? (
+    <span className="text-red-500 ml-1">*</span>
+  ) : null;
+
   switch (question.type) {
     case QuestionTypes.TRUE_FALSE:
       return (
         <div className="space-y-3">
+          <div className="flex items-center">
+            <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
+          </div>
+          {hint}
           {question.options.map((option, index) => (
             <div key={index} className="flex items-center">
               <input
@@ -886,9 +998,39 @@ function renderQuestionByType(question, answer, handleAnswerChange) {
         </div>
       );
       
+    case QuestionTypes.YES_NO:
+      return (
+        <div className="space-y-3">
+          <div className="flex items-center">
+            <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
+          </div>
+          {hint}
+          {question.options.map((option, index) => (
+            <div key={index} className="flex items-center">
+              <input
+                type="radio"
+                id={`option-${question.id}-${index}`}
+                name={`question-${question.id}`}
+                value={index}
+                checked={answer === index}
+                onChange={() => handleAnswerChange(index)}
+                className="w-5 h-5 text-gray-800 border-gray-300 focus:ring-gray-500"
+              />
+              <label htmlFor={`option-${question.id}-${index}`} className="ml-2 block text-gray-700">
+                {option}
+              </label>
+            </div>
+          ))}
+        </div>
+      );
+
     case QuestionTypes.MULTICHOICE:
       return (
         <div className="space-y-3">
+          <div className="flex items-center">
+            <p className="text-sm font-medium text-gray-700">Select option(s){requiredIndicator}</p>
+          </div>
+          {hint}
           {question.options.map((option, index) => (
             <div key={index} className="flex items-center">
               <input
@@ -920,55 +1062,72 @@ function renderQuestionByType(question, answer, handleAnswerChange) {
       
     case QuestionTypes.DROPDOWN:
       return (
-        <select
-          value={answer}
-          onChange={(e) => handleAnswerChange(e.target.value)}
-          className="block w-full p-2 mt-1 rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-base"
-        >
-          <option value="">Select an answer</option>
-          {question.options.map((option, index) => (
-            <option key={index} value={index}>
-              {option}
-            </option>
-          ))}
-        </select>
+        <div>
+          <div className="flex items-center mb-2">
+            <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
+          </div>
+          {hint}
+          <select
+            value={answer}
+            onChange={(e) => handleAnswerChange(e.target.value)}
+            className="block w-full p-2 mt-1 rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-base"
+          >
+            <option value="">Select an answer</option>
+            {question.options.map((option, index) => (
+              <option key={index} value={index}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
+      );
+
+    case QuestionTypes.SHORT_ANSWER:
+      return (
+        <div>
+          <div className="flex items-center mb-2">
+            <p className="text-sm font-medium text-gray-700">Enter your answer{requiredIndicator}</p>
+          </div>
+          {hint}
+          <textarea
+            rows={4}
+            value={answer || ''}
+            onChange={(e) => handleAnswerChange(e.target.value)}
+            placeholder="Type your answer here..."
+            className="block w-full p-2 rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-base"
+          />
+        </div>
+      );
+
+    case QuestionTypes.INFORMATION:
+      return (
+        <div className="mt-2 bg-blue-50 p-4 rounded-md border border-blue-200">
+          {question.description ? (
+            <div dangerouslySetInnerHTML={{ __html: question.description }} />
+          ) : (
+            <p className="text-gray-500 italic">Information block</p>
+          )}
+          {hint}
+        </div>
       );
       
     case QuestionTypes.FILE_UPLOAD:
       return (
-        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-          <div className="space-y-1 text-center">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              stroke="currentColor"
-              fill="none"
-              viewBox="0 0 48 48"
-              aria-hidden="true"
-            >
-              <path
-                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <div className="flex flex-col sm:flex-row text-sm text-gray-600 justify-center">
-              <label
-                htmlFor={`file-upload-${question.id}`}
-                className="relative cursor-pointer bg-white rounded-md font-medium text-gray-800 hover:text-gray-700 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gray-500"
-              >
-                <span>Upload a file</span>
-                <input id={`file-upload-${question.id}`} name={`file-upload-${question.id}`} type="file" className="sr-only" />
-              </label>
-              <p className="pl-1 mt-1 sm:mt-0">or drag and drop</p>
-            </div>
-            <p className="text-xs text-gray-500">PNG, JPG, PDF up to 10MB</p>
+        <div>
+          <div className="flex items-center mb-2">
+            <p className="text-sm font-medium text-gray-700">Upload a file{requiredIndicator}</p>
           </div>
+          {hint}
+          <input 
+            type="file" 
+            onChange={(e) => handleAnswerChange(e.target.files[0])} 
+            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-200 file:text-gray-700 hover:file:bg-gray-300"
+          />
         </div>
       );
       
     default:
-      return <p className="text-red-500">Unknown question type: {question.type}</p>;
+      return <p className="text-red-500">Unsupported question type: {question.type}</p>;
   }
 }
 

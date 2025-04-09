@@ -12,6 +12,8 @@ import { FaBars, FaChevronDown, FaChevronUp, FaEdit, FaCheck, FaTimes } from 're
 import QuestionTypes from "../../models/QuestionTypes";
 import ConfirmationModal from "../ConfirmationModal";
 import { Trash } from "lucide-react";
+import ShortAnswerQuestion from "./ShortAnswerQuestion";
+import InformationQuestion from "./InformationQuestion";
 
 const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, expandOnError, updateFieldsBeingEdited }) => {
     const [hasExpandedBefore, setHasExpandedBefore] = useState(false);
@@ -109,6 +111,14 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, exp
                     saveAllFields={saveAllFields}
                     updateFieldsBeingEdited={updateFieldsBeingEdited}
                 />;
+            case QuestionTypes.YES_NO:
+                return <TrueFalseQuestion
+                    question={question}
+                    onChange={onChange}
+                    isExpanded={isExpanded}
+                    saveAllFields={saveAllFields}
+                    updateFieldsBeingEdited={updateFieldsBeingEdited}
+                />;
             case QuestionTypes.MULTICHOICE:
                 return <MultichoiceQuestion
                     question={question}
@@ -137,6 +147,22 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, exp
                     saveAllFields={saveAllFields}
                     updateFieldsBeingEdited={updateFieldsBeingEdited}
                 />;
+            case QuestionTypes.SHORT_ANSWER:
+                return <ShortAnswerQuestion
+                    question={question}
+                    onChange={onChange}
+                    isExpanded={isExpanded}
+                    saveAllFields={saveAllFields}
+                    updateFieldsBeingEdited={updateFieldsBeingEdited}
+                />;
+            case QuestionTypes.INFORMATION:
+                return <InformationQuestion
+                    question={question}
+                    onChange={onChange}
+                    isExpanded={isExpanded}
+                    saveAllFields={saveAllFields}
+                    updateFieldsBeingEdited={updateFieldsBeingEdited}
+                />;
             default:
                 return <span>{question.question}</span>;
         }
@@ -146,15 +172,34 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, exp
         switch (question.type) {
             case QuestionTypes.TRUE_FALSE:
                 return "True/False";
+            case QuestionTypes.YES_NO:
+                return "Yes/No";
             case QuestionTypes.MULTICHOICE:
                 return "Multi Choice";
             case QuestionTypes.DROPDOWN:
                 return "Dropdown";
             case QuestionTypes.FILE_UPLOAD:
                 return "File Upload";
+            case QuestionTypes.SHORT_ANSWER:
+                return "Short Answer";
+            case QuestionTypes.INFORMATION:
+                return "Information";
             default:
                 return question.questionType;
         }
+    };
+
+    // Function to render required/optional badge
+    const renderRequiredBadge = () => {
+        // Questions are required by default unless explicitly set to false
+        const isRequired = question.isRequired !== false;
+        // Information questions are always optional
+        if (question.type === QuestionTypes.INFORMATION) {
+            return <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Info Only</span>;
+        }
+        return isRequired ? 
+            <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">Required</span> : 
+            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded-full">Optional</span>;
     };
 
     const cancelActionHandler = () => {
@@ -261,6 +306,11 @@ const QuestionItem = ({ question, onChange, onDeleteQuestion, saveAllFields, exp
                                 )}
                             </div>
                         )}
+                    </div>
+
+                    {/* Required/Optional Badge */}
+                    <div className="flex items-center mr-2">
+                        {renderRequiredBadge()}
                     </div>
 
                     {/* Expand/Collapse Button */}
