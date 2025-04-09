@@ -2348,17 +2348,6 @@ export const exportStaffInductionResultsToExcel = async (req, res) => {
       // Special case check - in some formats the question might be directly a string
       if (typeof question === 'string') return question;
       
-      // Debug
-      const textProperties = ['title', 'question', 'questionTitle', 'text', 'content', 'prompt'];
-      for (const key of Object.keys(question)) {
-        if (typeof question[key] === 'string' && 
-            (key.toLowerCase().includes('question') || 
-            key.toLowerCase().includes('title') || 
-            key.toLowerCase().includes('text'))) {
-          return question[key];
-        }
-      }
-      
       return 'Unable to retrieve question text';
     };
 
@@ -4106,13 +4095,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
              .moveDown(1);
         }
       }
-    }
-    
-    // Add debug footer in development environments
-    if (process.env.NODE_ENV !== 'production') {
-      doc.fontSize(6)
-         .fillColor('#999999')
-         .text(`Debug: Generated from ${req.headers['host'] || 'unknown host'} with ${userInduction.answers ? userInduction.answers.length : 0} answers`, 50, doc.page.height - 20);
     }
     
     // Finalise the PDF document
