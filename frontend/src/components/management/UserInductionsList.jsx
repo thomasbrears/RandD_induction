@@ -149,8 +149,8 @@ const UserInductionsList = ({
               className="shadow-sm hover:shadow-md transition-shadow"
               bordered
             >
-              <div className="flex justify-between items-start">
-                <div>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
+                <div className="w-full">
                   <div className="flex items-center gap-2 mb-1">
                     <Text strong>{getInductionName(induction)}</Text>
                     {getStatusBadge(induction.status)}
@@ -159,8 +159,17 @@ const UserInductionsList = ({
                     <div>Completed on: {formatDate(getCompletionDate(induction))}</div>
                     <div>Due date: {formatDate(induction.dueDate)}</div>
                   </div>
+                  <div className="mt-3 sm:hidden">
+                    <Button 
+                      type="link" 
+                      size="small"
+                      onClick={() => handleViewInductionResults(induction)}
+                      className="px-0"
+                      > View Results
+                    </Button>
+                  </div>
                 </div>
-                <div>
+                <div className="hidden sm:block">
                     <Button 
                       type="link" 
                       size="small"
@@ -180,8 +189,8 @@ const UserInductionsList = ({
     <Card 
       className="mx-auto max-w-4xl shadow-lg mt-6"
       title={
-        <div className="flex justify-between items-center">
-          <div className="flex items-center">
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center py-2">
+          <div className="flex items-center mb-4 sm:mb-0 pt-1">
             <FileOutlined className="mr-2" />
             <span>Assigned Inductions</span>
           </div>
@@ -189,6 +198,7 @@ const UserInductionsList = ({
             type="primary"
             icon={<ArrowRightOutlined />}
             onClick={onManageInductions}
+            className="self-start sm:self-auto mb-2 sm:mb-0"
           >Manage Inductions
           </Button>
         </div>
