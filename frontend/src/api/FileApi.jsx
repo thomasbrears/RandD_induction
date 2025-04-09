@@ -30,13 +30,31 @@ export const uploadFile = async (user, file) => {
       ? { authtoken: token, "Content-Type": "multipart/form-data" }
       : { "Content-Type": "multipart/form-data" };
 
-    const response = await axios.post(`${API_URL}/files/upload`, formData, {
+    const response = await axios.post(`${API_URL}/files/upload-file`, formData, {
       headers,
     });
 
     return response.data; // contains { url, gcsFileName }
   } catch (error) {
     console.error("Error uploading file:", error);
+    throw error;
+  }
+};
+
+export const deleteFile = async (user, fileName) =>{
+  try{
+    const token = user?.token;
+    const headers = token ? { authtoken: token } : {};
+
+    const response = await axios.delete(`${API_URL}/files/delete-file`, {
+      headers,
+      data: { fileName }, 
+    });
+
+    return response.data;
+
+  } catch (error) {
+    console.error("Error deleting file:", error);
     throw error;
   }
 };

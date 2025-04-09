@@ -2,49 +2,23 @@ import { useEffect, useState } from "react";
 import { Modal, Form, Select, Input, Button, Collapse, Switch, Radio } from "antd";
 import QuestionTypes from "../../models/QuestionTypes";
 import TiptapEditor from "../TiptapEditor";
-import { FaCheck, FaTimes } from "react-icons/fa";
+import { FaCheck, FaTimes, FaTrash } from "react-icons/fa";
 import { DefaultNewQuestion } from "../../models/Question";
 import { UpOutlined, PlusOutlined } from "@ant-design/icons";
 import "../../style/AntdOverride.css";
 import { v4 as uuidv4 } from 'uuid';
-import useAuth from "../../hooks/useAuth";
-import { getSignedUrl, uploadFile } from "../../api/FileApi";
-import { messageWarning, notifySuccess } from '../../utils/notificationService';
+import ImageUpload from "../ImageUpload";
 
 const { Option } = Select;
 
 const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
-    const { user, loading: authLoading } = useAuth();
     const [form] = Form.useForm();
     const selectedType = Form.useWatch('type', form);
     const requiresValidation = Form.useWatch('requiresValidation', form);
     const answers = Form.useWatch('answers', form);
 
-    //File stuff
-    const [fileName, setFileName] = useState(null);
-    const [fileUrl, setFileUrl] = useState(null);
-    const [loading, setLoading] = useState(false)
-
-    const handleFileChange = async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setLoading(true);
-            try {
-                const result = await uploadFile(user, file);
-                setFileUrl(result.url);
-                setFileName(result.gcsFileName);
-                notifySuccess("File uploaded successfully!");
-            } catch (error) {
-                messageWarning("Error uploading file:", error);
-            } finally {
-                setLoading(false);
-            }
-        }
-    };
-
-    const handleUploadButtonClick = (e) => {
-        e.stopPropagation();
-        document.getElementById("imageUploadInput").click();
+    const handleFileChange = (fileName) => {
+        form.setFieldValue("imageFile", fileName);
     };
 
     const handleQuestionTypeChange = (value) => {
@@ -78,9 +52,6 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
             options: newOptions,
             answers: newAnswers,
         });
-
-        setFileName(null);
-        setFileUrl(null);
     };
 
     useEffect(() => {
@@ -88,23 +59,6 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
             form.resetFields();
             form.setFieldsValue(DefaultNewQuestion);
             form.setFieldsValue(questionData || { type: undefined });
-            setFileName(null);
-            setFileUrl(null);
-            if (questionData && questionData.imageFile) {
-                setFileName(questionData.imageFile);
-
-                if (!authLoading) {
-                    const fetchImage = async () => {
-                        try {
-                            const result = await getSignedUrl(user, fileName);
-                            setFileUrl(result.url);
-                        } catch (err) {
-                            console.log(err.response?.data?.message || "An error occurred");
-                        }
-                    };
-                    fetchImage();
-                }
-            }
         }
     }, [questionData, visible]);
 
@@ -118,7 +72,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
             answers: form.getFieldValue('answers') || [],
             requiresValidation: form.getFieldValue('requiresValidation') || true,
             hint: form.getFieldValue('hint') || "",
-            imageFile: fileName || null,
+            imageFile: form.getFieldValue('imageFile') || null,
         }
 
         onSave(newQuestion);
@@ -141,10 +95,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
     };
 
     const handleCancel = (e) => {
-        if (e.target.id === "imageUploadButton") {
-            e.preventDefault();
-            return;
-        }
+
         onClose();
     };
 
@@ -222,31 +173,8 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
                                             {/* Image Upload Section */}
                                             <div className="mt-6 pt-2 border-t border-gray-300">
                                                 <span className="font-semibold">Add an Image (Optional):</span>
-                                                <div className="mt-2">
-                                                    <input
-                                                        type="file"
-                                                        accept="image/*, .png, .jpg, .jpeg"
-                                                        onChange={handleFileChange}
-                                                        style={{ display: "none" }}
-                                                        id="imageUploadInput"
-                                                    />
-                                                    <button
-                                                        id="imageUploadButton"
-                                                        type="button"
-                                                        onClick={(e) => { handleUploadButtonClick(e) }}
-                                                        className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-5 text-base rounded-md"
-                                                    >
-                                                        {loading ? <p>Uploading...</p> : <p>Upload Image</p>}
-                                                    </button>
-                                                </div>
+                                                <ImageUpload questionData={questionData} saveFileChange={handleFileChange} />
 
-                                                {/* Display image after successful upload */}
-                                                {loading && <p>Uploading...</p>}
-                                                {fileUrl && !loading && (
-                                                    <div>
-                                                        <img src={fileUrl} alt="Uploaded" width="200" />
-                                                    </div>
-                                                )}
                                             </div>
                                         </div>
                                     ),

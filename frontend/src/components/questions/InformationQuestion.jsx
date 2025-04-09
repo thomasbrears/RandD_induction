@@ -1,4 +1,4 @@
-import { messageWarning} from '../../utils/notificationService';
+import { messageWarning } from '../../utils/notificationService';
 import useAuth from "../../hooks/useAuth";
 import { getSignedUrl } from "../../api/FileApi";
 import { useEffect, useState } from "react";
@@ -21,6 +21,15 @@ const InformationQuestion = ({ question }) => {
         }
     }, [user, authLoading, question]);
 
+    const handleExpiredImage = async () => {
+        try {
+            const result = await getSignedUrl(user, question.imageFile);
+            setImageUrl(result.url);
+        } catch (err) {
+            console.error("Failed to refresh signed URL:", err);
+        }
+    };
+
     return (
         <div className="rounded-md bg-white">
             {/* Description */}
@@ -37,6 +46,7 @@ const InformationQuestion = ({ question }) => {
                     <img
                         src={imageUrl}
                         alt={question.imageFile}
+                        onError={handleExpiredImage}
                         className="max-w-[500px] w-full h-auto object-contain"
                     />
                 </div>

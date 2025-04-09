@@ -19,8 +19,19 @@ const MultichoiceQuestion = ({ question }) => {
         }
       };
       fetchImage();
+    } else if (!question.imageFile && imageUrl){
+      setImageUrl(null);
     }
   }, [user, authLoading, question]);
+
+  const handleExpiredImage = async () => {
+    try {
+      const result = await getSignedUrl(user, question.imageFile);
+      setImageUrl(result.url);
+    } catch (err) {
+      console.error("Failed to refresh signed URL:", err);
+    }
+  };
 
   return (
     <div className="rounded-md bg-white">
@@ -38,6 +49,7 @@ const MultichoiceQuestion = ({ question }) => {
           <img
             src={imageUrl}
             alt={question.imageFile}
+            onError={handleExpiredImage}
             className="max-w-[500px] w-full h-auto object-contain"
           />
         </div>

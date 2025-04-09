@@ -30,7 +30,6 @@ export const uploadFile = async (req, res) => {
 
     blobStream.on("finish", async () => {
       try {
-        // Get the signed URL for the uploaded file
         const options = {
           version: "v4",
           action: "read",
@@ -80,5 +79,22 @@ export const getSignedUrl = async (req, res) => {
     res.json({ url });
   } catch (error) {
     res.status(500).json({ error: "Failed to generate signed URL", details: error.message });
+  }
+};
+
+export const deleteFile = async (req, res) => {
+  try {
+    const { fileName } = req.body;
+
+    if (!fileName) {
+      return res.status(400).send("File name is required.");
+    }
+
+    const file = storage.bucket(BUCKET_NAME).file(fileName);
+
+    await file.delete();
+    res.status(200).send("File deleted successfully.");
+  } catch (error) {
+    res.status(500).send("Failed to delete file.");
   }
 };
