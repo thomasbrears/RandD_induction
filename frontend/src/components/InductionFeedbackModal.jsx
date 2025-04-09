@@ -3,13 +3,14 @@ import { Modal, Typography, Space, Rate, Input, Radio, Button, Form, Divider } f
 import { SmileOutlined, MehOutlined, FrownOutlined, LoadingOutlined } from '@ant-design/icons';
 import { submitFeedback } from '../api/FeedbackApi';
 import { getUser } from '../api/UserApi';
+import { updateUserInduction } from '../api/UserInductionApi';
 import useAuth from '../hooks/useAuth';
 import { notifyError, notifySuccess } from '../utils/notificationService';
 
 const { Text } = Typography;
 const { TextArea } = Input;
 
-const InductionFeedbackModal = ({ visible, onClose, inductionId, inductionName = '' }) => {
+const InductionFeedbackModal = ({ visible, onClose, inductionId, inductionName = '', userInductionId = null }) => {
   const [form] = Form.useForm();
   const [submitting, setSubmitting] = useState(false);
   const [selectedRating, setSelectedRating] = useState(null);
@@ -187,9 +188,33 @@ const InductionFeedbackModal = ({ visible, onClose, inductionId, inductionName =
           values.authToken = user.token;
         }
       }
-             
-      // Submit feedback through the API
-      await submitFeedback(values);
+      
+      // Create a consolidated feedback object that can be stored in the userInduction record
+      const feedbackSummary = {
+        overallRating: values.overallRating,
+        websiteUsability: values.websiteUsability,
+        contentClarity: values.contentClarity,
+        detailedFeedback: values.detailedFeedback || '',
+        submittedAt: values.submittedAt
+      };
+      
+      // Submit feedback through the feedback API
+      // Update the userInduction record with the feedback
+      const operations = [
+        submitFeedback(values)
+      ];
+      
+      // If we have a userInductionId, also update the userInduction record
+      if (user && userInductionId) {
+        operations.push(
+          updateUserInduction(user, userInductionId, {
+            feedback: feedbackSummary
+          })
+        );
+      }
+      
+      // Execute both operations
+      await Promise.all(operations);
      
       // Display success notification
       notifySuccess('Thank you for your feedback!');

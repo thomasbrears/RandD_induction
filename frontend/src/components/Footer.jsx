@@ -35,7 +35,7 @@ const Footer = () => {
       <div className="max-w-screen-xl mx-auto px-4">
         <div className="flex flex-col items-center sm:flex-row sm:justify-between">
           {/* Logo */}
-          <div className="flex-shrink-0 mb-6 sm:mb-0">
+          <div className="flex-shrink-0 mb-6 mr-6 sm:mb-0">
             <img src={`/images/AUTEventsInductionPortal.jpg`} alt="AUT Events Induction Portal" className="max-w-[150px]" />
           </div>
           
@@ -58,7 +58,7 @@ const Footer = () => {
                     <>
                       <li><Link to="/management/dashboard" className="hover:text-blue-400">Dashboard</Link></li>
                       <li><Link to="/management/inductions/view" className="hover:text-blue-400">Manage Inductions</Link></li>
-                      <li><Link to="/management/inductions/results" className="hover:text-blue-400">View Induction Results</Link></li>
+                      <li><Link to="/management/results" className="hover:text-blue-400">View Induction Results</Link></li>
                       <li><Link to="/management/users/view" className="hover:text-blue-400">Manage Users</Link></li>
                       <li><Link to="/management/contact-submissions" className="hover:text-blue-400">Contact Submissions</Link></li>
                     </>
@@ -69,7 +69,7 @@ const Footer = () => {
               )}
               
               {!IS_AUTHENTICATED && (
-                <li><Link to="/auth/signin" className="hover:text-blue-400">Sign-in</Link></li>
+                <li><Link to="/auth/signin" className="hover:text-blue-400">Sign in</Link></li>
               )}
             </ul>
           </nav>

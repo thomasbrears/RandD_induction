@@ -1,55 +1,167 @@
-import React, { useState } from "react";
-import { Modal, Button, Input, DatePicker, Select, Popconfirm } from "antd";
+import React, { useState, useEffect } from "react";
+import { Modal, Button, DatePicker, Select, Popconfirm } from "antd";
 import dayjs from "dayjs";
+import { notifyPromise } from "../../utils/notificationService";
 
 const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionData }) => {
-  const [availableFrom, setAvailableFrom] = useState(inductionData.availableFrom ? dayjs(inductionData.availableFrom) : null);
-  const [dueDate, setDueDate] = useState(inductionData.dueDate ? dayjs(inductionData.dueDate) : null);
-  const [status, setStatus] = useState(inductionData.status);
-  const [completionDate, setCompletionDate] = useState(inductionData.completionDate ? dayjs(inductionData.completionDate) : null);
-  //const [notes, setNotes] = useState(inductionData.notes || "");
+  const getDateValue = (data, oldField, newField) => {
+    
+    if (data[newField]) return data[newField];
+    if (data[oldField]) return data[oldField];
+    return null;
+  };
+
+  const parseDate = (dateValue) => {
+    if (!dateValue) {
+      return null;
+    }
+   
+    try {      
+      // Handle Firestore Timestamp objects with _seconds and _nanoseconds
+      if (typeof dateValue === 'object' && 
+          (dateValue._seconds !== undefined || dateValue.seconds !== undefined)) {
+        const seconds = dateValue._seconds !== undefined ? dateValue._seconds : dateValue.seconds;
+        return dayjs(new Date(seconds * 1000));
+      }
+     
+      // Handle objects with toDate method
+      if (typeof dateValue === 'object' && typeof dateValue.toDate === 'function') {
+        return dayjs(dateValue.toDate());
+      }
+
+      // Handle ISO strings
+      if (typeof dateValue === 'string') {
+        const parsedDate = dayjs(dateValue);
+        return parsedDate.isValid() ? parsedDate : null;
+      }
+      
+      // Handle regular Date objects
+      if (dateValue instanceof Date) {
+        return dayjs(dateValue);
+      }
+     
+      // Generic fallback
+      const parsedDate = dayjs(dateValue);
+      if (parsedDate.isValid()) {
+        return parsedDate;
+      }
+      
+      return null;
+    } catch (e) {
+      console.error("Error parsing date:", e, dateValue);
+      return null;
+    }
+  };
+
+  // Initialise state with null values
+  const [availableFrom, setAvailableFrom] = useState(null);
+  const [dueDate, setDueDate] = useState(null);
+  const [status, setStatus] = useState("");
+  const [completionDate, setCompletionDate] = useState(null);
+  const [formInitialized, setFormInitialized] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Update state when inductionData changes
+  useEffect(() => {
+    if (inductionData && visible) {
+      
+      const availableFromValue = getDateValue(inductionData, 'availableFrom', 'availableFrom');
+      const dueDateValue = getDateValue(inductionData, 'dueDate', 'dueDate');
+      const completionDateValue = getDateValue(inductionData, 'completionDate', 'completedAt');
+      
+      const parsedAvailableFrom = parseDate(availableFromValue);
+      const parsedDueDate = parseDate(dueDateValue);
+      const parsedCompletionDate = parseDate(completionDateValue);
+      
+      setAvailableFrom(parsedAvailableFrom);
+      setDueDate(parsedDueDate);
+      setStatus(inductionData.status || "");
+      setCompletionDate(parsedCompletionDate);
+      setFormInitialized(true);
+    }
+  }, [inductionData, visible]);
 
   const handleStatusChange = (value) => {
     setStatus(value);
     if (value === "complete") {
-      // If status is 'Complete', show the completion date
+      // If status is Complete, show the completion date field
       if (!completionDate) {
         setCompletionDate(dayjs()); // Set current date as default
       }
     } else {
-      setCompletionDate(null); // Reset completion date if status is not 'Complete'
+      setCompletionDate(null); // Reset completion date if status is not Complete
     }
   };
 
   const handleDelete = () => {
-    return new Promise((resolve) => {
-        setTimeout(async () => {
-          await onDelete(); // Call the delete function
-          onCancel(); // Close modal after deletion
-          resolve(null);
-        }, 500); // Small delay to mimic async confirmation
-      });
+    setIsDeleting(true);
+    
+    const deletePromise = new Promise(async (resolve, reject) => {
+      try {
+        await onDelete(); // Call the delete function
+        onCancel(); // Close modal after deletion
+        resolve("Induction assignment removed successfully");
+      } catch (error) {
+        console.error("Error deleting induction:", error);
+        reject(error);
+      } finally {
+        setIsDeleting(false);
+      }
+    });
+    
+    return notifyPromise(deletePromise, {
+      pending: "Removing induction assignment...",
+      success: "Induction assignment removed successfully",
+      error: (err) => `Failed to remove induction: ${err?.message || "Unknown error"}`
+    });
   };
 
-  const handleSave = () => {
+  const handleSave = () => {      
+    // Map old field names to new field names if needed
     const updatedInduction = {
       ...inductionData,
       availableFrom: availableFrom ? availableFrom.toISOString() : null,
       dueDate: dueDate ? dueDate.toISOString() : null,
       status,
+      // Backwards compatibility
       completionDate: completionDate ? completionDate.toISOString() : null,
-      //notes,
+      completedAt: completionDate ? completionDate.toISOString() : null,
     };
-    onSave(updatedInduction); // Save changes
+    
+    setIsSaving(true);
+    
+    const savePromise = new Promise(async (resolve, reject) => {
+      try {
+        await onSave(updatedInduction); // Save changes
+        resolve("Induction updated successfully");
+      } catch (error) {
+        console.error("Error saving induction:", error);
+        reject(error);
+      } finally {
+        setIsSaving(false);
+      }
+    });
+    
+    notifyPromise(savePromise, {
+      pending: "Updating induction...",
+      success: "Induction updated successfully",
+      error: (err) => `Failed to update induction: ${err?.message || "Unknown error"}`
+    }).then(() => {
+      // Only close the modal on success
+      onCancel();
+    }).catch((err) => {
+      // Keep the modal open on error
+      console.error("Save failed:", err);
+    });
   };
 
   const handleCancel = () => {
     // Reset to original data if cancelled
-    setAvailableFrom(inductionData.availableFrom ? dayjs(inductionData.availableFrom) : null);
-    setDueDate(inductionData.dueDate ? dayjs(inductionData.dueDate) : null);
-    setStatus(inductionData.status);
-    setCompletionDate(inductionData.completionDate ? dayjs(inductionData.completionDate) : null);
-    //setNotes(inductionData.notes || "");
+    setAvailableFrom(parseDate(getDateValue(inductionData, 'availableFrom', 'availableFrom')));
+    setDueDate(parseDate(getDateValue(inductionData, 'dueDate', 'dueDate')));
+    setStatus(inductionData.status || "");
+    setCompletionDate(parseDate(getDateValue(inductionData, 'completionDate', 'completedAt')));
     onCancel();
   };
 
@@ -63,23 +175,18 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
     if (!availableFrom || !dueDate || !status) {
       return false;
     }
-    
+   
     // Check if completion date is provided when status is complete
     if (status === "complete" && !completionDate) {
       return false;
     }
-    
+   
     // Check date relationship
     if (availableFrom && dueDate && availableFrom.isAfter(dueDate)) {
       return false; // Invalid: availableFrom is after dueDate
     }
-    
+   
     return true;
-  };
-
-  // Disable past dates for availableFrom and dueDate
-  const disablePastDates = (current) => {
-    return current && current.isBefore(dayjs(), "day"); // Disable past dates
   };
 
   // Disable dates before availableFrom for dueDate
@@ -87,27 +194,57 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
     return availableFrom && current && current.isBefore(availableFrom, "day");
   };
 
+  // Get the induction name
+  const getInductionName = () => {
+    if (inductionData.name) {
+      return inductionData.name;
+    } else if (inductionData.inductionName) {
+      return inductionData.inductionName;
+    } else if (inductionData.induction?.name) {
+      return inductionData.induction.name;
+    }
+    return "Manage Induction";
+  };
+
+  // Dont render the modal content until we've properly initialised the form
+  if (!formInitialized && visible) {
+    return (
+      <Modal
+        title="Loading induction details..."
+        open={visible}
+        onCancel={handleCancel}
+        footer={[
+          <Button key="cancel" type="default" onClick={handleCancel}>
+            Cancel
+          </Button>
+        ]}
+      >
+        <div className="text-center py-4">Loading induction details...</div>
+      </Modal>
+    );
+  }
+
   return (
     <Modal
-      title="Manage Induction"
-      visible={visible}
+      title={`Manage Assignment (${getInductionName()})`}
+      open={visible}
       onCancel={handleCancel}
       footer={[
-        <Button key="cancel" type="default" onClick={handleCancel}>
+        <Button key="cancel" type="default" onClick={handleCancel} disabled={isSaving || isDeleting}>
           Cancel
         </Button>,
-        <Button 
-          key="save" 
-          type="primary" 
+        <Button
+          key="save"
+          type="primary"
           onClick={handleSave}
-          disabled={!validateForm()}
+          disabled={!validateForm() || isSaving || isDeleting}
+          loading={isSaving}
         >
-          Save Changes
+          {isSaving ? "Saving..." : "Save Changes"}
         </Button>,
       ]}
     >
       <div>
-        <p className="text-gray-500 text-xs mb-4">Fields marked with <span className="text-red-500">*</span> are required</p>
         <h4 className="mt-4">Available From Date <span className="text-red-500">*</span></h4>
         <DatePicker
           value={availableFrom}
@@ -121,7 +258,6 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
             Available from date is required
           </p>
         )}
-
         <h4 className="mt-4">Due Date <span className="text-red-500">*</span></h4>
         <DatePicker
           value={dueDate}
@@ -141,11 +277,10 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
             Due date must be after the available from date
           </p>
         )}
-
         <h4 className="mt-4">Change Status <span className="text-red-500">*</span></h4>
-        <Select 
-          value={status} 
-          onChange={handleStatusChange} 
+        <Select
+          value={status}
+          onChange={handleStatusChange}
           style={{ width: "100%" }}
           status={!status ? "error" : ""}
         >
@@ -159,7 +294,6 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
             Status is required
           </p>
         )}
-
         {status === "complete" && (
           <>
             <h4 className="mt-4">Completion Date <span className="text-red-500">*</span></h4>
@@ -177,7 +311,6 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
             )}
           </>
         )}
-
         <h4 className="mt-4">Would you like to remove this induction assignment?</h4>
         <Popconfirm
           key="delete"
@@ -186,17 +319,12 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
           onConfirm={handleDelete}
           okText="Yes, Remove"
           cancelText="No, Cancel"
+          disabled={isSaving || isDeleting}
         >
-          <Button danger>Remove Induction Assignment</Button>
+          <Button danger loading={isDeleting} disabled={isSaving || isDeleting}>
+            {isDeleting ? "Removing..." : "Remove Induction Assignment"}
+          </Button>
         </Popconfirm>
-
-        {/* <h4>Notes</h4>
-        <Input.TextArea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          placeholder="Add a reason for status change or any notes"
-          rows={4}
-        /> */}
       </div>
     </Modal>
   );

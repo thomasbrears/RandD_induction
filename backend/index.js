@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { authMiddleware } from "./middleware/authMiddleware.js";
 import userRoutes from "./routes/userRoutes.js";
+import userInductionRoutes from "./routes/userInductionRoutes.js";
 import inductionRoutes from "./routes/inductionRoutes.js";
 import departmentRoutes from "./routes/departmentRoutes.js";
 import contactRoutes from "./routes/contactRoutes.js";
@@ -61,6 +62,9 @@ app.use("/api/positions", positionRoutes);
 
 // User Routes
 app.use("/api/users", userRoutes);
+
+// User InductionRoutes
+app.use("/api/user-inductions", userInductionRoutes);
 
 // Induction Routes
 app.use("/api/inductions", inductionRoutes);
