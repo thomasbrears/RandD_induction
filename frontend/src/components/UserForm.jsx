@@ -441,14 +441,37 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
     >
       {/* Deactivated banner */}
       {isDeactivated && (
-          <Alert
-            message="User Deactivated"
-            description="This user is currently deactivated and cannot login or complete inductions."
-            type="error"
-            showIcon
-            className="mb-4"
-          />
-      )}
+        <Alert
+          message="User Deactivated"
+          description={
+            <div>
+              <p>This user is currently deactivated and cannot login or complete inductions.</p>
+              <Popconfirm
+                title="Reactivate User"
+                description="This will restore the user's access to the portal immediately."
+                onConfirm={handleDeactivateOrReactivate}
+                okText="Reactivate"
+                cancelText="Cancel"
+                okButtonProps={{ 
+                  type: "primary",
+                  style: { backgroundColor: '#52c41a', borderColor: '#52c41a' }
+                }}
+              >
+                <Button 
+                  type="primary"
+                  icon={<CheckCircleOutlined />}
+                  style={{ backgroundColor: '#52c41a', borderColor: '#52c41a', marginTop: '10px' }}
+                >
+                  Reactivate User
+                </Button>
+              </Popconfirm>
+            </div>
+          }
+          type="error"
+          showIcon
+          className="mb-4"
+        />
+     )}
       
       {/* Similar email warning */}
       {similarUsers.length > 0 && (
@@ -479,28 +502,25 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
         {/* Action buttons for existing users */}
         {isEditPage && isExistingUser && (
           <Space wrap className="w-full sm:w-auto justify-end">
-            <Popconfirm
-              title={user.disabled ? "Reactivate User" : "Deactivate User"}
-              description={user.disabled 
-                ? "This will restore the user's access to the platform." 
-                : "This will prevent the user from logging in and completing inductions."}
-              onConfirm={handleDeactivateOrReactivate}
-              okText={user.disabled ? "Reactivate" : "Deactivate"}
-              cancelText="Cancel"
-              okButtonProps={{ 
-                danger: !user.disabled,
-                type: user.disabled ? "primary" : "default" 
-              }}
-            >
-              <Button 
-                type={user.disabled ? "primary" : "default"}
-                danger={!user.disabled}
-                icon={user.disabled ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
-                style={user.disabled ? { backgroundColor: '#52c41a', borderColor: '#52c41a' } : {}}
+            {/* Only show Deactivate button if user is not already deactivated */}
+            {!user.disabled && (
+              <Popconfirm
+                title="Deactivate User"
+                description="This will prevent the user from logging in and completing inductions."
+                onConfirm={handleDeactivateOrReactivate}
+                okText="Deactivate"
+                cancelText="Cancel"
+                okButtonProps={{ danger: true }}
               >
-                {user.disabled ? "Reactivate User" : "Deactivate User"}
-              </Button>
-            </Popconfirm>
+                <Button 
+                  type="default"
+                  danger
+                  icon={<CloseCircleOutlined />}
+                >
+                  Deactivate User
+                </Button>
+              </Popconfirm>
+            )}
 
             <Popconfirm
               title="Delete User"
