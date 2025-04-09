@@ -159,18 +159,43 @@ const EditUser = () => {
 
         <div className="flex-1 mb-4 mx-4">
           {loading ? (
+           <div className="space-y-6">
             <Card className="mx-auto max-w-4xl shadow-lg mt-6">
-              <Skeleton.Input active size="small" style={{ width: 150, marginBottom: 16 }} />
-              <Divider />
-              <Form layout="vertical">
-                <Skeleton.Input active style={{ width: '100%', height: 32, marginBottom: 24 }} />
-                <Skeleton.Input active style={{ width: '100%', height: 32, marginBottom: 24 }} />
-                <Skeleton.Input active style={{ width: '100%', height: 32, marginBottom: 24 }} />
-                <div className="text-center mt-6">
-                  <Skeleton.Button active style={{ width: 120, height: 40 }} />
+              <div className="space-y-4">
+                <div className="flex items-center mb-3">
+                  <Skeleton.Input active style={{ width: '180px', height: '24px' }} />
                 </div>
-              </Form>
+                <Divider />
+                
+                {/* Form fields */}
+                <div className="space-y-4">
+                  <Skeleton.Input active style={{ width: '100%', height: '40px' }} />
+                  <Skeleton.Input active style={{ width: '100%', height: '40px' }} />
+                  <Skeleton.Input active style={{ width: '100%', height: '40px' }} />
+                  <Skeleton.Input active style={{ width: '100%', height: '40px' }} />
+                  <Skeleton.Input active style={{ width: '100%', height: '40px' }} />
+                  <Skeleton.Input active style={{ width: '100%', height: '40px' }} />
+                </div>
+              </div>
             </Card>
+            
+            {/* Inductions List Skeleton */}
+            <Card className="mx-auto max-w-4xl shadow-lg mt-6">
+              <div className="space-y-4">
+                <div className="flex items-center mb-3">
+                  <Skeleton.Input active style={{ width: '180px', height: '24px' }} />
+                </div>
+                <Divider />
+                
+                {/* Three induction items */}
+                <div className="space-y-4">
+                  <Skeleton.Input active style={{ width: '100%', height: '60px' }} />
+                  <Skeleton.Input active style={{ width: '100%', height: '60px' }} />
+                  <Skeleton.Input active style={{ width: '100%', height: '60px' }} />
+                </div>
+              </div>
+            </Card>
+          </div>
           ) : userUpdated && updatedUser ? (
             // Success message screen with buttons
             <Result

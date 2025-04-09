@@ -66,15 +66,29 @@ const AddUser = () => {
 
         {/* Main content area */}
         <div className="flex-1 mb-4 mx-4">
-          {isLoading ? (
-            <Card className="mx-auto max-w-4xl shadow-lg mt-6">
-              <Skeleton.Input active size="small" style={{ width: 150, marginBottom: 16 }} />
+        {isLoading ? (
+          <Card className="mx-auto max-w-4xl shadow-lg mt-6">
+            <div className="space-y-4">
+              <div className="flex items-center mb-3">
+                <Skeleton.Input active style={{ width: '180px', height: '24px' }} />
+              </div>
               <Divider />
-              <Skeleton active paragraph={{ rows: 5 }} />
-              <div className="text-center mt-6">
+              
+              {/* Form fields */}
+              <div className="space-y-4">
+                <Skeleton.Input active style={{ width: '100%', height: '40px' }} />
+                <Skeleton.Input active style={{ width: '100%', height: '40px' }} />
+                <Skeleton.Input active style={{ width: '100%', height: '40px' }} />
+                <Skeleton.Input active style={{ width: '100%', height: '40px' }} />
+                <Skeleton.Input active style={{ width: '100%', height: '40px' }} />
+                <Skeleton.Input active style={{ width: '100%', height: '40px' }} />
+              </div>
+              
+              <div className="flex justify-end mt-4">
                 <Skeleton.Button active style={{ width: 120, height: 40 }} />
               </div>
-            </Card>
+            </div>
+          </Card>
           ) : userCreated && createdUser ? (
             // Success Message screen with buttons
             <Result
