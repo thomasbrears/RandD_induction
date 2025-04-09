@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Modal, Select, Input, Button } from "antd";
+import { Modal, Select, Input, Button, Switch, Divider } from "antd";
 import QuestionTypes from "../../models/QuestionTypes";
 import { Check, X } from "lucide-react";
 import TiptapEditor from "../TiptapEditor";
@@ -11,6 +11,10 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
     const [answers, setAnswers] = useState([]);
     const [showDescription, setShowDescription] = useState(false);
     const [description, setDescription] = useState("");
+    const [isRequired, setIsRequired] = useState(true);
+    const [hint, setHint] = useState("");
+    const [incorrectAnswerMessage, setIncorrectAnswerMessage] = useState("");
+    const [showAdvancedOptions, setShowAdvancedOptions] = useState(false);
     const [validationErrors, setValidationErrors] = useState({});
     const [validateAll, setValidateAll] = useState(false);
 
@@ -28,6 +32,10 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                 setOptions(["True", "False"]);
                 setAnswers([0]);
                 break;
+            case QuestionTypes.YES_NO:
+                setOptions(["Yes", "No"]);
+                setAnswers([0]);
+                break;
             case QuestionTypes.DROPDOWN:
             case QuestionTypes.MULTICHOICE:
                 setOptions([]);
@@ -36,6 +44,15 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
             case QuestionTypes.FILE_UPLOAD:
                 setOptions(["Yes", "No"]);
                 setAnswers([0]);
+                break;
+            case QuestionTypes.SHORT_ANSWER:
+                setOptions([]);
+                setAnswers([]);
+                break;
+            case QuestionTypes.INFORMATION:
+                setOptions([]);
+                setAnswers([]);
+                setIsRequired(false); // Information questions are never required
                 break;
             default:
                 setOptions([]);
@@ -89,6 +106,10 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
         setAnswers([]);
         setShowDescription(false);
         setDescription("");
+        setIsRequired(true);
+        setHint("");
+        setIncorrectAnswerMessage("");
+        setShowAdvancedOptions(false);
         setValidateAll(false);
         setValidationErrors({});
     };
@@ -102,6 +123,8 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
         if (!questionText.trim()) {
             errors.questionText = "Question text cannot be empty";
         }
+
+        // Options and answers validation for relevant question types
         if ((questionType === QuestionTypes.MULTICHOICE || questionType === QuestionTypes.DROPDOWN) && options.length === 0) {
             errors.options = "At least one option is required";
         }
@@ -112,8 +135,17 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                 errors.answers = "At least one answer must be selected";
             }
         }
-        if (options.some(option => option.trim() === "")) {
+        if (options.some(option => option.trim() === "") && 
+            (questionType === QuestionTypes.MULTICHOICE || 
+             questionType === QuestionTypes.DROPDOWN || 
+             questionType === QuestionTypes.TRUE_FALSE || 
+             questionType === QuestionTypes.YES_NO)) {
             errors.options = "All options must have text";
+        }
+
+        // For INFORMATION type, require description
+        if (questionType === QuestionTypes.INFORMATION && !description.trim()) {
+            errors.description = "Information content is required";
         }
 
         setValidationErrors(errors);
@@ -140,6 +172,9 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
             options,
             answers,
             imageFile,
+            isRequired,
+            hint,
+            incorrectAnswerMessage
         };
         onSave(newQuestion);
         resetForm();
@@ -164,7 +199,10 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                 >
                     <Select.Option value={QuestionTypes.MULTICHOICE}>Multiple Choice</Select.Option>
                     <Select.Option value={QuestionTypes.TRUE_FALSE}>True/False</Select.Option>
+                    <Select.Option value={QuestionTypes.YES_NO}>Yes/No</Select.Option>
                     <Select.Option value={QuestionTypes.DROPDOWN}>Dropdown</Select.Option>
+                    <Select.Option value={QuestionTypes.SHORT_ANSWER}>Short Answer</Select.Option>
+                    <Select.Option value={QuestionTypes.INFORMATION}>Information</Select.Option>
                     <Select.Option value={QuestionTypes.FILE_UPLOAD}>File Upload</Select.Option>
                 </Select>
                 {validationErrors.questionType && <p className="text-red-500 text-sm">{validationErrors.questionType}</p>}
@@ -183,6 +221,18 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                         />
                     </div>
 
+                    {/* Required Toggle */}
+                    {questionType !== QuestionTypes.INFORMATION && (
+                        <div className="mt-4 flex items-center gap-2">
+                            <span className="text-gray-700">Required:</span>
+                            <Switch
+                                checked={isRequired}
+                                onChange={(checked) => setIsRequired(checked)}
+                                size="small"
+                            />
+                        </div>
+                    )}
+
                     <div className="mt-4">
                         {/* Checkbox to toggle description input */}
                         <label className="flex items-center gap-2 cursor-pointer">
@@ -193,14 +243,61 @@ const QuestionForm = ({ visible, onClose, onSave }) => {
                                 onChange={() => setShowDescription(!showDescription)}
                                 className="cursor-pointer"
                             />
-
                         </label>
 
                         {/* Hidden input field for description */}
                         {showDescription && (
-                            <TiptapEditor localDescription={description} handleLocalChange={(field, value) => setDescription(value)} />
+                            <>
+                                {validationErrors.description && (
+                                    <p className="text-red-500 text-sm">{validationErrors.description}</p>
+                                )}
+                                <TiptapEditor localDescription={description} handleLocalChange={(field, value) => setDescription(value)} />
+                            </>
                         )}
                     </div>
+
+                    {/* Toggle for advanced options */}
+                    <Divider />
+                    <div className="mt-2">
+                        <label className="flex items-center gap-2 cursor-pointer">
+                            <span className="text-gray-700 font-medium">Advanced Options:</span>
+                            <input
+                                type="checkbox"
+                                checked={showAdvancedOptions}
+                                onChange={() => setShowAdvancedOptions(!showAdvancedOptions)}
+                                className="cursor-pointer"
+                            />
+                        </label>
+                    </div>
+
+                    {/* Advanced options section */}
+                    {showAdvancedOptions && (
+                        <div className="mt-3 space-y-4 bg-gray-50 p-3 rounded-md">
+                            {/* Hint field */}
+                            <div>
+                                <label className="block mb-1 text-sm font-medium">Hint (Optional):</label>
+                                <Input
+                                    value={hint}
+                                    onChange={(e) => setHint(e.target.value)}
+                                    placeholder="Add a hint that will appear for this question"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">This hint will be shown to users to help them answer the question.</p>
+                            </div>
+
+                            {/* Incorrect answer message field */}
+                            {questionType !== QuestionTypes.INFORMATION && questionType !== QuestionTypes.SHORT_ANSWER && questionType !== QuestionTypes.FILE_UPLOAD && (
+                                <div>
+                                    <label className="block mb-1 text-sm font-medium">Incorrect Answer Message (Optional):</label>
+                                    <Input
+                                        value={incorrectAnswerMessage}
+                                        onChange={(e) => setIncorrectAnswerMessage(e.target.value)}
+                                        placeholder="Message to show when an incorrect answer is given"
+                                    />
+                                    <p className="text-xs text-gray-500 mt-1">This message will appear when a user provides an incorrect answer.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                     {/* Checkbox to toggle image upload input */}
                     <div className="mt-4">

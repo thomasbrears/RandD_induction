@@ -9,6 +9,9 @@ import QuestionTypes from './QuestionTypes';
  * @property {string[]} [options]
  * @property {Array[]} [answers]
  * @property {File | null} [imageFile]
+ * @property {boolean} [isRequired]
+ * @property {string} [hint]
+ * @property {string} [incorrectAnswerMessage]
  */
 
 /** @type {Question} */
@@ -20,4 +23,7 @@ export const DefaultNewQuestion = {
     options: [],
     answers: [],
     imageFile: null,
+    isRequired: true,
+    hint: "",
+    incorrectAnswerMessage: ""
 };

@@ -13,6 +13,9 @@ import QuestionTypes from './QuestionTypes';
  * @property {string} [description]
  * @property {QuestionTypes} [type]
  * @property {Answer[]} [answers]
+ * @property {boolean} [isRequired]
+ * @property {string} [hint]
+ * @property {string} [incorrectAnswerMessage]
  */
 
 /** @type {Question} */
@@ -22,4 +25,7 @@ export const DefaultNewQuestion = {
     description: "",
     type: QuestionTypes.MULTICHOICE,
     answers: [],
+    isRequired: true,
+    hint: "",
+    incorrectAnswerMessage: ""
 };
