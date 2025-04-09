@@ -119,3 +119,20 @@ export const reactivateUser = async (user, uid) => {
     throw error;
   }
 };
+
+// Sends a password reset email to the specified user
+export const sendPasswordResetEmail = async (targetUserEmail) => {
+  try {
+    // Firebase auth
+    const { getAuth, sendPasswordResetEmail: firebaseSendPasswordResetEmail } = await import('firebase/auth');
+    const auth = getAuth();
+    
+    // Send password reset email
+    await firebaseSendPasswordResetEmail(auth, targetUserEmail);
+    
+    return { success: true };
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    throw error;
+  }
+};
