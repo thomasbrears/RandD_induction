@@ -1448,7 +1448,45 @@ function renderQuestionByType(question, answer, handleAnswerChange) {
           <textarea
             rows={4}
             value={answer || ''}
-            onChange={(e) => handleAnswerChange(e.target.value)}
+            onChange={(e) => {
+              // Call the regular handleAnswerChange
+              handleAnswerChange(e.target.value);
+              
+              // Also explicitly save progress after a short delay
+              setTimeout(() => {
+                console.log("Saving short answer progress...", e.target.value);
+                if (induction && induction.id) {
+                  const updatedAnswers = {
+                    ...answers,
+                    [question.id]: e.target.value
+                  };
+                  
+                  // Also mark as answered if there's text content
+                  const hasContent = e.target.value.trim().length > 0;
+                  let updatedAnsweredQuestions = {...answeredQuestions};
+                  if (hasContent) {
+                    updatedAnsweredQuestions[question.id] = true;
+                  }
+                  
+                  const progress = {
+                    inductionId: induction.id,
+                    answers: updatedAnswers,
+                    currentQuestionIndex,
+                    answeredQuestions: updatedAnsweredQuestions,
+                    lastUpdated: new Date().toISOString()
+                  };
+                  
+                  localStorage.setItem(`induction_progress_${induction.id}`, JSON.stringify(progress));
+                  console.log("Short answer progress saved successfully");
+                  setLastSaved(new Date());
+                  
+                  // Also update the answered questions state if needed
+                  if (hasContent) {
+                    setAnsweredQuestions(updatedAnsweredQuestions);
+                  }
+                }
+              }, 100);
+            }}
             placeholder="Type your answer here..."
             className="block w-full p-2 rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-base"
           />

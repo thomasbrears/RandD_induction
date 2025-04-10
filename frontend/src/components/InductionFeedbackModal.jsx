@@ -70,44 +70,40 @@ const InductionFeedbackModal = ({ visible, onClose, inductionId, inductionName =
 
   // Monitor form values and check if all required fields are filled
   useEffect(() => {
+    if (!visible) return; // Don't run if modal is not visible
+    
     const validateForm = () => {
       try {
         // Get current form values without validation
         const values = form.getFieldsValue();
-       
+        
         // Check if all required fields are filled
         const overallRatingFilled = !!values.overallRating;
         const websiteUsabilityFilled = !!values.websiteUsability;
         const contentClarityFilled = !!values.contentClarity;
-       
+        
         // If detailed feedback is required, check if it's filled
         const detailedFeedbackRequired = needsDetailedFeedback;
         const detailedFeedbackFilled = !!values.detailedFeedback;
-       
+        
         // Set form validity
         const isValid = overallRatingFilled &&
-                        websiteUsabilityFilled &&
-                        contentClarityFilled &&
-                        (!detailedFeedbackRequired || detailedFeedbackFilled);
-       
+                       websiteUsabilityFilled &&
+                       contentClarityFilled &&
+                       (!detailedFeedbackRequired || detailedFeedbackFilled);
+        
         setFormIsValid(isValid);
       } catch (error) {
         console.error('Error checking form validity:', error);
         setFormIsValid(false);
       }
     };
-   
-    validateForm();
-
-    // Set up a listener for form value changes
-    const unsubscribe = form.getFieldsValue();
     
-    return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
-    };
-  }, [form, needsDetailedFeedback]);
+    validateForm();
+    
+    // Don't try to set up a listener with getFieldsValue, which isn't a subscription
+    // Instead, we'll rely on the onFieldsChange callback
+  }, [form, needsDetailedFeedback, visible]);
 
   // Update form validity when field values change
   const handleFieldsChange = () => {
@@ -259,42 +255,25 @@ const InductionFeedbackModal = ({ visible, onClose, inductionId, inductionName =
 
   return (
     <Modal
-      title={
-        <div>
-          <h1 className="mb-0 text-xl">How was your induction experience?</h1>
-        </div>
-      }
+      title="Feedback for Induction"
       open={visible}
-      width={600}
       onCancel={onClose}
-      footer={[
-        <Button key="cancel" onClick={onClose} disabled={submitting}>
-          Cancel
-        </Button>,
-        <Button
-          key="submit"
-          type="primary"
-          onClick={handleSubmit}
-          loading={submitting}
-          disabled={!formIsValid || submitting}
-          icon={submitting ? <LoadingOutlined /> : null}
-        >
-          {submitting ? 'Submitting...' : 'Submit Feedback'}
-        </Button>
-      ]}
+      footer={null}
+      style={{ maxWidth: '90%' }}
+      width={500}
     >
-      <Space direction="vertical" size="large" className="w-full">
-        <div>
-          <p className="text-gray-600 text-sm">
-            Your feedback helps us improve the induction process and is much appreciated.
-          </p>
-        </div>
-        <Form
-          form={form}
-          layout="vertical"
-          onFieldsChange={handleFieldsChange}
-        >
-          {/* Overall Rating Section */}
+      <Form
+        form={form}
+        layout="vertical"
+        onFieldsChange={handleFieldsChange}
+        onFinish={handleSubmit}
+      >
+        <Space direction="vertical" size="large" className="w-full">
+          <div>
+            <p className="text-gray-600 text-sm">
+              Your feedback helps us improve the induction process and is much appreciated.
+            </p>
+          </div>
           <Form.Item
             name="overallRating"
             label="How would you rate your overall induction experience?"
@@ -309,7 +288,6 @@ const InductionFeedbackModal = ({ visible, onClose, inductionId, inductionName =
             />
           </Form.Item>
           <Divider />
-          {/* Website Usability Section */}
           <Form.Item
             name="websiteUsability"
             label="How easy was it to complete the induction using our website?"
@@ -326,7 +304,6 @@ const InductionFeedbackModal = ({ visible, onClose, inductionId, inductionName =
             </Radio.Group>
           </Form.Item>
           <Divider />
-          {/* Content Clarity Section */}
           <Form.Item
             name="contentClarity"
             label="How clear and helpful was the induction content?"
@@ -342,7 +319,6 @@ const InductionFeedbackModal = ({ visible, onClose, inductionId, inductionName =
             </Radio.Group>
           </Form.Item>
           <Divider />
-          {/* Conditional Detailed Feedback Section */}
           {needsDetailedFeedback && (
             <div className="bg-amber-50 p-4 rounded-md border border-amber-200 mb-4">
               <Text className="text-amber-800">
@@ -363,8 +339,21 @@ const InductionFeedbackModal = ({ visible, onClose, inductionId, inductionName =
                 "Please share your thoughts, suggestions, or any issues you encountered..."}
             />
           </Form.Item>
-        </Form>
-      </Space>
+        </Space>
+
+        {/* Form submit button */}
+        <div className="flex justify-end mt-6">
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={submitting}
+            disabled={!formIsValid || submitting}
+            className={`bg-gray-800 hover:bg-gray-700 ${(!formIsValid || submitting) ? 'opacity-50' : ''}`}
+          >
+            {submitting ? 'Submitting...' : 'Submit Feedback'}
+          </Button>
+        </div>
+      </Form>
     </Modal>
   );
 };
