@@ -267,10 +267,14 @@ const InductionFormPage = () => {
   const loadProgressFromLocalStorage = () => {
     if (!induction || !induction.id) return false;
     
-    const savedProgress = localStorage.getItem(`induction_progress_${induction.id}`);
-    if (!savedProgress) return false;
-    
     try {
+      const savedProgress = localStorage.getItem(`induction_progress_${induction.id}`);
+      if (!savedProgress) {
+        console.log("No saved progress found for induction:", induction.id);
+        return false;
+      }
+      
+      console.log("Found saved progress, attempting to parse...");
       const progress = JSON.parse(savedProgress);
       
       // Check if the saved progress is recent (within the last 24 hours)
@@ -279,10 +283,18 @@ const InductionFormPage = () => {
       const hoursSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60);
       
       if (hoursSinceUpdate > 24) {
-        // If older than 24 hours, clear it
+        console.log("Saved progress is older than 24 hours, clearing...");
         localStorage.removeItem(`induction_progress_${induction.id}`);
         return false;
       }
+      
+      // Log what we're restoring for debugging
+      console.log("Restoring progress:", {
+        answersCount: Object.keys(progress.answers || {}).length,
+        currentQuestionIndex: progress.currentQuestionIndex,
+        answeredQuestionsCount: Object.keys(progress.answeredQuestions || {}).length,
+        lastUpdated: lastUpdated.toLocaleString()
+      });
       
       // Restore progress
       setAnswers(progress.answers || {});
@@ -293,6 +305,8 @@ const InductionFormPage = () => {
       return true;
     } catch (error) {
       console.error("Error loading saved progress:", error);
+      // Try to clean up any corrupted data
+      localStorage.removeItem(`induction_progress_${induction.id}`);
       return false;
     }
   };
@@ -354,16 +368,54 @@ const InductionFormPage = () => {
   };
 
   const handleAnswer = (questionId, answer) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: answer
-    }));
+    setAnswers(prev => {
+      const newAnswers = {
+        ...prev,
+        [questionId]: answer
+      };
+      
+      // Explicitly save progress after updating answers
+      setTimeout(() => {
+        // Use setTimeout to ensure this runs after state update is complete
+        if (induction && induction.id) {
+          const progress = {
+            inductionId: induction.id,
+            answers: newAnswers,
+            currentQuestionIndex,
+            answeredQuestions,
+            lastUpdated: new Date().toISOString()
+          };
+          
+          localStorage.setItem(`induction_progress_${induction.id}`, JSON.stringify(progress));
+          setLastSaved(new Date());
+        }
+      }, 0);
+      
+      return newAnswers;
+    });
+    
     // Clear feedback when a new answer is selected
     setAnswerFeedback({
       isCorrect: null,
       message: '',
       showFeedback: false
     });
+  };
+
+  // Function to explicitly force a progress save
+  const forceProgressSave = (updatedAnsweredQuestions = null) => {
+    if (!induction || !induction.id) return;
+    
+    const progress = {
+      inductionId: induction.id,
+      answers,
+      currentQuestionIndex,
+      answeredQuestions: updatedAnsweredQuestions || answeredQuestions,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    localStorage.setItem(`induction_progress_${induction.id}`, JSON.stringify(progress));
+    setLastSaved(new Date());
   };
 
   const handleNextQuestion = () => {
@@ -378,10 +430,14 @@ const InductionFormPage = () => {
     // For information questions, always allow proceeding without an answer
     if (currentQuestion.type === QuestionTypes.INFORMATION) {
       // Mark this question as correctly answered
-      setAnsweredQuestions(prev => ({
-        ...prev,
+      const updatedAnsweredQuestions = {
+        ...answeredQuestions,
         [currentQuestion.id]: true
-      }));
+      };
+      setAnsweredQuestions(updatedAnsweredQuestions);
+      
+      // Force save progress immediately with the updated state
+      forceProgressSave(updatedAnsweredQuestions);
       
       // Proceed to next question
       if (currentQuestionIndex < induction.questions.length - 1) {
@@ -406,10 +462,14 @@ const InductionFormPage = () => {
     if (!isRequired && (currentAnswer === undefined || currentAnswer === '' || 
         (Array.isArray(currentAnswer) && currentAnswer.length === 0))) {
       // Mark this question as correctly answered
-      setAnsweredQuestions(prev => ({
-        ...prev,
+      const updatedAnsweredQuestions = {
+        ...answeredQuestions,
         [currentQuestion.id]: true
-      }));
+      };
+      setAnsweredQuestions(updatedAnsweredQuestions);
+      
+      // Force save progress immediately with the updated state
+      forceProgressSave(updatedAnsweredQuestions);
       
       // Proceed to next question
       if (currentQuestionIndex < induction.questions.length - 1) {
@@ -458,10 +518,14 @@ const InductionFormPage = () => {
         });
         
         // Mark this question as answered (not necessarily correct)
-        setAnsweredQuestions(prev => ({
-          ...prev,
+        const updatedAnsweredQuestions = {
+          ...answeredQuestions,
           [currentQuestion.id]: true
-        }));
+        };
+        setAnsweredQuestions(updatedAnsweredQuestions);
+        
+        // Force save progress immediately with the updated state
+        forceProgressSave(updatedAnsweredQuestions);
         
         // Proceed to next question after a short delay
         setTimeout(() => {
@@ -497,10 +561,14 @@ const InductionFormPage = () => {
       });
       
       // Mark this question as correctly answered
-      setAnsweredQuestions(prev => ({
-        ...prev,
+      const updatedAnsweredQuestions = {
+        ...answeredQuestions,
         [currentQuestion.id]: true
-      }));
+      };
+      setAnsweredQuestions(updatedAnsweredQuestions);
+      
+      // Force save progress immediately with the updated state
+      forceProgressSave(updatedAnsweredQuestions);
       
       // Proceed to next question after a short delay
       setTimeout(() => {
