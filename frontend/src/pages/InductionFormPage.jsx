@@ -60,6 +60,12 @@ const InductionFormPage = () => {
   // Add state to track answered questions
   const [answeredQuestions, setAnsweredQuestions] = useState({});
 
+  // Track if user is on the submission screen
+  const [showSubmissionScreen, setShowSubmissionScreen] = useState(false);
+
+  // Add state to track when progress was last saved
+  const [lastSaved, setLastSaved] = useState(null);
+
   // Load induction data just once on mount
   useEffect(() => {
     let mounted = true;
@@ -241,9 +247,81 @@ const InductionFormPage = () => {
     };
   }, [idParam, user, navigate, loadAttempts]);
 
+  // Function to save progress to localStorage
+  const saveProgressToLocalStorage = () => {
+    if (!induction || !induction.id) return;
+    
+    const progress = {
+      inductionId: induction.id,
+      answers: answers,
+      currentQuestionIndex: currentQuestionIndex,
+      answeredQuestions: answeredQuestions,
+      lastUpdated: new Date().toISOString()
+    };
+    
+    localStorage.setItem(`induction_progress_${induction.id}`, JSON.stringify(progress));
+    setLastSaved(new Date());
+  };
+
+  // Function to load progress from localStorage
+  const loadProgressFromLocalStorage = () => {
+    if (!induction || !induction.id) return false;
+    
+    const savedProgress = localStorage.getItem(`induction_progress_${induction.id}`);
+    if (!savedProgress) return false;
+    
+    try {
+      const progress = JSON.parse(savedProgress);
+      
+      // Check if the saved progress is recent (within the last 24 hours)
+      const lastUpdated = new Date(progress.lastUpdated);
+      const now = new Date();
+      const hoursSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60);
+      
+      if (hoursSinceUpdate > 24) {
+        // If older than 24 hours, clear it
+        localStorage.removeItem(`induction_progress_${induction.id}`);
+        return false;
+      }
+      
+      // Restore progress
+      setAnswers(progress.answers || {});
+      setCurrentQuestionIndex(progress.currentQuestionIndex || 0);
+      setAnsweredQuestions(progress.answeredQuestions || {});
+      setLastSaved(lastUpdated);
+      
+      return true;
+    } catch (error) {
+      console.error("Error loading saved progress:", error);
+      return false;
+    }
+  };
+
+  // Set up auto-save at regular intervals and on certain actions
+  useEffect(() => {
+    if (!started || !induction || !induction.id) return;
+    
+    // Save progress whenever answers change
+    saveProgressToLocalStorage();
+    
+    // Set up interval to auto-save every 30 seconds
+    const saveInterval = setInterval(saveProgressToLocalStorage, 30000);
+    
+    // Clean up interval on unmount
+    return () => clearInterval(saveInterval);
+  }, [answers, currentQuestionIndex, answeredQuestions, started, induction?.id]);
+
+  // Load saved progress when induction loads and user starts
+  useEffect(() => {
+    if (started && induction && induction.id) {
+      loadProgressFromLocalStorage();
+    }
+  }, [started, induction?.id]);
+
+  // Handle starting the induction (also check for saved progress)
   const handleStart = async () => {
-    // Mark induction as in progress in the database
-    if (userInduction && userInduction.status === 'assigned') {
+    // If user is logged in, try to update their induction status
+    if (user && userInduction) {
       try {
         await updateUserInduction(user, userInduction.id, {
           status: 'in_progress',
@@ -256,11 +334,18 @@ const InductionFormPage = () => {
     }
     
     setStarted(true);
-    const initialAnswers = {};
-    induction.questions.forEach(question => {
-      initialAnswers[question.id] = question.type === QuestionTypes.MULTICHOICE ? [] : '';
-    });
-    setAnswers(initialAnswers);
+    
+    // Try to load saved progress
+    const progressLoaded = loadProgressFromLocalStorage();
+    
+    // If no saved progress, initialize with empty answers
+    if (!progressLoaded) {
+      const initialAnswers = {};
+      induction.questions.forEach(question => {
+        initialAnswers[question.id] = question.type === QuestionTypes.MULTICHOICE ? [] : '';
+      });
+      setAnswers(initialAnswers);
+    }
   };
 
   // New function to toggle between slideshow and list view
@@ -364,8 +449,33 @@ const InductionFormPage = () => {
         break;
         
       case QuestionTypes.SHORT_ANSWER:
-        // For short answers, we don't validate correctness (manual review required)
-        isCorrect = true;
+        // For short answers, we mark as "pending review" instead of correct/incorrect
+        // Set feedback to show in orange color for "pending review"
+        setAnswerFeedback({
+          isCorrect: null, // null means pending review
+          message: 'Answer submitted for review.',
+          showFeedback: true
+        });
+        
+        // Mark this question as answered (not necessarily correct)
+        setAnsweredQuestions(prev => ({
+          ...prev,
+          [currentQuestion.id]: true
+        }));
+        
+        // Proceed to next question after a short delay
+        setTimeout(() => {
+          if (currentQuestionIndex < induction.questions.length - 1) {
+            setCurrentQuestionIndex(currentQuestionIndex + 1);
+            // Reset feedback for the next question
+            setAnswerFeedback({
+              isCorrect: null,
+              message: '',
+              showFeedback: false
+            });
+          }
+        }, 1000);
+        return; // Exit the function early
         break;
         
       case QuestionTypes.FILE_UPLOAD:
@@ -599,8 +709,51 @@ const InductionFormPage = () => {
     navigate('/inductions/my-inductions');
   };
 
-  // Calculate estimated time (assumed 2 minutes per question as a default)
-  const estimatedTime = induction?.questions?.length ? induction.questions.length * 2 : 0;
+  // Calculate estimated time based on question types
+  const calculateEstimatedTime = (questions) => {
+    if (!questions || !questions.length) return 0;
+    
+    let totalSeconds = 0;
+    
+    questions.forEach(question => {
+      switch (question.type) {
+        case QuestionTypes.MULTICHOICE:
+        case QuestionTypes.TRUE_FALSE:
+        case QuestionTypes.YES_NO:
+        case QuestionTypes.DROPDOWN:
+          totalSeconds += 45; // 45 seconds for multiple choice/selection questions
+          break;
+        case QuestionTypes.SHORT_ANSWER:
+          totalSeconds += 120; // 2 minutes for short answer questions
+          break;
+        case QuestionTypes.INFORMATION:
+          totalSeconds += 60; // 1 minute for info sections
+          break;
+        case QuestionTypes.FILE_UPLOAD:
+          totalSeconds += 90; // 1.5 minutes for file uploads
+          break;
+        default:
+          totalSeconds += 60; // Default to 1 minute
+      }
+    });
+    
+    // Convert to minutes
+    return Math.ceil(totalSeconds / 60);
+  };
+
+  // Format the time as a range (±20%)
+  const formatTimeRange = (minutes) => {
+    if (minutes === 0) return "0 minutes";
+    
+    const lowerBound = Math.max(1, Math.floor(minutes * 0.8));
+    const upperBound = Math.ceil(minutes * 1.2);
+    
+    return `${lowerBound}-${upperBound} minutes`;
+  };
+
+  // Calculate estimated time
+  const estimatedTime = calculateEstimatedTime(induction?.questions);
+  const estimatedTimeRange = formatTimeRange(estimatedTime);
 
   // New function to handle sidebar navigation
   const handleQuestionNavigation = (index) => {
@@ -618,6 +771,63 @@ const InductionFormPage = () => {
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(prev => !prev);
+  };
+
+  // Function to check if all required questions are answered
+  const checkAllRequiredQuestionsAnswered = () => {
+    const missingAnswers = [];
+    
+    induction.questions.forEach((question, index) => {
+      // Skip validation for INFORMATION type questions
+      if (question.type === QuestionTypes.INFORMATION) return;
+      
+      // Check if question is required (default to true if not specified)
+      const isRequired = question.isRequired !== false;
+      
+      if (isRequired) {
+        const answer = answers[question.id];
+        
+        // Check if answer is missing
+        if (answer === undefined || answer === '' || 
+            (Array.isArray(answer) && answer.length === 0)) {
+          missingAnswers.push({
+            index: index + 1,
+            question: question.question
+          });
+        }
+      }
+    });
+    
+    return missingAnswers.length === 0;
+  };
+
+  // Handler for moving to submission screen
+  const handleGoToSubmissionScreen = () => {
+    if (checkAllRequiredQuestionsAnswered()) {
+      setShowSubmissionScreen(true);
+    } else {
+      notifyError('Missing Required Answers', 'Please answer all required questions before submitting.');
+    }
+  };
+
+  // Handler for going back from submission screen to questions
+  const handleBackToQuestions = () => {
+    setShowSubmissionScreen(false);
+  };
+
+  // Helper function to format the last saved time
+  const formatLastSaved = (date) => {
+    if (!date) return '';
+    
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000); // Difference in seconds
+    
+    if (diff < 5) return 'Just now';
+    if (diff < 60) return `${diff} seconds ago`;
+    if (diff < 120) return '1 minute ago';
+    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
+    if (diff < 7200) return '1 hour ago';
+    return `${Math.floor(diff / 3600)} hours ago`;
   };
 
   // Render based on view state
@@ -670,7 +880,7 @@ const InductionFormPage = () => {
                 <div className="bg-green-50 p-4 rounded-md">
                   <span className="block text-sm font-medium text-gray-600">Estimated Time</span>
                   <span className="text-lg font-semibold">
-                    {estimatedTime} {estimatedTime === 1 ? 'minute' : 'minutes'}
+                    {estimatedTimeRange}
                   </span>
                 </div>
               </div>
@@ -719,16 +929,15 @@ const InductionFormPage = () => {
                           onClick={() => handleQuestionNavigation(index)}
                           className={`w-full text-left px-3 py-2 rounded-md flex items-center ${
                             currentQuestionIndex === index 
-                              ? 'bg-gray-800 text-white' 
+                              ? 'bg-blue-100 text-blue-800 border border-blue-300'
                               : answeredQuestions[question.id]
                                 ? 'bg-green-50 text-green-700 border border-green-200'
                                 : 'text-gray-700 hover:bg-gray-100'
                           }`}
-                          disabled={!showAllQuestions && !answeredQuestions[question.id] && index > currentQuestionIndex}
                         >
                           <span className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full mr-2 text-sm ${
                             currentQuestionIndex === index 
-                              ? 'bg-white text-gray-800' 
+                              ? 'bg-blue-500 text-white'
                               : answeredQuestions[question.id]
                                 ? 'bg-green-100 text-green-700'
                                 : 'bg-gray-200 text-gray-700'
@@ -809,103 +1018,182 @@ const InductionFormPage = () => {
                           <div className="mb-4">
                             <div className="flex justify-between mb-2">
                               <span className="text-sm font-medium">Progress</span>
-                              <span className="text-sm font-medium">{currentQuestionIndex + 1} of {induction.questions.length}</span>
+                              <span className="text-sm font-medium">
+                                {showSubmissionScreen ? 'Final Review' : `${currentQuestionIndex + 1} of ${induction.questions.length}`}
+                              </span>
                             </div>
                             <div className="w-full bg-gray-200 rounded-full h-2.5">
                               <div 
                                 className="bg-gray-800 h-2.5 rounded-full" 
-                                style={{ width: `${((currentQuestionIndex + 1) / induction.questions.length) * 100}%` }}
+                                style={{ width: showSubmissionScreen ? '100%' : `${((currentQuestionIndex + 1) / induction.questions.length) * 100}%` }}
                               ></div>
                             </div>
-                          </div>
-                          
-                          {/* Current question */}
-                          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
-                            {induction.questions[currentQuestionIndex] && (
-                              <div className="space-y-4">
-                                <h2 className="text-xl font-semibold">{induction.questions[currentQuestionIndex].question}</h2>
-                                
-                                {induction.questions[currentQuestionIndex].description && (
-                                  <div 
-                                    className="text-gray-600 prose max-w-none"
-                                    dangerouslySetInnerHTML={{ __html: induction.questions[currentQuestionIndex].description }}
-                                  />
-                                )}
-                                
-                                {/* Question content based on type */}
-                                <div className="mt-4">
-                                  {renderQuestionByType(
-                                    induction.questions[currentQuestionIndex], 
-                                    answers[induction.questions[currentQuestionIndex].id], 
-                                    (answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)
-                                  )}
-                                </div>
-                                
-                                {/* Answer Feedback */}
-                                {answerFeedback.showFeedback && (
-                                  <div className={`mt-4 p-3 rounded-md ${
-                                    answerFeedback.isCorrect 
-                                      ? 'bg-green-50 text-green-700 border border-green-200' 
-                                      : 'bg-red-50 text-red-700 border border-red-200'
-                                  }`}>
-                                    <div className="flex items-center">
-                                      {answerFeedback.isCorrect ? (
-                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                      ) : (
-                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                      )}
-                                      <span className="font-medium">{answerFeedback.message}</span>
-                                    </div>
-                                  </div>
-                                )}
+                            
+                            {/* Last saved indicator */}
+                            {lastSaved && (
+                              <div className="mt-2 text-xs text-gray-500 flex items-center justify-end">
+                                <svg 
+                                  className="w-3 h-3 mr-1" 
+                                  xmlns="http://www.w3.org/2000/svg" 
+                                  fill="none" 
+                                  viewBox="0 0 24 24" 
+                                  stroke="currentColor"
+                                >
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                                </svg>
+                                Progress saved {formatLastSaved(lastSaved)}
                               </div>
                             )}
                           </div>
                           
+                          {/* Show either submission screen or current question */}
+                          {showSubmissionScreen ? (
+                            <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
+                              <h2 className="text-xl font-semibold mb-4">Ready to Submit</h2>
+                              
+                              <div className="bg-blue-50 p-4 rounded-md border border-blue-200 mb-6">
+                                <p className="text-blue-800">
+                                  <span className="font-semibold">All questions completed!</span> You've finished the induction and your answers are ready to be submitted.
+                                </p>
+                              </div>
+                              
+                              <div className="space-y-4 mb-6">
+                                <h3 className="font-semibold text-lg">Summary:</h3>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                  <div className="bg-gray-100 p-3 rounded">
+                                    <p className="text-sm text-gray-600">Total Questions</p>
+                                    <p className="font-bold">{induction.questions.length}</p>
+                                  </div>
+                                  
+                                  <div className="bg-gray-100 p-3 rounded">
+                                    <p className="text-sm text-gray-600">Questions Answered</p>
+                                    <p className="font-bold">{Object.keys(answeredQuestions).length}</p>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex justify-between mt-8">
+                                <button
+                                  type="button"
+                                  onClick={handleBackToQuestions}
+                                  className="px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-800 hover:bg-gray-50"
+                                >
+                                  Back to Questions
+                                </button>
+                                
+                                <button
+                                  type="submit"
+                                  disabled={isSubmitting}
+                                  className={`px-6 py-3 bg-gray-800 text-white rounded-md ${
+                                    isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-700'
+                                  }`}
+                                >
+                                  {isSubmitting ? 'Submitting...' : 'Confirm & Submit'}
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            /* Current question content */
+                            <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
+                              {induction.questions[currentQuestionIndex] && (
+                                <div className="space-y-4">
+                                  <h2 className="text-xl font-semibold">{induction.questions[currentQuestionIndex].question}</h2>
+                                  
+                                  {induction.questions[currentQuestionIndex].description && (
+                                    <div 
+                                      className="text-gray-600 prose max-w-none"
+                                      dangerouslySetInnerHTML={{ __html: induction.questions[currentQuestionIndex].description }}
+                                    />
+                                  )}
+                                  
+                                  {/* Question content based on type */}
+                                  <div className="mt-4">
+                                    {renderQuestionByType(
+                                      induction.questions[currentQuestionIndex], 
+                                      answers[induction.questions[currentQuestionIndex].id], 
+                                      (answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)
+                                    )}
+                                  </div>
+                                  
+                                  {/* Answer Feedback */}
+                                  {answerFeedback.showFeedback && (
+                                    <div className={`mt-4 p-3 rounded-md ${
+                                      answerFeedback.isCorrect === true 
+                                        ? 'bg-green-50 text-green-700 border border-green-200' 
+                                        : answerFeedback.isCorrect === false
+                                          ? 'bg-red-50 text-red-700 border border-red-200'
+                                          : 'bg-orange-50 text-orange-700 border border-orange-200'
+                                    }`}>
+                                      <div className="flex items-center">
+                                        {answerFeedback.isCorrect === true ? (
+                                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                                          </svg>
+                                        ) : answerFeedback.isCorrect === false ? (
+                                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+                                          </svg>
+                                        ) : (
+                                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                                          </svg>
+                                        )}
+                                        <span className="font-medium">{answerFeedback.message}</span>
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
                           {/* Navigation buttons */}
-                          <div className="flex justify-between mt-6">
-                            <button 
-                              type="button"
-                              onClick={handlePrevQuestion}
-                              disabled={currentQuestionIndex === 0}
-                              className={`px-4 py-2 border rounded-md ${
-                                currentQuestionIndex === 0 
-                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                                  : 'bg-white text-gray-800 hover:bg-gray-50'
-                              }`}
-                            >
-                              Previous
-                            </button>
-                            
-                            {currentQuestionIndex < induction.questions.length - 1 ? (
+                          {!showSubmissionScreen && (
+                            <div className="flex justify-between mt-6">
                               <button 
                                 type="button"
-                                onClick={handleNextQuestion}
-                                disabled={answerFeedback.showFeedback && !answerFeedback.isCorrect}
-                                className={`px-4 py-2 bg-gray-800 text-white rounded-md ${
-                                  answerFeedback.showFeedback && !answerFeedback.isCorrect 
-                                    ? 'opacity-50 cursor-not-allowed' 
-                                    : 'hover:bg-gray-700'
+                                onClick={handlePrevQuestion}
+                                disabled={currentQuestionIndex === 0}
+                                className={`px-4 py-2 border rounded-md ${
+                                  currentQuestionIndex === 0 
+                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                                    : 'bg-white text-gray-800 hover:bg-gray-50'
                                 }`}
                               >
-                                Next
+                                Previous
                               </button>
-                            ) : (
-                              <button 
-                                type="submit"
-                                disabled={isSubmitting}
-                                className={`px-6 py-2 bg-gray-800 text-white rounded-md ${
-                                  isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-700'
-                                }`}
-                              >
-                                {isSubmitting ? 'Submitting...' : 'Complete Induction'}
-                              </button>
-                            )}
-                          </div>
+                              
+                              {currentQuestionIndex < induction.questions.length - 1 ? (
+                                <button 
+                                  type="button"
+                                  onClick={handleNextQuestion}
+                                  disabled={
+                                    // Only disable for incorrect answers if it's not a short answer question
+                                    answerFeedback.showFeedback && 
+                                    !answerFeedback.isCorrect && 
+                                    induction.questions[currentQuestionIndex].type !== QuestionTypes.SHORT_ANSWER
+                                  }
+                                  className={`px-4 py-2 bg-gray-800 text-white rounded-md ${
+                                    answerFeedback.showFeedback && 
+                                    !answerFeedback.isCorrect && 
+                                    induction.questions[currentQuestionIndex].type !== QuestionTypes.SHORT_ANSWER
+                                      ? 'opacity-50 cursor-not-allowed' 
+                                      : 'hover:bg-gray-700'
+                                  }`}
+                                >
+                                  Next
+                                </button>
+                              ) : (
+                                <button 
+                                  type="button"
+                                  onClick={handleGoToSubmissionScreen}
+                                  className="px-6 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
+                                >
+                                  Review & Submit
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </>
                       )}
                       
