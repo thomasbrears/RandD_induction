@@ -68,66 +68,43 @@ const InductionFeedbackModal = ({ visible, onClose, inductionId, inductionName =
     fetchUserDetails();
   }, [user, loading]);
 
-  // Monitor form values and check if all required fields are filled
+  // Reset form when modal visibility changes
   useEffect(() => {
-    if (!visible) return; // Don't run if modal is not visible
-    
-    const validateForm = () => {
-      try {
-        // Get current form values without validation
-        const values = form.getFieldsValue();
-        
-        // Check if all required fields are filled
-        const overallRatingFilled = !!values.overallRating;
-        const websiteUsabilityFilled = !!values.websiteUsability;
-        const contentClarityFilled = !!values.contentClarity;
-        
-        // If detailed feedback is required, check if it's filled
-        const detailedFeedbackRequired = needsDetailedFeedback;
-        const detailedFeedbackFilled = !!values.detailedFeedback;
-        
-        // Set form validity
-        const isValid = overallRatingFilled &&
-                       websiteUsabilityFilled &&
-                       contentClarityFilled &&
-                       (!detailedFeedbackRequired || detailedFeedbackFilled);
-        
-        setFormIsValid(isValid);
-      } catch (error) {
-        console.error('Error checking form validity:', error);
-        setFormIsValid(false);
-      }
-    };
-    
-    validateForm();
-    
-    // Don't try to set up a listener with getFieldsValue, which isn't a subscription
-    // Instead, we'll rely on the onFieldsChange callback
-  }, [form, needsDetailedFeedback, visible]);
+    if (visible) {
+      form.resetFields();
+      setSelectedRating(null);
+      setNeedsDetailedFeedback(false);
+      setFormIsValid(false);
+    }
+  }, [visible, form]);
 
-  // Update form validity when field values change
+  // Update form validity when fields change
   const handleFieldsChange = () => {
+    // Don't validate if the modal is not visible
+    if (!visible) return;
+    
     try {
+      // Get current form values without validation
       const values = form.getFieldsValue();
-     
+      
       // Check if all required fields are filled
       const overallRatingFilled = !!values.overallRating;
       const websiteUsabilityFilled = !!values.websiteUsability;
       const contentClarityFilled = !!values.contentClarity;
-     
+      
       // If detailed feedback is required, check if it's filled
       const detailedFeedbackRequired = needsDetailedFeedback;
       const detailedFeedbackFilled = !!values.detailedFeedback;
-     
+      
       // Set form validity
       const isValid = overallRatingFilled &&
-                      websiteUsabilityFilled &&
-                      contentClarityFilled &&
-                      (!detailedFeedbackRequired || detailedFeedbackFilled);
-     
+                     websiteUsabilityFilled &&
+                     contentClarityFilled &&
+                     (!detailedFeedbackRequired || detailedFeedbackFilled);
+      
       setFormIsValid(isValid);
     } catch (error) {
-      console.error('Error checking form validity on field change:', error);
+      console.error('Error checking form validity:', error);
       setFormIsValid(false);
     }
   };

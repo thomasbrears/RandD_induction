@@ -66,6 +66,212 @@ const InductionFormPage = () => {
   // Add state to track when progress was last saved
   const [lastSaved, setLastSaved] = useState(null);
 
+  // Helper function to render the appropriate question type
+  const renderQuestionByType = (question, answer, handleAnswerChange) => {
+    // Determine if this question is required (default to true)
+    const isRequired = question.isRequired !== false;
+    
+    // Show hint if available
+    const hint = question.hint ? (
+      <div className="mt-2 text-xs italic text-gray-600 bg-gray-100 p-2 rounded-md">
+        <span className="font-semibold">Hint:</span> {question.hint}
+      </div>
+    ) : null;
+    
+    // Show required indicator if needed
+    const requiredIndicator = isRequired ? (
+      <span className="text-red-500 ml-1">*</span>
+    ) : null;
+
+    switch (question.type) {
+      case QuestionTypes.TRUE_FALSE:
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
+            </div>
+            {hint}
+            {question.options.map((option, index) => (
+              <div key={index} className="flex items-center">
+                <input
+                  type="radio"
+                  id={`option-${question.id}-${index}`}
+                  name={`question-${question.id}`}
+                  value={index}
+                  checked={answer === index}
+                  onChange={() => handleAnswerChange(index)}
+                  className="w-5 h-5 text-gray-800 border-gray-300 focus:ring-gray-500"
+                />
+                <label htmlFor={`option-${question.id}-${index}`} className="ml-2 block text-gray-700">
+                  {option}
+                </label>
+              </div>
+            ))}
+          </div>
+        );
+        
+      case QuestionTypes.YES_NO:
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
+            </div>
+            {hint}
+            {question.options.map((option, index) => (
+              <div key={index} className="flex items-center">
+                <input
+                  type="radio"
+                  id={`option-${question.id}-${index}`}
+                  name={`question-${question.id}`}
+                  value={index}
+                  checked={answer === index}
+                  onChange={() => handleAnswerChange(index)}
+                  className="w-5 h-5 text-gray-800 border-gray-300 focus:ring-gray-500"
+                />
+                <label htmlFor={`option-${question.id}-${index}`} className="ml-2 block text-gray-700">
+                  {option}
+                </label>
+              </div>
+            ))}
+          </div>
+        );
+
+      case QuestionTypes.MULTICHOICE:
+        return (
+          <div className="space-y-3">
+            <div className="flex items-center">
+              <p className="text-sm font-medium text-gray-700">Select option(s){requiredIndicator}</p>
+            </div>
+            {hint}
+            {question.options.map((option, index) => (
+              <div key={index} className="flex items-center">
+                <input
+                  type="checkbox"
+                  id={`option-${question.id}-${index}`}
+                  name={`question-${question.id}`}
+                  value={index}
+                  checked={Array.isArray(answer) && answer.includes(index)}
+                  onChange={() => {
+                    if (Array.isArray(answer)) {
+                      if (answer.includes(index)) {
+                        handleAnswerChange(answer.filter(i => i !== index));
+                      } else {
+                        handleAnswerChange([...answer, index]);
+                      }
+                    } else {
+                      handleAnswerChange([index]);
+                    }
+                  }}
+                  className="w-5 h-5 text-gray-800 border-gray-300 rounded focus:ring-gray-500"
+                />
+                <label htmlFor={`option-${question.id}-${index}`} className="ml-2 block text-gray-700 text-base">
+                  {option}
+                </label>
+              </div>
+            ))}
+          </div>
+        );
+        
+      case QuestionTypes.DROPDOWN:
+        return (
+          <div>
+            <div className="flex items-center mb-2">
+              <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
+            </div>
+            {hint}
+            <select
+              value={answer}
+              onChange={(e) => handleAnswerChange(e.target.value)}
+              className="block w-full p-2 mt-1 rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-base"
+            >
+              <option value="">Select an answer</option>
+              {question.options.map((option, index) => (
+                <option key={index} value={index}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+
+      case QuestionTypes.SHORT_ANSWER:
+        return (
+          <div>
+            <div className="flex items-center mb-2">
+              <p className="text-sm font-medium text-gray-700">Enter your answer{requiredIndicator}</p>
+            </div>
+            {hint}
+            <textarea
+              rows={4}
+              value={answer || ''}
+              onChange={(e) => {
+                // Call the regular handleAnswerChange
+                handleAnswerChange(e.target.value);
+                
+                // Also explicitly save progress after a short delay
+                setTimeout(() => {
+                  console.log("Saving short answer progress...", e.target.value);
+                  if (induction && induction.id) {
+                    const updatedAnswers = {
+                      ...answers,
+                      [question.id]: e.target.value
+                    };
+                    
+                    // Also mark as answered if there's text content
+                    const hasContent = e.target.value.trim().length > 0;
+                    let updatedAnsweredQuestions = {...answeredQuestions};
+                    if (hasContent) {
+                      updatedAnsweredQuestions[question.id] = true;
+                      setAnsweredQuestions(updatedAnsweredQuestions);
+                    }
+                    
+                    // Update answers state first
+                    setAnswers(updatedAnswers);
+                    
+                    // Use the common saveProgressToLocalStorage function instead
+                    // of duplicating the logic here
+                    setTimeout(saveProgressToLocalStorage, 100);
+                  }
+                }, 100);
+              }}
+              placeholder="Type your answer here..."
+              className="block w-full p-2 rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-base"
+            />
+          </div>
+        );
+
+      case QuestionTypes.INFORMATION:
+        return (
+          <div className="mt-2 bg-blue-50 p-4 rounded-md border border-blue-200">
+            {question.description ? (
+              <div dangerouslySetInnerHTML={{ __html: question.description }} />
+            ) : (
+              <p className="text-gray-500 italic">Information block</p>
+            )}
+            {hint}
+          </div>
+        );
+        
+      case QuestionTypes.FILE_UPLOAD:
+        return (
+          <div>
+            <div className="flex items-center mb-2">
+              <p className="text-sm font-medium text-gray-700">Upload a file{requiredIndicator}</p>
+            </div>
+            {hint}
+            <input 
+              type="file" 
+              onChange={(e) => handleAnswerChange(e.target.files[0])} 
+              className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-200 file:text-gray-700 hover:file:bg-gray-300"
+            />
+          </div>
+        );
+        
+      default:
+        return <p className="text-red-500">Unsupported question type: {question.type}</p>;
+    }
+  };
+
   // Load induction data just once on mount
   useEffect(() => {
     let mounted = true;
@@ -259,7 +465,16 @@ const InductionFormPage = () => {
       lastUpdated: new Date().toISOString()
     };
     
-    localStorage.setItem(`induction_progress_${induction.id}`, JSON.stringify(progress));
+    console.log("Saving progress to localStorage:", {
+      inductionId: induction.id,
+      answersCount: Object.keys(answers || {}).length,
+      currentQuestionIndex,
+      answeredQuestionsCount: Object.keys(answeredQuestions || {}).length
+    });
+    
+    // Stringify the data to ensure it's saved correctly
+    const serializedData = JSON.stringify(progress);
+    localStorage.setItem(`induction_progress_${induction.id}`, serializedData);
     setLastSaved(new Date());
   };
 
@@ -277,10 +492,27 @@ const InductionFormPage = () => {
       console.log("Found saved progress, attempting to parse...");
       const progress = JSON.parse(savedProgress);
       
+      // Check the structure of the parsed data
+      console.log("Parsed progress data:", {
+        hasAnswers: !!progress.answers,
+        answersCount: progress.answers ? Object.keys(progress.answers).length : 0,
+        hasCurrentIndex: progress.currentQuestionIndex !== undefined,
+        currentIndex: progress.currentQuestionIndex,
+        hasAnsweredQuestions: !!progress.answeredQuestions,
+        answeredQuestionsCount: progress.answeredQuestions ? Object.keys(progress.answeredQuestions).length : 0,
+        lastUpdated: progress.lastUpdated
+      });
+      
       // Check if the saved progress is recent (within the last 24 hours)
       const lastUpdated = new Date(progress.lastUpdated);
       const now = new Date();
       const hoursSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60);
+      
+      // Validate the date to make sure it's not in the future
+      if (lastUpdated > now) {
+        console.warn("Saved date is in the future, resetting to current time");
+        lastUpdated.setTime(now.getTime());
+      }
       
       if (hoursSinceUpdate > 24) {
         console.log("Saved progress is older than 24 hours, clearing...");
@@ -296,10 +528,16 @@ const InductionFormPage = () => {
         lastUpdated: lastUpdated.toLocaleString()
       });
       
-      // Restore progress
-      setAnswers(progress.answers || {});
-      setCurrentQuestionIndex(progress.currentQuestionIndex || 0);
-      setAnsweredQuestions(progress.answeredQuestions || {});
+      // Make sure we're using structurally valid data
+      const validAnswers = progress.answers && typeof progress.answers === 'object' ? progress.answers : {};
+      const validAnsweredQuestions = progress.answeredQuestions && typeof progress.answeredQuestions === 'object' ? progress.answeredQuestions : {};
+      const validCurrentIndex = typeof progress.currentQuestionIndex === 'number' && progress.currentQuestionIndex >= 0 ? 
+        progress.currentQuestionIndex : 0;
+      
+      // Restore progress with validated data
+      setAnswers(validAnswers);
+      setCurrentQuestionIndex(validCurrentIndex);
+      setAnsweredQuestions(validAnsweredQuestions);
       setLastSaved(lastUpdated);
       
       return true;
@@ -315,20 +553,39 @@ const InductionFormPage = () => {
   useEffect(() => {
     if (!started || !induction || !induction.id) return;
     
-    // Save progress whenever answers change
-    saveProgressToLocalStorage();
+    // Log current state for debugging
+    console.log("Current state before saving:", {
+      answersCount: Object.keys(answers || {}).length,
+      answeredQuestionsCount: Object.keys(answeredQuestions || {}).length,
+      currentQuestionIndex
+    });
+    
+    // Save progress whenever answers change (with debounce)
+    const saveTimeout = setTimeout(() => {
+      saveProgressToLocalStorage();
+    }, 500);
     
     // Set up interval to auto-save every 30 seconds
     const saveInterval = setInterval(saveProgressToLocalStorage, 30000);
     
-    // Clean up interval on unmount
-    return () => clearInterval(saveInterval);
+    // Clean up interval and timeout on unmount
+    return () => {
+      clearInterval(saveInterval);
+      clearTimeout(saveTimeout);
+    };
   }, [answers, currentQuestionIndex, answeredQuestions, started, induction?.id]);
 
   // Load saved progress when induction loads and user starts
   useEffect(() => {
     if (started && induction && induction.id) {
-      loadProgressFromLocalStorage();
+      console.log("User started induction, attempting to load saved progress");
+      const progressLoaded = loadProgressFromLocalStorage();
+      
+      if (progressLoaded) {
+        console.log("Successfully loaded saved progress");
+      } else {
+        console.log("No saved progress found or progress failed to load");
+      }
     }
   }, [started, induction?.id]);
 
@@ -368,31 +625,30 @@ const InductionFormPage = () => {
   };
 
   const handleAnswer = (questionId, answer) => {
+    // Update the answers state
     setAnswers(prev => {
       const newAnswers = {
         ...prev,
         [questionId]: answer
       };
       
-      // Explicitly save progress after updating answers
-      setTimeout(() => {
-        // Use setTimeout to ensure this runs after state update is complete
-        if (induction && induction.id) {
-          const progress = {
-            inductionId: induction.id,
-            answers: newAnswers,
-            currentQuestionIndex,
-            answeredQuestions,
-            lastUpdated: new Date().toISOString()
-          };
-          
-          localStorage.setItem(`induction_progress_${induction.id}`, JSON.stringify(progress));
-          setLastSaved(new Date());
-        }
-      }, 0);
-      
       return newAnswers;
     });
+    
+    // Also mark question as answered if appropriate
+    const hasValidAnswer = answer !== undefined && 
+      answer !== '' && 
+      !(Array.isArray(answer) && answer.length === 0);
+      
+    if (hasValidAnswer) {
+      setAnsweredQuestions(prev => ({
+        ...prev,
+        [questionId]: true
+      }));
+    }
+    
+    // Explicitly save progress after updating answers (with a slight delay to ensure state is updated)
+    setTimeout(saveProgressToLocalStorage, 200);
     
     // Clear feedback when a new answer is selected
     setAnswerFeedback({
@@ -1309,220 +1565,5 @@ const InductionFormPage = () => {
     </>
   );
 };
-
-// Helper function to render the appropriate question type
-function renderQuestionByType(question, answer, handleAnswerChange) {
-  // Determine if this question is required (default to true)
-  const isRequired = question.isRequired !== false;
-  
-  // Show hint if available
-  const hint = question.hint ? (
-    <div className="mt-2 text-xs italic text-gray-600 bg-gray-100 p-2 rounded-md">
-      <span className="font-semibold">Hint:</span> {question.hint}
-    </div>
-  ) : null;
-  
-  // Show required indicator if needed
-  const requiredIndicator = isRequired ? (
-    <span className="text-red-500 ml-1">*</span>
-  ) : null;
-
-  switch (question.type) {
-    case QuestionTypes.TRUE_FALSE:
-      return (
-        <div className="space-y-3">
-          <div className="flex items-center">
-            <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
-          </div>
-          {hint}
-          {question.options.map((option, index) => (
-            <div key={index} className="flex items-center">
-              <input
-                type="radio"
-                id={`option-${question.id}-${index}`}
-                name={`question-${question.id}`}
-                value={index}
-                checked={answer === index}
-                onChange={() => handleAnswerChange(index)}
-                className="w-5 h-5 text-gray-800 border-gray-300 focus:ring-gray-500"
-              />
-              <label htmlFor={`option-${question.id}-${index}`} className="ml-2 block text-gray-700">
-                {option}
-              </label>
-            </div>
-          ))}
-        </div>
-      );
-      
-    case QuestionTypes.YES_NO:
-      return (
-        <div className="space-y-3">
-          <div className="flex items-center">
-            <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
-          </div>
-          {hint}
-          {question.options.map((option, index) => (
-            <div key={index} className="flex items-center">
-              <input
-                type="radio"
-                id={`option-${question.id}-${index}`}
-                name={`question-${question.id}`}
-                value={index}
-                checked={answer === index}
-                onChange={() => handleAnswerChange(index)}
-                className="w-5 h-5 text-gray-800 border-gray-300 focus:ring-gray-500"
-              />
-              <label htmlFor={`option-${question.id}-${index}`} className="ml-2 block text-gray-700">
-                {option}
-              </label>
-            </div>
-          ))}
-        </div>
-      );
-
-    case QuestionTypes.MULTICHOICE:
-      return (
-        <div className="space-y-3">
-          <div className="flex items-center">
-            <p className="text-sm font-medium text-gray-700">Select option(s){requiredIndicator}</p>
-          </div>
-          {hint}
-          {question.options.map((option, index) => (
-            <div key={index} className="flex items-center">
-              <input
-                type="checkbox"
-                id={`option-${question.id}-${index}`}
-                name={`question-${question.id}`}
-                value={index}
-                checked={Array.isArray(answer) && answer.includes(index)}
-                onChange={() => {
-                  if (Array.isArray(answer)) {
-                    if (answer.includes(index)) {
-                      handleAnswerChange(answer.filter(i => i !== index));
-                    } else {
-                      handleAnswerChange([...answer, index]);
-                    }
-                  } else {
-                    handleAnswerChange([index]);
-                  }
-                }}
-                className="w-5 h-5 text-gray-800 border-gray-300 rounded focus:ring-gray-500"
-              />
-              <label htmlFor={`option-${question.id}-${index}`} className="ml-2 block text-gray-700 text-base">
-                {option}
-              </label>
-            </div>
-          ))}
-        </div>
-      );
-      
-    case QuestionTypes.DROPDOWN:
-      return (
-        <div>
-          <div className="flex items-center mb-2">
-            <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
-          </div>
-          {hint}
-          <select
-            value={answer}
-            onChange={(e) => handleAnswerChange(e.target.value)}
-            className="block w-full p-2 mt-1 rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-base"
-          >
-            <option value="">Select an answer</option>
-            {question.options.map((option, index) => (
-              <option key={index} value={index}>
-                {option}
-              </option>
-            ))}
-          </select>
-        </div>
-      );
-
-    case QuestionTypes.SHORT_ANSWER:
-      return (
-        <div>
-          <div className="flex items-center mb-2">
-            <p className="text-sm font-medium text-gray-700">Enter your answer{requiredIndicator}</p>
-          </div>
-          {hint}
-          <textarea
-            rows={4}
-            value={answer || ''}
-            onChange={(e) => {
-              // Call the regular handleAnswerChange
-              handleAnswerChange(e.target.value);
-              
-              // Also explicitly save progress after a short delay
-              setTimeout(() => {
-                console.log("Saving short answer progress...", e.target.value);
-                if (induction && induction.id) {
-                  const updatedAnswers = {
-                    ...answers,
-                    [question.id]: e.target.value
-                  };
-                  
-                  // Also mark as answered if there's text content
-                  const hasContent = e.target.value.trim().length > 0;
-                  let updatedAnsweredQuestions = {...answeredQuestions};
-                  if (hasContent) {
-                    updatedAnsweredQuestions[question.id] = true;
-                  }
-                  
-                  const progress = {
-                    inductionId: induction.id,
-                    answers: updatedAnswers,
-                    currentQuestionIndex,
-                    answeredQuestions: updatedAnsweredQuestions,
-                    lastUpdated: new Date().toISOString()
-                  };
-                  
-                  localStorage.setItem(`induction_progress_${induction.id}`, JSON.stringify(progress));
-                  console.log("Short answer progress saved successfully");
-                  setLastSaved(new Date());
-                  
-                  // Also update the answered questions state if needed
-                  if (hasContent) {
-                    setAnsweredQuestions(updatedAnsweredQuestions);
-                  }
-                }
-              }, 100);
-            }}
-            placeholder="Type your answer here..."
-            className="block w-full p-2 rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-base"
-          />
-        </div>
-      );
-
-    case QuestionTypes.INFORMATION:
-      return (
-        <div className="mt-2 bg-blue-50 p-4 rounded-md border border-blue-200">
-          {question.description ? (
-            <div dangerouslySetInnerHTML={{ __html: question.description }} />
-          ) : (
-            <p className="text-gray-500 italic">Information block</p>
-          )}
-          {hint}
-        </div>
-      );
-      
-    case QuestionTypes.FILE_UPLOAD:
-      return (
-        <div>
-          <div className="flex items-center mb-2">
-            <p className="text-sm font-medium text-gray-700">Upload a file{requiredIndicator}</p>
-          </div>
-          {hint}
-          <input 
-            type="file" 
-            onChange={(e) => handleAnswerChange(e.target.files[0])} 
-            className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-gray-200 file:text-gray-700 hover:file:bg-gray-300"
-          />
-        </div>
-      );
-      
-    default:
-      return <p className="text-red-500">Unsupported question type: {question.type}</p>;
-  }
-}
 
 export default InductionFormPage;
