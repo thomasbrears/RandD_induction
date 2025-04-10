@@ -20,10 +20,15 @@ export const getSignedUrl = async (user, fileName) => {
   }
 };
 
-export const uploadFile = async (user, file) => {
+export const uploadFile = async (user, file, customFileName = null) => {
   try {
     const formData = new FormData();
     formData.append("file", file);
+
+    // If customFileName is provided, append it as a field
+    if (customFileName) {
+      formData.append("customFileName", customFileName);
+    }
 
     const token = user?.token;
     const headers = token
@@ -34,7 +39,7 @@ export const uploadFile = async (user, file) => {
       headers,
     });
 
-    return response.data; // contains { url, gcsFileName }
+    return response.data; // { url, gcsFileName }
   } catch (error) {
     console.error("Error uploading file:", error);
     throw error;

@@ -7,15 +7,19 @@ const BUCKET_NAME = "r_and_d_induction_files";
 export const uploadFile = async (req, res) => {
   try {
     const { file } = req;
+    const { customFileName } = req.body;
 
     if (!file) {
       return res.status(400).send("No file uploaded.");
     }
 
-    // Generate a unique filename 
-    const gcsFileName = `${Date.now()}_${file.originalname}`;
+    const safeOriginalName = file.originalname.replace(/\s+/g, "_");
 
-    // Upload the file to Google Cloud Storage
+    // Use provided customFileName or generate one
+    const gcsFileName = customFileName 
+      ? customFileName.replace(/\s+/g, "_")
+      : `${Date.now()}_${safeOriginalName}`;
+
     const blob = bucket.file(gcsFileName);
     const blobStream = blob.createWriteStream({
       metadata: {
@@ -33,14 +37,14 @@ export const uploadFile = async (req, res) => {
         const options = {
           version: "v4",
           action: "read",
-          expires: Date.now() + 60 * 60 * 1000, // 1 hour expiration
+          expires: Date.now() + 60 * 60 * 1000,
         };
 
         const [signedUrl] = await blob.getSignedUrl(options);
 
         res.status(200).json({
           message: "File uploaded successfully!",
-          url: signedUrl, 
+          url: signedUrl,
           gcsFileName,
         });
       } catch (error) {

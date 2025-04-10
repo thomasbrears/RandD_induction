@@ -15,9 +15,10 @@ import Loading from "../../components/Loading";
 import { createNewInduction } from "../../api/InductionApi";
 import { useNavigate } from "react-router-dom";
 import TiptapEditor from "../../components/TiptapEditor";
+import { uploadFile } from "../../api/FileApi";
 
 const InductionCreate = () => {
-  const { user } = useAuth(); // Get the user object from the useAuth hook
+  const { user } = useAuth();// Get the user object from the useAuth hook
 
   // States for managing the induction data and ui states
   const [induction, setInduction] = useState({
@@ -33,6 +34,7 @@ const InductionCreate = () => {
   const [savingInProgress, setSavingInProgress] = useState(false);
   const [Departments, setDepartments] = useState([]);
   const navigate = useNavigate();
+  const [fileBuffer, setFileBuffer] = useState(new Map());
 
   useEffect(() => {
     const getDepartments = async () => {
@@ -41,6 +43,58 @@ const InductionCreate = () => {
     };
     getDepartments();
   }, []);
+
+  //File Handling
+  const handleFileBufferUpdate = (questionId, file) => {
+    setFileBuffer(prev => {
+      const newBuffer = new Map(prev);
+      if (file) {
+        newBuffer.set(questionId, file);
+      } else {
+        newBuffer.delete(questionId);
+      }
+      return newBuffer;
+    });
+  };
+
+  const getImageUrl = async (questionId) => {
+    const file = fileBuffer.get(questionId);
+    return file ? URL.createObjectURL(file) : null;
+  };
+
+  const handleUploadNewQuestionFiles = async () => {
+    let updatedInduction = { ...induction };
+  
+    for (const q of induction.questions) {
+      const hasFileInBuffer = fileBuffer.has(q.id);
+      const currentFileName = q.imageFile;
+  
+      if (hasFileInBuffer) {
+        const file = fileBuffer.get(q.id);
+        const finalFileName = `${q.id}_${file.name}`;
+  
+        if (currentFileName !== finalFileName) {
+          try {
+            const result = await uploadFile(user, file, finalFileName);
+            const uploadedFileName = result.gcsFileName || finalFileName;
+  
+            updatedInduction = {
+              ...updatedInduction,
+              questions: updatedInduction.questions.map((question) =>
+                question.id === q.id
+                  ? { ...question, imageFile: uploadedFileName }
+                  : question
+              ),
+            };
+          } catch (err) {
+            messageWarning(`Failed to upload file for question ${q.id}`, err);
+          }
+        }
+      }
+    }
+  
+    return updatedInduction;
+  };
 
   const handleCancelAndReturnButton = () => {
     navigate(-1);
@@ -73,14 +127,17 @@ const InductionCreate = () => {
 
   const handleSubmit = async () => {
     setSavingInProgress(true);
-
+  
+    // Upload files first
+    const updatedInduction = await handleUploadNewQuestionFiles();
+  
     if (user) {
-      const result = await createNewInduction(user, induction);
+      const result = await createNewInduction(user, updatedInduction);
       setSavingInProgress(false);
       if (result) {
-        notifySuccess("Induction updated successfully!");
+        notifySuccess("Induction created successfully!");
       } else {
-        messageWarning("Error while updating induction.");
+        messageWarning("Error while creating induction.");
       }
     }
     setShowResult(true);
@@ -343,7 +400,12 @@ const InductionCreate = () => {
                   {/* Main content for managing induction details */}
                   <div className="p-4 mx-auto w-full max-w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl space-y-6">
 
-                    <InductionFormContent induction={induction} setInduction={setInduction} />
+                    <InductionFormContent
+                      induction={induction}
+                      setInduction={setInduction}
+                      getImageUrl={getImageUrl}
+                      saveFileChange={handleFileBufferUpdate}
+                    />
 
                     {/* Save Button */}
                     <div className="flex justify-center mt-6">

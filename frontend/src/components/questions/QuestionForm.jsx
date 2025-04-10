@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Modal, Form, Select, Input, Button, Collapse, Switch, Radio } from "antd";
 import QuestionTypes from "../../models/QuestionTypes";
 import TiptapEditor from "../TiptapEditor";
-import { FaCheck, FaTimes, FaTrash } from "react-icons/fa";
+import { FaCheck, FaTimes} from "react-icons/fa";
 import { DefaultNewQuestion } from "../../models/Question";
 import { UpOutlined, PlusOutlined } from "@ant-design/icons";
 import "../../style/AntdOverride.css";
@@ -11,14 +11,30 @@ import ImageUpload from "../ImageUpload";
 
 const { Option } = Select;
 
-const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
+const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, saveFileChange }) => {
     const [form] = Form.useForm();
     const selectedType = Form.useWatch('type', form);
     const requiresValidation = Form.useWatch('requiresValidation', form);
     const answers = Form.useWatch('answers', form);
+    const [tempFile, setTempFile] = useState(null);
+    const [fileUrl, setFileUrl] = useState(null);
 
-    const handleFileChange = (fileName) => {
-        form.setFieldValue("imageFile", fileName);
+    const handleFileChange = (file) => {
+        if (fileUrl?.startsWith("blob:")) {
+            URL.revokeObjectURL(fileUrl);
+        }
+    
+        if (file) {
+            setTempFile(file);
+            form.setFieldValue("imageFile", file.name);
+    
+            const previewUrl = URL.createObjectURL(file);
+            setFileUrl(previewUrl);
+        } else {
+            setTempFile(null);
+            form.setFieldValue("imageFile", null);
+            setFileUrl(null);
+        }
     };
 
     const handleQuestionTypeChange = (value) => {
@@ -56,15 +72,43 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
 
     useEffect(() => {
         if (visible) {
+            const initialValues = {
+                ...DefaultNewQuestion,
+                ...questionData,
+            };
+
+            // If new question generate new ID
+            if (!initialValues.id) {
+                initialValues.id = uuidv4();
+                initialValues.type = null;
+            }
+
             form.resetFields();
-            form.setFieldsValue(DefaultNewQuestion);
-            form.setFieldsValue(questionData || { type: undefined });
+            form.setFieldsValue(initialValues);
+
+            //File/image handling
+            setTempFile(null);
+            setFileUrl(null);
+            if (questionData && questionData.imageFile) {
+                const loadImage = async () => {
+                    const url = await getImageUrl(form.getFieldValue('id'));
+                    setFileUrl(url);
+                };
+    
+                loadImage();
+            }
         }
     }, [questionData, visible]);
 
     const onFinish = (formData) => {
+        if(tempFile && form.getFieldValue('imageFile')){
+            saveFileChange(form.getFieldValue('id'), tempFile);
+        } else if (!tempFile && !form.getFieldValue('imageFile')){
+            saveFileChange(form.getFieldValue('id'), null);
+        }
+
         const newQuestion = {
-            id: form.getFieldValue('id') || uuidv4(),
+            id: form.getFieldValue('id'),
             question: form.getFieldValue('question') || "",
             description: form.getFieldValue('description') || "",
             type: form.getFieldValue('type') || QuestionTypes.MULTICHOICE,
@@ -95,13 +139,11 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
     };
 
     const handleCancel = (e) => {
-
         onClose();
     };
 
     return (
         <Modal open={visible} title="Add Question" onCancel={handleCancel} footer={null}>
-
             <Form
                 form={form}
                 initialValues={questionData}
@@ -173,7 +215,10 @@ const QuestionForm = ({ visible, onClose, onSave, questionData }) => {
                                             {/* Image Upload Section */}
                                             <div className="mt-6 pt-2 border-t border-gray-300">
                                                 <span className="font-semibold">Add an Image (Optional):</span>
-                                                <ImageUpload questionData={questionData} saveFileChange={handleFileChange} />
+                                                <ImageUpload
+                                                    fileUrl={fileUrl}
+                                                    saveFileChange={handleFileChange}
+                                                />
 
                                             </div>
                                         </div>

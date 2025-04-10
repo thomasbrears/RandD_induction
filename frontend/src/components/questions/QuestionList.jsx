@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/sortable";
 import QuestionItem from "./QuestionItem";
 
-const QuestionList = ({ questions = [], setQuestions, onQuestionEdit}) => {
+const QuestionList = ({ questions = [], setQuestions, onQuestionEdit, getImageUrl}) => {
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -49,6 +49,7 @@ const QuestionList = ({ questions = [], setQuestions, onQuestionEdit}) => {
               onDeleteQuestion={handleQuestionDelete}
               onQuestionEdit={onQuestionEdit}
               index={index} 
+              getImageUrl={getImageUrl}
             />
           ))}
         </ul>

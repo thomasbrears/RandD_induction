@@ -1,33 +1,32 @@
-import { messageWarning } from '../../utils/notificationService';
-import useAuth from "../../hooks/useAuth";
-import { getSignedUrl } from "../../api/FileApi";
 import { useEffect, useState } from "react";
 
-const FileUploadQuestion = ({ question }) => {
-  const { user, loading: authLoading } = useAuth();
+const FileUploadQuestion = ({ question, getImageUrl }) => {
   const [imageUrl, setImageUrl] = useState(null);
 
   useEffect(() => {
-    if (question.imageFile && !authLoading) {
-      const fetchImage = async () => {
-        try {
-          const result = await getSignedUrl(user, question.imageFile);
-          setImageUrl(result.url);
-        } catch (err) {
-          messageWarning(err.response?.data?.message || "An error occurred");
-        }
+    if (question.imageFile) {
+      const loadImage = async () => {
+          const url = await getImageUrl(question.id);
+          setImageUrl(url);
       };
-      fetchImage();
-    }
-  }, [user, authLoading, question]);
+
+      loadImage();
+  } else {
+      setImageUrl(null);
+  }
+  }, [question.imageFile]);
 
   const handleExpiredImage = async () => {
-    try {
-      const result = await getSignedUrl(user, question.imageFile);
-      setImageUrl(result.url);
-    } catch (err) {
-      console.error("Failed to refresh signed URL:", err);
-    }
+    if (question.imageFile) {
+      const loadImage = async () => {
+          const url = await getImageUrl(question.id);
+          setImageUrl(url);
+      };
+
+      loadImage();
+  } else {
+      setImageUrl(null);
+  }
   };
 
   return (

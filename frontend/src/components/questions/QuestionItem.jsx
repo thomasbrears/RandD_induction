@@ -16,7 +16,7 @@ import QuestionTypes from "../../models/QuestionTypes";
 import ConfirmationModal from "../ConfirmationModal";
 import { Trash } from "lucide-react";
 
-const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index }) => {
+const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index, getImageUrl }) => {
     const [hasExpandedBefore, setHasExpandedBefore] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const contentRef = useRef(null);
@@ -84,30 +84,37 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index }) => 
             case QuestionTypes.TRUE_FALSE:
                 return <TrueFalseQuestion
                     question={question}
+                    getImageUrl={getImageUrl}
                 />;
             case QuestionTypes.MULTICHOICE:
                 return <MultichoiceQuestion
                     question={question}
+                    getImageUrl={getImageUrl}
                 />;
             case QuestionTypes.DROPDOWN:
                 return <DropdownQuestion
                     question={question}
+                    getImageUrl={getImageUrl}
                 />;
             case QuestionTypes.FILE_UPLOAD:
                 return <FileUploadQuestion
                     question={question}
+                    getImageUrl={getImageUrl}
                 />;
             case QuestionTypes.YES_NO:
                 return <YesNoQuestion
                     question={question}
+                    getImageUrl={getImageUrl}
                 />;
             case QuestionTypes.SHORT_ANSWER:
                 return <ShortAnswerQuestion
                     question={question}
+                    getImageUrl={getImageUrl}
                 />;
             case QuestionTypes.INFORMATION:
                 return <InformationQuestion
                     question={question}
+                    getImageUrl={getImageUrl}
                 />;
             default:
                 return <span>{question.question}</span>;

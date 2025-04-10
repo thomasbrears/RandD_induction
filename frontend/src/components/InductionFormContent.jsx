@@ -5,7 +5,7 @@ import QuestionForm from "../components/questions/QuestionForm";
 import TiptapEditor from "./TiptapEditor";
 import { Select } from "antd";
 
-const InductionFormContent = ({ induction, setInduction }) => {
+const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileChange }) => {
     const [Departments, setDepartments] = useState([]);
     const [showQuestionModal, setShowQuestionModal] = useState(false);
     const [validationErrors, setValidationErrors] = useState({});
@@ -100,6 +100,8 @@ const InductionFormContent = ({ induction, setInduction }) => {
                 onClose={handleCloseModal}
                 onSave={handleSaveQuestion}
                 questionData={editingQuestion}
+                getImageUrl={getImageUrl}
+                saveFileChange={saveFileChange}
             />
 
             <div className="bg-white p-6 rounded-lg shadow-md space-y-6">
@@ -161,6 +163,7 @@ const InductionFormContent = ({ induction, setInduction }) => {
                         questions={induction.questions}
                         setQuestions={handleUpdateQuestions}
                         onQuestionEdit={handleQuestionEdit}
+                        getImageUrl={getImageUrl}
                     />
                 </div>
 
