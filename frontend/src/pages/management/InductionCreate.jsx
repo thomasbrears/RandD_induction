@@ -31,10 +31,11 @@ const InductionCreate = () => {
   const [showResult, setShowResult] = useState(false);
   const [actionType, setActionType] = useState(null);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
-  const [savingInProgress, setSavingInProgress] = useState(false);
   const [Departments, setDepartments] = useState([]);
   const navigate = useNavigate();
   const [fileBuffer, setFileBuffer] = useState(new Map());
+  const [loading, setLoading] = useState(false);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   useEffect(() => {
     const getDepartments = async () => {
@@ -64,20 +65,20 @@ const InductionCreate = () => {
 
   const handleUploadNewQuestionFiles = async () => {
     let updatedInduction = { ...induction };
-  
+
     for (const q of induction.questions) {
       const hasFileInBuffer = fileBuffer.has(q.id);
       const currentFileName = q.imageFile;
-  
+
       if (hasFileInBuffer) {
         const file = fileBuffer.get(q.id);
         const finalFileName = `${q.id}_${file.name}`;
-  
+
         if (currentFileName !== finalFileName) {
           try {
             const result = await uploadFile(user, file, finalFileName);
             const uploadedFileName = result.gcsFileName || finalFileName;
-  
+
             updatedInduction = {
               ...updatedInduction,
               questions: updatedInduction.questions.map((question) =>
@@ -92,7 +93,7 @@ const InductionCreate = () => {
         }
       }
     }
-  
+
     return updatedInduction;
   };
 
@@ -126,14 +127,15 @@ const InductionCreate = () => {
   };
 
   const handleSubmit = async () => {
-    setSavingInProgress(true);
-  
+    setLoading(true);
+    setLoadingMessage(`Creating new Induction...`);
+
     // Upload files first
     const updatedInduction = await handleUploadNewQuestionFiles();
-  
+
     if (user) {
       const result = await createNewInduction(user, updatedInduction);
-      setSavingInProgress(false);
+      setLoading(false);
       if (result) {
         notifySuccess("Induction created successfully!");
       } else {
@@ -326,6 +328,7 @@ const InductionCreate = () => {
           )}
 
           {/* Main content area */}
+          {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
           <div className="flex bg-gray-50 w-full">
             {/* Management Sidebar */}
             <div className="hidden md:flex">
@@ -358,34 +361,28 @@ const InductionCreate = () => {
                     </div>
                   }
                 >
-                  {savingInProgress ? (
-                    <div className="flex justify-center items-center">
-                      <Loading message="Creating Induction..." />
-                    </div>
-                  ) : (
-                    <>
-                      {actionType === "submit" && <p>Are you sure you want to submit this induction?</p>}
-                      {actionType === "prompt" && (
-                        <>
-                          <p>Some details are missing. Please review the list below and try again.</p>
+                  <>
+                    {actionType === "submit" && <p>Are you sure you want to submit this induction?</p>}
+                    {actionType === "prompt" && (
+                      <>
+                        <p>Some details are missing. Please review the list below and try again.</p>
 
-                          {checkForMissingFields().length > 0 && (
-                            <>
-                              <div className="mt-4"></div>
-                              <div className="p-4 bg-gray-50 border-l-4 border-gray-300 text-gray-700 rounded-md">
-                                <p className="font-medium">Issues that need attention:</p>
-                                <ul className="list-disc list-inside mt-2 space-y-1">
-                                  {checkForMissingFields().map((field) => (
-                                    <li key={field} className="ml-4">{field}</li>
-                                  ))}
-                                </ul>
-                              </div>
-                            </>
-                          )}
-                        </>
-                      )}
-                    </>
-                  )}
+                        {checkForMissingFields().length > 0 && (
+                          <>
+                            <div className="mt-4"></div>
+                            <div className="p-4 bg-gray-50 border-l-4 border-gray-300 text-gray-700 rounded-md">
+                              <p className="font-medium">Issues that need attention:</p>
+                              <ul className="list-disc list-inside mt-2 space-y-1">
+                                {checkForMissingFields().map((field) => (
+                                  <li key={field} className="ml-4">{field}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </>
+                        )}
+                      </>
+                    )}
+                  </>
                 </Modal>
 
                 <div className="flex-1 min-w-0">
