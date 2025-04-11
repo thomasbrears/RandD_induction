@@ -66,6 +66,166 @@ const InductionFormPage = () => {
   // Add state to track when progress was last saved
   const [lastSaved, setLastSaved] = useState(null);
 
+  // Add a side menu component for mobile navigation
+  const MobileSideNavigation = ({ 
+    questions, 
+    currentIndex, 
+    onNavClick, 
+    answeredQuestions,
+    isOpen,
+    onClose 
+  }) => {
+    if (!isOpen) return null;
+    
+    return (
+      <div className="fixed inset-0 z-50 overflow-hidden lg:hidden">
+        {/* Background overlay */}
+        <div 
+          className="absolute inset-0 bg-gray-600 bg-opacity-75" 
+          onClick={onClose}
+        ></div>
+        
+        {/* Side panel */}
+        <div className="absolute inset-y-0 right-0 max-w-xs w-3/4 flex flex-col bg-white shadow-xl">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+            <h3 className="text-lg font-medium text-gray-900">Questions</h3>
+            <button 
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700 focus:outline-none"
+            >
+              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+          
+          <div className="flex-1 overflow-y-auto py-4 px-2">
+            <div className="grid grid-cols-4 gap-2">
+              {questions.map((question, index) => {
+                const isAnswered = answeredQuestions[question.id];
+                const isCurrent = index === currentIndex;
+                
+                return (
+                  <button
+                    key={question.id}
+                    onClick={() => {
+                      onNavClick(index);
+                      onClose();
+                    }}
+                    className={`
+                      rounded-full w-10 h-10 flex items-center justify-center text-sm font-medium
+                      ${isAnswered 
+                        ? 'bg-green-100 text-green-800 border border-green-300' 
+                        : 'bg-gray-100 text-gray-600 border border-gray-300'}
+                      ${isCurrent ? 'ring-2 ring-offset-2 ring-gray-500' : ''}
+                    `}
+                  >
+                    {index + 1}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // In your main InductionFormPage component, add state for mobile menu:
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // Add the mobile navigation toggle button and menu to your component
+  const renderMobileNavToggle = () => {
+    // Don't show in desktop view or when not started
+    if (!started || !induction) return null;
+    
+    return (
+      <div className="lg:hidden fixed bottom-4 right-4 z-40">
+        <button
+          onClick={() => setMobileMenuOpen(true)}
+          className="bg-gray-800 text-white rounded-full p-3 shadow-lg flex items-center justify-center"
+          aria-label="Open question navigation"
+        >
+          <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16m-7 6h7" />
+          </svg>
+        </button>
+        
+        <MobileSideNavigation
+          questions={induction.questions}
+          currentIndex={currentQuestionIndex}
+          onNavClick={handleQuestionNavigation}
+          answeredQuestions={answeredQuestions}
+          isOpen={mobileMenuOpen}
+          onClose={() => setMobileMenuOpen(false)}
+        />
+      </div>
+    );
+  };
+
+  // Update the progress bar with enhanced save indicator
+  const renderProgressBar = () => {
+    if (!induction || !induction.questions || induction.questions.length === 0) return null;
+
+    // Filter out INFORMATION type questions for progress calculation
+    const totalQuestions = induction.questions.filter(q => q.type !== QuestionTypes.INFORMATION).length;
+    
+    // Count answered questions (excluding information blocks)
+    const answeredCount = Object.keys(answeredQuestions).filter(id => {
+      const question = induction.questions.find(q => q.id === id);
+      return question && question.type !== QuestionTypes.INFORMATION;
+    }).length;
+    
+    // Calculate progress percentage based on answered questions
+    const progressPercentage = totalQuestions > 0 ? Math.floor((answeredCount / totalQuestions) * 100) : 0;
+    
+    return (
+      <div className="mb-4">
+        <div className="flex justify-between mb-1">
+          <span className="text-xs font-semibold text-gray-500">Progress</span>
+          <span className="text-xs font-semibold text-gray-500">{progressPercentage}%</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2.5">
+          <div className="bg-gray-600 h-2.5 rounded-full" style={{ width: `${progressPercentage}%` }}></div>
+        </div>
+        
+        {/* Update the saved progress indicator with more information */}
+        {lastSaved && (
+          <div className="mt-1 flex items-center">
+            <span className="text-xs text-gray-500">
+              <span className="inline-block w-2 h-2 rounded-full bg-green-500 mr-1"></span>
+              <div className="relative inline-block group">
+                <span>Saved locally</span>
+                <div className="absolute bottom-full left-0 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
+                  Progress is saved to this browser on this device only. It will be lost if you clear your browser data or switch devices.
+                </div>
+              </div>
+              <span className="text-gray-400 ml-1">
+                {new Date(lastSaved).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Update the question navigation to work when in all questions view
+  const handleQuestionNavigation = (index) => {
+    if (index >= 0 && index < induction.questions.length) {
+      // Allow navigation even in all-questions view
+      setCurrentQuestionIndex(index);
+      
+      // If we're in all-questions view, exit it
+      if (showAllQuestions) {
+        setShowAllQuestions(false);
+      }
+      
+      // Save current state
+      saveProgressToLocalStorage();
+    }
+  };
+
   // Helper function to render the appropriate question type
   const renderQuestionByType = (question, answer, handleAnswerChange) => {
     // Determine if this question is required (default to true)
@@ -90,7 +250,8 @@ const InductionFormPage = () => {
             <div className="flex items-center">
               <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
             </div>
-            {hint}
+            {/* Only show hint if feedback is showing and answer is incorrect */}
+            {answerFeedback.showFeedback && !answerFeedback.isCorrect && hint}
             {question.options.map((option, index) => (
               <div key={index} className="flex items-center">
                 <input
@@ -116,7 +277,8 @@ const InductionFormPage = () => {
             <div className="flex items-center">
               <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
             </div>
-            {hint}
+            {/* Only show hint if feedback is showing and answer is incorrect */}
+            {answerFeedback.showFeedback && !answerFeedback.isCorrect && hint}
             {question.options.map((option, index) => (
               <div key={index} className="flex items-center">
                 <input
@@ -142,7 +304,8 @@ const InductionFormPage = () => {
             <div className="flex items-center">
               <p className="text-sm font-medium text-gray-700">Select option(s){requiredIndicator}</p>
             </div>
-            {hint}
+            {/* Only show hint if feedback is showing and answer is incorrect */}
+            {answerFeedback.showFeedback && !answerFeedback.isCorrect && hint}
             {question.options.map((option, index) => (
               <div key={index} className="flex items-center">
                 <input
@@ -178,7 +341,8 @@ const InductionFormPage = () => {
             <div className="flex items-center mb-2">
               <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
             </div>
-            {hint}
+            {/* Only show hint if feedback is showing and answer is incorrect */}
+            {answerFeedback.showFeedback && !answerFeedback.isCorrect && hint}
             <select
               value={answer}
               onChange={(e) => handleAnswerChange(e.target.value)}
@@ -200,7 +364,8 @@ const InductionFormPage = () => {
             <div className="flex items-center mb-2">
               <p className="text-sm font-medium text-gray-700">Enter your answer{requiredIndicator}</p>
             </div>
-            {hint}
+            {/* Only show hint if feedback is showing and answer is incorrect */}
+            {answerFeedback.showFeedback && !answerFeedback.isCorrect && hint}
             <textarea
               rows={4}
               value={answer || ''}
@@ -210,7 +375,6 @@ const InductionFormPage = () => {
                 
                 // Also explicitly save progress after a short delay
                 setTimeout(() => {
-                  console.log("Saving short answer progress...", e.target.value);
                   if (induction && induction.id) {
                     const updatedAnswers = {
                       ...answers,
@@ -248,7 +412,8 @@ const InductionFormPage = () => {
             ) : (
               <p className="text-gray-500 italic">Information block</p>
             )}
-            {hint}
+            {/* Only show hint if feedback is showing and answer is incorrect */}
+            {answerFeedback.showFeedback && !answerFeedback.isCorrect && hint}
           </div>
         );
         
@@ -258,7 +423,8 @@ const InductionFormPage = () => {
             <div className="flex items-center mb-2">
               <p className="text-sm font-medium text-gray-700">Upload a file{requiredIndicator}</p>
             </div>
-            {hint}
+            {/* Only show hint if feedback is showing and answer is incorrect */}
+            {answerFeedback.showFeedback && !answerFeedback.isCorrect && hint}
             <input 
               type="file" 
               onChange={(e) => handleAnswerChange(e.target.files[0])} 
@@ -465,13 +631,6 @@ const InductionFormPage = () => {
       lastUpdated: new Date().toISOString()
     };
     
-    console.log("Saving progress to localStorage:", {
-      inductionId: induction.id,
-      answersCount: Object.keys(answers || {}).length,
-      currentQuestionIndex,
-      answeredQuestionsCount: Object.keys(answeredQuestions || {}).length
-    });
-    
     // Stringify the data to ensure it's saved correctly
     const serializedData = JSON.stringify(progress);
     localStorage.setItem(`induction_progress_${induction.id}`, serializedData);
@@ -485,23 +644,10 @@ const InductionFormPage = () => {
     try {
       const savedProgress = localStorage.getItem(`induction_progress_${induction.id}`);
       if (!savedProgress) {
-        console.log("No saved progress found for induction:", induction.id);
         return false;
       }
       
-      console.log("Found saved progress, attempting to parse...");
       const progress = JSON.parse(savedProgress);
-      
-      // Check the structure of the parsed data
-      console.log("Parsed progress data:", {
-        hasAnswers: !!progress.answers,
-        answersCount: progress.answers ? Object.keys(progress.answers).length : 0,
-        hasCurrentIndex: progress.currentQuestionIndex !== undefined,
-        currentIndex: progress.currentQuestionIndex,
-        hasAnsweredQuestions: !!progress.answeredQuestions,
-        answeredQuestionsCount: progress.answeredQuestions ? Object.keys(progress.answeredQuestions).length : 0,
-        lastUpdated: progress.lastUpdated
-      });
       
       // Check if the saved progress is recent (within the last 24 hours)
       const lastUpdated = new Date(progress.lastUpdated);
@@ -510,23 +656,13 @@ const InductionFormPage = () => {
       
       // Validate the date to make sure it's not in the future
       if (lastUpdated > now) {
-        console.warn("Saved date is in the future, resetting to current time");
         lastUpdated.setTime(now.getTime());
       }
       
       if (hoursSinceUpdate > 24) {
-        console.log("Saved progress is older than 24 hours, clearing...");
         localStorage.removeItem(`induction_progress_${induction.id}`);
         return false;
       }
-      
-      // Log what we're restoring for debugging
-      console.log("Restoring progress:", {
-        answersCount: Object.keys(progress.answers || {}).length,
-        currentQuestionIndex: progress.currentQuestionIndex,
-        answeredQuestionsCount: Object.keys(progress.answeredQuestions || {}).length,
-        lastUpdated: lastUpdated.toLocaleString()
-      });
       
       // Make sure we're using structurally valid data
       const validAnswers = progress.answers && typeof progress.answers === 'object' ? progress.answers : {};
@@ -542,7 +678,6 @@ const InductionFormPage = () => {
       
       return true;
     } catch (error) {
-      console.error("Error loading saved progress:", error);
       // Try to clean up any corrupted data
       localStorage.removeItem(`induction_progress_${induction.id}`);
       return false;
@@ -552,13 +687,6 @@ const InductionFormPage = () => {
   // Set up auto-save at regular intervals and on certain actions
   useEffect(() => {
     if (!started || !induction || !induction.id) return;
-    
-    // Log current state for debugging
-    console.log("Current state before saving:", {
-      answersCount: Object.keys(answers || {}).length,
-      answeredQuestionsCount: Object.keys(answeredQuestions || {}).length,
-      currentQuestionIndex
-    });
     
     // Save progress whenever answers change (with debounce)
     const saveTimeout = setTimeout(() => {
@@ -578,14 +706,7 @@ const InductionFormPage = () => {
   // Load saved progress when induction loads and user starts
   useEffect(() => {
     if (started && induction && induction.id) {
-      console.log("User started induction, attempting to load saved progress");
-      const progressLoaded = loadProgressFromLocalStorage();
-      
-      if (progressLoaded) {
-        console.log("Successfully loaded saved progress");
-      } else {
-        console.log("No saved progress found or progress failed to load");
-      }
+      loadProgressFromLocalStorage();
     }
   }, [started, induction?.id]);
 
@@ -856,6 +977,46 @@ const InductionFormPage = () => {
     }
   };
 
+  // Add the validation function back
+  // Function to check if all required questions are answered
+  const checkAllRequiredQuestionsAnswered = () => {
+    if (!induction || !induction.questions) return true;
+    
+    const missingAnswers = [];
+    
+    induction.questions.forEach((question, index) => {
+      // Skip validation for INFORMATION type questions
+      if (question.type === QuestionTypes.INFORMATION) return;
+      
+      // Check if question is required (default to true if not specified)
+      const isRequired = question.isRequired !== false;
+      
+      if (isRequired) {
+        const answer = answers[question.id];
+        
+        // Check if answer is missing
+        if (answer === undefined || answer === '' || 
+            (Array.isArray(answer) && answer.length === 0)) {
+          missingAnswers.push({
+            index: index + 1,
+            question: question.question
+          });
+        }
+      }
+    });
+    
+    return missingAnswers.length === 0;
+  };
+
+  // Handler for moving to submission screen with validation
+  const handleGoToSubmissionScreen = () => {
+    if (checkAllRequiredQuestionsAnswered()) {
+      setShowSubmissionScreen(true);
+    } else {
+      notifyError('Missing Required Answers', 'Please answer all required questions before submitting.');
+    }
+  };
+
   // Submit the induction
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -1079,81 +1240,6 @@ const InductionFormPage = () => {
   const estimatedTime = calculateEstimatedTime(induction?.questions);
   const estimatedTimeRange = formatTimeRange(estimatedTime);
 
-  // New function to handle sidebar navigation
-  const handleQuestionNavigation = (index) => {
-    setCurrentQuestionIndex(index);
-    // Reset feedback when navigating
-    setAnswerFeedback({
-      isCorrect: null,
-      message: '',
-      showFeedback: false
-    });
-  };
-
-  // Mobile sidebar state
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(prev => !prev);
-  };
-
-  // Function to check if all required questions are answered
-  const checkAllRequiredQuestionsAnswered = () => {
-    const missingAnswers = [];
-    
-    induction.questions.forEach((question, index) => {
-      // Skip validation for INFORMATION type questions
-      if (question.type === QuestionTypes.INFORMATION) return;
-      
-      // Check if question is required (default to true if not specified)
-      const isRequired = question.isRequired !== false;
-      
-      if (isRequired) {
-        const answer = answers[question.id];
-        
-        // Check if answer is missing
-        if (answer === undefined || answer === '' || 
-            (Array.isArray(answer) && answer.length === 0)) {
-          missingAnswers.push({
-            index: index + 1,
-            question: question.question
-          });
-        }
-      }
-    });
-    
-    return missingAnswers.length === 0;
-  };
-
-  // Handler for moving to submission screen
-  const handleGoToSubmissionScreen = () => {
-    if (checkAllRequiredQuestionsAnswered()) {
-      setShowSubmissionScreen(true);
-    } else {
-      notifyError('Missing Required Answers', 'Please answer all required questions before submitting.');
-    }
-  };
-
-  // Handler for going back from submission screen to questions
-  const handleBackToQuestions = () => {
-    setShowSubmissionScreen(false);
-  };
-
-  // Helper function to format the last saved time
-  const formatLastSaved = (date) => {
-    if (!date) return '';
-    
-    const now = new Date();
-    const diff = Math.floor((now - date) / 1000); // Difference in seconds
-    
-    if (diff < 5) return 'Just now';
-    if (diff < 60) return `${diff} seconds ago`;
-    if (diff < 120) return '1 minute ago';
-    if (diff < 3600) return `${Math.floor(diff / 60)} minutes ago`;
-    if (diff < 7200) return '1 hour ago';
-    return `${Math.floor(diff / 3600)} hours ago`;
-  };
-
   // Render based on view state
   if (viewState === STATES.LOADING) {
     return <Loading />;
@@ -1226,7 +1312,7 @@ const InductionFormPage = () => {
                 {/* View Mode Toggle - Mobile only */}
                 <div className="mb-4 flex justify-end md:hidden">
                   <button
-                    onClick={toggleMobileMenu}
+                    onClick={() => setMobileMenuOpen(true)}
                     className="w-full flex items-center justify-between px-4 py-2 bg-gray-100 rounded-md text-gray-700"
                   >
                     <span>Question Navigator</span>
@@ -1339,36 +1425,7 @@ const InductionFormPage = () => {
                         /* Slideshow View - Single question displayed */
                         <>
                           {/* Progress indicator */}
-                          <div className="mb-4">
-                            <div className="flex justify-between mb-2">
-                              <span className="text-sm font-medium">Progress</span>
-                              <span className="text-sm font-medium">
-                                {showSubmissionScreen ? 'Final Review' : `${currentQuestionIndex + 1} of ${induction.questions.length}`}
-                              </span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5">
-                              <div 
-                                className="bg-gray-800 h-2.5 rounded-full" 
-                                style={{ width: showSubmissionScreen ? '100%' : `${((currentQuestionIndex + 1) / induction.questions.length) * 100}%` }}
-                              ></div>
-                            </div>
-                            
-                            {/* Last saved indicator */}
-                            {lastSaved && (
-                              <div className="mt-2 text-xs text-gray-500 flex items-center justify-end">
-                                <svg 
-                                  className="w-3 h-3 mr-1" 
-                                  xmlns="http://www.w3.org/2000/svg" 
-                                  fill="none" 
-                                  viewBox="0 0 24 24" 
-                                  stroke="currentColor"
-                                >
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-                                </svg>
-                                Progress saved {formatLastSaved(lastSaved)}
-                              </div>
-                            )}
-                          </div>
+                          {renderProgressBar()}
                           
                           {/* Show either submission screen or current question */}
                           {showSubmissionScreen ? (
@@ -1399,7 +1456,7 @@ const InductionFormPage = () => {
                               <div className="flex justify-between mt-8">
                                 <button
                                   type="button"
-                                  onClick={handleBackToQuestions}
+                                  onClick={() => setShowSubmissionScreen(false)}
                                   className="px-4 py-2 border border-gray-300 rounded-md bg-white text-gray-800 hover:bg-gray-50"
                                 >
                                   Back to Questions
@@ -1562,6 +1619,9 @@ const InductionFormPage = () => {
         inductionName={induction?.name}
         userInductionId={userInduction?.id}
       />
+
+      {/* Add the mobile navigation toggle */}
+      {renderMobileNavToggle()}
     </>
   );
 };
