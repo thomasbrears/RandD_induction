@@ -136,8 +136,8 @@ const InductionFormPage = () => {
 
   // Add the mobile navigation toggle button and menu to your component
   const renderMobileNavToggle = () => {
-    // Don't show in desktop view or when not started
-    if (!started || !induction) return null;
+    // Don't show in desktop view or when not started or when in all-questions view
+    if (!started || !induction || showAllQuestions) return null;
     
     return (
       <div className="lg:hidden fixed bottom-4 right-4 z-40">
@@ -1310,79 +1310,78 @@ const InductionFormPage = () => {
             {induction.questions && induction.questions.length > 0 ? (
               <div className="space-y-6">
                 {/* View Mode Toggle - Mobile only */}
-                <div className="mb-4 flex justify-end md:hidden">
-                  <button
-                    onClick={() => setMobileMenuOpen(true)}
-                    className="w-full flex items-center justify-between px-4 py-2 bg-gray-100 rounded-md text-gray-700"
-                  >
-                    <span>Question Navigator</span>
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      className={`h-5 w-5 transition-transform ${mobileMenuOpen ? 'transform rotate-180' : ''}`} 
-                      viewBox="0 0 20 20" 
-                      fill="currentColor"
+                {!showAllQuestions && (
+                  <div className="mb-4 flex justify-end md:hidden">
+                    <button
+                      onClick={() => setMobileMenuOpen(true)}
+                      className="w-full flex items-center justify-between px-4 py-2 bg-gray-100 rounded-md text-gray-700 hover:bg-gray-200"
                     >
-                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
-                
-                {/* Main flex container for sidebar and content */}
-                <div className="flex flex-col md:flex-row">
-                  {/* Question numbers side panel - hidden on mobile unless toggled */}
-                  <div className={`${mobileMenuOpen ? 'block' : 'hidden'} md:block md:w-1/4 bg-gray-50 p-4 border-r`}>
-                    <h2 className="text-lg font-medium mb-4">Questions</h2>
-                    <div className="space-y-2">
-                      {induction.questions.map((question, index) => (
-                        <button
-                          key={question.id}
-                          onClick={() => handleQuestionNavigation(index)}
-                          className={`w-full text-left px-3 py-2 rounded-md flex items-center ${
-                            currentQuestionIndex === index 
-                              ? 'bg-blue-100 text-blue-800 border border-blue-300'
-                              : answeredQuestions[question.id]
-                                ? 'bg-green-50 text-green-700 border border-green-200'
-                                : 'text-gray-700 hover:bg-gray-100'
-                          }`}
-                        >
-                          <span className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full mr-2 text-sm ${
-                            currentQuestionIndex === index 
-                              ? 'bg-blue-500 text-white'
-                              : answeredQuestions[question.id]
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-200 text-gray-700'
-                          }`}>
-                            {index + 1}
-                          </span>
-                          <span className="truncate">{question.question.length > 20 ? question.question.substring(0, 20) + '...' : question.question}</span>
-                        </button>
-                      ))}
-                    </div>
+                      <span>Question Navigator</span>
+                      <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                      </svg>
+                    </button>
                   </div>
+                )}
+                
+                {/* Main flex container for sidebar and content - adjust layout for list view */}
+                <div className="flex flex-col md:flex-row">
+                  {/* Question numbers side panel - completely hidden in list view on desktop */}
+                  {!showAllQuestions && (
+                    <div className={`${mobileMenuOpen ? 'block' : 'hidden'} md:block md:w-1/4 bg-gray-50 p-4 border-r`}>
+                      <h2 className="text-lg font-medium mb-4">Questions</h2>
+                      <div className="space-y-2">
+                        {induction.questions.map((question, index) => (
+                          <button
+                            key={question.id}
+                            onClick={() => handleQuestionNavigation(index)}
+                            className={`w-full text-left px-3 py-2 rounded-md flex items-center ${
+                              currentQuestionIndex === index 
+                                ? 'bg-blue-100 text-blue-800 border border-blue-300'
+                                : answeredQuestions[question.id]
+                                  ? 'bg-green-50 text-green-700 border border-green-200'
+                                  : 'text-gray-700 hover:bg-gray-100'
+                            }`}
+                          >
+                            <span className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full mr-2 text-sm ${
+                              currentQuestionIndex === index 
+                                ? 'bg-blue-500 text-white'
+                                : answeredQuestions[question.id]
+                                  ? 'bg-green-100 text-green-700'
+                                  : 'bg-gray-200 text-gray-700'
+                            }`}>
+                              {index + 1}
+                            </span>
+                            <span className="truncate">{question.question.length > 20 ? question.question.substring(0, 20) + '...' : question.question}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   
-                  {/* Main content area */}
-                  <div className="md:w-3/4 p-6">
+                  {/* Main content area - full width in list view */}
+                  <div className={`${showAllQuestions ? 'w-full' : 'md:w-3/4'} p-6`}>
                     <form onSubmit={handleSubmit} className="space-y-6">
                       {/* View Mode Toggle */}
                       <div className="mb-4 flex justify-end">
                         <button
                           type="button"
                           onClick={toggleViewMode}
-                          className="text-gray-600 hover:text-gray-800 text-sm font-medium flex items-center"
+                          className="text-gray-700 hover:text-gray-900 font-medium flex items-center px-3 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200"
                         >
                           {showAllQuestions ? (
                             <>
-                              <span>Switch to Slideshow View</span>
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5l-7 7 7 7" />
                               </svg>
+                              <span>Switch to Slideshow View</span>
                             </>
                           ) : (
                             <>
-                              <span>View All Questions</span>
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                               </svg>
+                              <span>View All Questions</span>
                             </>
                           )}
                         </button>
