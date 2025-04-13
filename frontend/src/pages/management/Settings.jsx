@@ -1,36 +1,108 @@
 import React, { useEffect, useState } from 'react';
 import { Helmet } from 'react-helmet-async';
 import { useNavigate } from 'react-router-dom'; 
-import { Tabs } from 'antd';
+import { Tabs, Card, Row, Col, Typography, Divider, Skeleton } from 'antd';
 import { notifyError } from '../../utils/notificationService';
 import { AiOutlineSetting } from 'react-icons/ai';
 import { FaBuilding, FaUserTie } from 'react-icons/fa';
 import { IoLocation } from "react-icons/io5";
+import { EditOutlined } from '@ant-design/icons';
 import useAuth from '../../hooks/useAuth';
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
 import ManageDepartments from '../../components/management/ManageDepartments';
 import ManageLocations from '../../components/management/ManageLocations';
 import ManagePositions from '../../components/management/ManagePositions';
+import ManageContent from '../../components/management/ManageContent';
+
+const { Title, Paragraph } = Typography;
+const { TabPane } = Tabs;
 
 const Settings = () => {
-  const { user } = useAuth(); // Get the user object from useAuth hook
-  const [loading, setLoading] = useState(true); // State to handle loading
-  const navigate = useNavigate(); // Use navigate for redirection
+  const { user } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('1');
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (user) {
-      setLoading(false); // Stop loading if the user is authenticated
+      setLoading(false);
     } else if (!user && !loading) {
-      // Redirect non-authenticated users after loading
       notifyError('Authentication required', 'You must be logged in to access this page');
       navigate('/login');
     }
   }, [user, loading, navigate]);
 
+  const handleTabChange = (key) => {
+    setActiveTab(key);
+  };
+
+  const settings = [
+    {
+      key: 'departments',
+      title: 'Departments',
+      description: 'View, add, and manage staff departments.',
+      icon: <FaBuilding className="text-blue-500 text-3xl" />,
+      tabKey: '2'
+    },
+    {
+      key: 'positions',
+      title: 'Positions',
+      description: 'View, add, and manage staff positions.',
+      icon: <FaUserTie className="text-green-500 text-3xl" />,
+      tabKey: '3'
+    },
+    {
+      key: 'locations',
+      title: 'Locations',
+      description: 'View, add, and manage staff locations.',
+      icon: <IoLocation className="text-purple-500 text-3xl" />,
+      tabKey: '4'
+    },
+    {
+      key: 'content',
+      title: 'Website Content',
+      description: 'Update content displayed across different pages of the portal.',
+      icon: <EditOutlined className="text-orange-500 text-3xl" />,
+      tabKey: '5'
+    }
+  ];
+
+  // Skeleton loading screen
+  const renderSkeletonLoader = () => {
+    return (
+      <>
+        <PageHeader
+          title="System Settings"
+          subtext="Manage the Induction Portal"
+        />
+        
+        <div className="flex md:px-0 bg-gray-50">
+          <div>
+            <ManagementSidebar />
+          </div>
+          
+          <div className="flex-1 bg-white rounded-lg shadow-md p-6">
+            <Skeleton active paragraph={{ rows: 2 }} className="mb-6" />
+            
+            <Row gutter={[16, 16]}>
+              {[1, 2, 3, 4].map(item => (
+                <Col xs={24} sm={12} lg={6} key={item}>
+                  <Card className="h-full">
+                    <Skeleton active paragraph={{ rows: 3 }} avatar={{ shape: 'circle' }} />
+                  </Card>
+                </Col>
+              ))}
+            </Row>
+          </div>
+        </div>
+      </>
+    );
+  };
+
   // Loading state
   if (loading) {
-    return <div className="text-center mt-20">Loading...</div>;
+    return renderSkeletonLoader();
   }
 
   return (
@@ -46,7 +118,7 @@ const Settings = () => {
       />
 
       {/* Main container */}
-      <div className="flex  md:px-0 bg-gray-50">
+      <div className="flex md:px-0 bg-gray-50">
         {/* Management Sidebar */}
         <div>
           <ManagementSidebar />
@@ -54,10 +126,14 @@ const Settings = () => {
 
         {/* Main content area */}
         <div className="flex-1 bg-white rounded-lg shadow-md overflow-x-auto">
-
-          <Tabs type="card">
+          <Tabs 
+            activeKey={activeTab}
+            onChange={handleTabChange}
+            type="card"
+            className="px-4"
+          >
             {/* Overview Tab */}
-            <items
+            <TabPane
               tab={
                 <span>
                   <AiOutlineSetting className="inline-block mr-2" />
@@ -66,26 +142,40 @@ const Settings = () => {
               }
               key="1"
             >
-              <div className="text-center py-6">
-                <h2 className="text-2xl font-semibold text-gray-800">Welcome to System Settings for the Induction Portal</h2>
-                <p className="text-gray-600 mt-2">
-                  Here administrators can manage key settings and option of the Induction Portal. <br /> <b>Use the tabs above to navigate through different sections.</b>
-                </p>
-
-                <div className="mt-6 bg-gray-100 p-4 rounded-lg shadow-md text-left max-w-lg mx-auto">
-                  <h3 className="text-lg font-semibold text-gray-700">What You Can Do Here:</h3>
-                  <ul className="list-disc list-inside mt-2 text-gray-600">
-                    <li><FaBuilding className="inline-block mr-2" /> View, create, edit & delete available departments.</li>
-                    <li><FaUserTie className="inline-block mr-2" /> View, create, edit & delete available positions.</li>
-                    <li><IoLocation className="inline-block mr-2" /> View, create, edit & delete available locations.</li>
-                    <li><AiOutlineSetting className="inline-block mr-2" /> More setting options coming soon</li>
-                  </ul>
+              <div className="p-6">
+                <div className="mb-6">
+                  <h1 className="text-gray-800 text-2xl">Welcome to System Settings</h1>
+                  <p className="text-gray-600 mt-2 max-w-3xl">
+                    Here administrators can manage key settings and options of the Induction Portal.
+                    Select any card below or use the tabs above to navigate to different sections.
+                  </p>
+                  <Divider className="my-6" />
                 </div>
+
+                <Row gutter={[16, 16]}>
+                  {settings.map(setting => (
+                    <Col xs={24} sm={12} lg={6} key={setting.key}>
+                      <Card
+                        hoverable
+                        className="h-full shadow-sm transition-all duration-300 hover:shadow-md"
+                        onClick={() => setActiveTab(setting.tabKey)}
+                      >
+                        <div className="flex flex-col items-center text-center h-full">
+                          <div className="mb-4 p-4 rounded-full bg-gray-50 flex items-center justify-center">
+                            {setting.icon}
+                          </div>
+                          <h1 className="mb-2 text-gray-800">{setting.title}</h1>
+                          <p className="text-gray-600">{setting.description}</p>
+                        </div>
+                      </Card>
+                    </Col>
+                  ))}
+                </Row>
               </div>
-            </items>
+            </TabPane>
 
             {/* Manage Departments Tab */}
-            <items
+            <TabPane
               tab={
                 <span>
                   <FaBuilding className="inline-block mr-2" />
@@ -95,10 +185,10 @@ const Settings = () => {
               key="2"
             >
               <ManageDepartments />
-            </items>
+            </TabPane>
 
             {/* Manage Positions Tab */}
-            <items
+            <TabPane
               tab={
                 <span>
                   <FaUserTie className="inline-block mr-2" />
@@ -108,10 +198,10 @@ const Settings = () => {
               key="3"
             >
               <ManagePositions />
-            </items>
+            </TabPane>
 
             {/* Manage Locations Tab */}
-            <items
+            <TabPane
               tab={
                 <span>
                   <IoLocation className="inline-block mr-2" />
@@ -121,7 +211,20 @@ const Settings = () => {
               key="4"
             >
               <ManageLocations />
-            </items>
+            </TabPane>
+
+            {/* Manage Content Tab */}
+            <TabPane
+              tab={
+                <span>
+                  <EditOutlined className="inline-block mr-2" />
+                  Manage Website Content
+                </span>
+              }
+              key="5"
+            >
+              <ManageContent />
+            </TabPane>
           </Tabs>
         </div>
       </div>

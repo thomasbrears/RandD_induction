@@ -1,0 +1,90 @@
+/* Base styling for the editor content */
+.ProseMirror {
+    min-height: 200px;
+    outline: none;
+  }
+  
+  /* Placeholder styling */
+  .ProseMirror p.is-editor-empty:first-child::before {
+    color: #adb5bd;
+    content: attr(data-placeholder);
+    float: left;
+    height: 0;
+    pointer-events: none;
+  }
+  
+  /* Heading styles */
+  .ProseMirror h1 {
+    font-size: 1.75em;
+    font-weight: 600;
+    line-height: 1.2;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+  }
+  
+  .ProseMirror h2 {
+    font-size: 1.5em;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+  }
+  
+  .ProseMirror h3 {
+    font-size: 1.25em;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+  }
+  
+  /* Paragraph spacing */
+  .ProseMirror p {
+    margin-bottom: 0.5em;
+    line-height: 1.5;
+  }
+  
+  /* List styling */
+  .ProseMirror ul,
+  .ProseMirror ol {
+    padding-left: 1.5em;
+    margin-bottom: 0.5em;
+  }
+  
+  .ProseMirror li {
+    margin-bottom: 0.25em;
+  }
+  
+  .ProseMirror ul li {
+    list-style-type: disc;
+  }
+  
+  .ProseMirror ol li {
+    list-style-type: decimal;
+  }
+  
+  /* Link styling */
+  .ProseMirror a {
+    color: #3b82f6;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  
+  /* Text alignment */
+  .ProseMirror .text-left {
+    text-align: left;
+  }
+  
+  .ProseMirror .text-center {
+    text-align: center;
+  }
+  
+  .ProseMirror .text-right {
+    text-align: right;
+  }
+  
+  /* Active button styling */
+  .editor-button-active {
+    background-color: #e0f2fe;
+    color: #0284c7;
+  }
