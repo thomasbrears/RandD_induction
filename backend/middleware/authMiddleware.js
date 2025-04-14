@@ -4,7 +4,8 @@ import admin from "firebase-admin";
 export const authMiddleware = async (req, res, next) => {
   // Public routes that don't require authentication
   const publicPaths = [
-    '/api/contact/submit'
+    '/api/contact/submit',
+    '/api/content'
   ];
   
   // Skip authentication for public routes

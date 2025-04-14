@@ -5,6 +5,7 @@ import useAuth from '../hooks/useAuth';
 import { getUserInductions } from '../api/UserInductionApi';
 import { notification, Button } from 'antd'; 
 import { WarningOutlined } from '@ant-design/icons';
+import DynamicContent from '../components/DynamicContent.jsx';
 
 const HomePage = () => {
     const { user } = useAuth();
@@ -198,36 +199,35 @@ const HomePage = () => {
                 )}
             </div>
 
-            {/* About Section */}
+            {/* About Section - Dynamic */}
             <div className="relative bg-cover bg-top text-white py-16 mb-16" style={{ backgroundImage: `url(/images/AUTEventsStaff.jpg)` }}>
-                {/* Dark overlay */}
                 <div className="absolute inset-0 bg-black opacity-70"></div> {/* Dark overlay on image */}
                 <h2 className="text-2xl text-center font-semibold mb-4 relative z-10">About Us</h2>
                 <div className="max-w-3xl mx-auto text-center relative z-10 leading-relaxed space-y-4">
-                <p className="text-lg"> We cater anywhere for anyone. Is it your place or ours?</p>
-                <p className="text-lg">Offering end-to-end management service from venue selection, catering, and audio-visual solutions to your event and conference needs,
-                     our team of experts will work with you to design your event from inception to completion, customizing each element to suit all budgets.</p>
-                <p className="text-lg">Our menu, lovingly crafted by our Group Chef, offers a tantalizing selection made from local produce and sustainable sources.</p>
-                <p className="text-lg">Available at our award-winning spaces in Auckland CBD and at some of the most iconic venues in town, our dedicated events team will
-                     work with you to create an impressive experience—be it a day workshop, cocktail party, or your all-important gala dinner.</p>
-                <p className="text-lg">Let us organize and manage your event so you can focus on your guests!</p>
-                <Link
-                    to="https://www.autevents.co.nz/"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md inline-block mt-4"
-                >
-                    Visit the AUT Events Website
-                </Link>
+                    <DynamicContent 
+                        section="about" 
+                        fallbackText="We cater anywhere for anyone. Is it your place or ours?"
+                    />
+                    
+                    <Link
+                        to="https://www.autevents.co.nz/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md inline-block mt-4"
+                    >Visit the AUT Events Website
+                    </Link>
                 </div>
             </div>
 
-            {/* Feedback Section */}
+            {/* Feedback Section - Dynamic */}
             <div className="bg-white text-black py-16 mb-5">
                 <h2 className="text-2xl text-center font-semibold mb-4">Contact us - We'd love to hear from you!</h2>
                 <div className="max-w-4xl mx-auto text-center">
-                    <p className="text-lg mb-8">If you have any questions, feedback or complaints, please don't hesitate to get in touch with us using the button below or by direct email to your manager.</p>
-                    <Link to="/contact" className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md text-center w-auto mx-auto">Contact us</Link>
+                    <DynamicContent 
+                        section="contact" 
+                        fallbackText="If you have any questions, feedback or complaints, please don't hesitate to get in touch with us using the button below or by direct email to your manager."
+                    />
+                    <Link to="/contact" className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md text-center w-auto mx-auto mt-8 inline-block">Contact us</Link>
                 </div>
             </div>
             
