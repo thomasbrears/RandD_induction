@@ -6,8 +6,10 @@ import { getInduction } from '../api/InductionApi';
 import { updateUserInduction, getUserInductionById } from '../api/UserInductionApi';
 import Loading from '../components/Loading';
 import InductionFeedbackModal from '../components/InductionFeedbackModal';
+import SaveRecoveryModal from '../components/takeInduction/SaveRecoveryModal';
 import QuestionTypes from '../models/QuestionTypes';
 import { notifyError, notifySuccess, messageError, messageSuccess } from '../utils/notificationService';
+import { MenuOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 
 import InductionIntro from '../components/takeInduction/InductionIntro';
 import ProgressBar from '../components/takeInduction/ProgressBar';
@@ -27,7 +29,8 @@ import {
 import {
   saveProgressToLocalStorage,
   loadProgressFromLocalStorage,
-  forceProgressSave
+  forceProgressSave,
+  setupVisibilityChangeTracking
 } from '../utils/localStorageManager';
 
 const STATES = {
@@ -89,6 +92,10 @@ const InductionFormPage = () => {
   
   // Mobile menu state
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // State for save recovery modal
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [savedProgressData, setSavedProgressData] = useState(null);
 
   // Load induction data just once on mount
   useEffect(() => {
@@ -271,34 +278,27 @@ const InductionFormPage = () => {
     };
   }, [idParam, user, navigate, loadAttempts]);
 
-  // Set up auto-save at regular intervals and on certain actions
+  // Optimised auto-save
   useEffect(() => {
     if (!started || !induction || !induction.id) return;
     
-    // Save progress whenever answers change (with debounce)
-    const saveTimeout = setTimeout(() => {
-      saveProgressToLocalStorage(induction.id, {
-        answers,
-        currentQuestionIndex,
-        answeredQuestions
-      }, setLastSaved);
-    }, 500);
+    // Function to get current progress data
+    const getCurrentProgressData = () => ({
+      answers,
+      currentQuestionIndex,
+      answeredQuestions
+    });
     
-    // Set up interval to auto-save every 30 seconds
-    const saveInterval = setInterval(() => {
-      saveProgressToLocalStorage(induction.id, {
-        answers,
-        currentQuestionIndex,
-        answeredQuestions
-      }, setLastSaved);
-    }, 30000);
+    // Set up event listeners for tab switching and page close
+    const cleanupListeners = setupVisibilityChangeTracking(
+      induction.id,
+      getCurrentProgressData,
+      setLastSaved
+    );
     
-    // Clean up interval and timeout on unmount
-    return () => {
-      clearInterval(saveInterval);
-      clearTimeout(saveTimeout);
-    };
-  }, [answers, currentQuestionIndex, answeredQuestions, started, induction?.id]);
+    // Clean up event listeners on unmount
+    return cleanupListeners;
+  }, [started, induction?.id, answers, currentQuestionIndex, answeredQuestions]);
 
   // Load saved progress when induction loads and user starts
   useEffect(() => {
@@ -306,12 +306,17 @@ const InductionFormPage = () => {
       const progressData = loadProgressFromLocalStorage(induction.id);
       
       if (progressData) {
-        setAnswers(progressData.answers || {});
-        setCurrentQuestionIndex(progressData.currentQuestionIndex || 0);
-        setAnsweredQuestions(progressData.answeredQuestions || {});
-        setLastSaved(progressData.lastUpdated ? new Date(progressData.lastUpdated) : null);
+        // total questions count to progress data for the recovery modal
+        const progressWithTotal = {
+          ...progressData,
+          totalQuestions: induction.questions.length
+        };
+        
+        // Update state to show recovery modal
+        setSavedProgressData(progressWithTotal);
+        setShowRecoveryModal(true);
       } else {
-        // Initialize with empty answers if no saved progress
+        // Initialise with empty answers if no saved progress
         const initialAnswers = {};
         induction.questions.forEach(question => {
           initialAnswers[question.id] = question.type === QuestionTypes.MULTICHOICE ? [] : '';
@@ -330,6 +335,40 @@ const InductionFormPage = () => {
     } else {
       setMobileMenuOpen(!mobileMenuOpen);
     }
+  };
+  
+  // Handler for recovering saved progress
+  const handleRecoverProgress = () => {
+    if (savedProgressData) {
+      // Load the saved progress data
+      setAnswers(savedProgressData.answers || {});
+      setCurrentQuestionIndex(savedProgressData.currentQuestionIndex || 0);
+      setAnsweredQuestions(savedProgressData.answeredQuestions || {});
+      setLastSaved(savedProgressData.lastUpdated ? new Date(savedProgressData.lastUpdated) : null);
+      
+      // Close the modal
+      setShowRecoveryModal(false);
+    }
+  };
+  
+  // Handler for starting fresh
+  const handleStartFresh = () => {
+    // Initialise with empty answers
+    const initialAnswers = {};
+    if (induction && induction.questions) {
+      induction.questions.forEach(question => {
+        initialAnswers[question.id] = question.type === QuestionTypes.MULTICHOICE ? [] : '';
+      });
+    }
+    
+    // Reset progress
+    setAnswers(initialAnswers);
+    setCurrentQuestionIndex(0);
+    setAnsweredQuestions({});
+    setLastSaved(null);
+    
+    // Close the modal
+    setShowRecoveryModal(false);
   };
 
   // Handle starting the induction
@@ -353,11 +392,20 @@ const InductionFormPage = () => {
   // Toggle between slideshow and list view
   const toggleViewMode = () => {
     setShowAllQuestions(prev => !prev);
+    
+    // Force save when view mode changes
+    if (induction && induction.id) {
+      forceProgressSave(induction.id, {
+        answers,
+        currentQuestionIndex,
+        answeredQuestions
+      }, setLastSaved);
+    }
   };
 
   // Handle answer updates
   const handleAnswer = (questionId, answer) => {
-    // Update the answers state
+    // Only update the answers state
     setAnswers(prev => {
       const newAnswers = {
         ...prev,
@@ -366,18 +414,6 @@ const InductionFormPage = () => {
       
       return newAnswers;
     });
-    
-    // Also mark question as answered if appropriate
-    const hasValidAnswer = answer !== undefined && 
-      answer !== '' && 
-      !(Array.isArray(answer) && answer.length === 0);
-      
-    if (hasValidAnswer) {
-      setAnsweredQuestions(prev => ({
-        ...prev,
-        [questionId]: true
-      }));
-    }
     
     // Clear feedback when a new answer is selected
     setAnswerFeedback({
@@ -393,9 +429,9 @@ const InductionFormPage = () => {
     const currentQuestion = induction.questions[currentQuestionIndex];
     const currentAnswer = answers[currentQuestion.id];
     
-    // For information questions, always allow proceeding without an answer
+    // For information questions, always allow proceeding and mark as answered
     if (currentQuestion.type === QuestionTypes.INFORMATION) {
-      // Mark this question as answered
+      // Mark this question as answered only now
       const updatedAnsweredQuestions = {
         ...answeredQuestions,
         [currentQuestion.id]: true
@@ -436,7 +472,7 @@ const InductionFormPage = () => {
         showFeedback: true
       });
       
-      // Mark this question as answered
+      // Mark this question as answered only after submission
       const updatedAnsweredQuestions = {
         ...answeredQuestions,
         [currentQuestion.id]: true
@@ -473,7 +509,7 @@ const InductionFormPage = () => {
     });
     
     if (validation.isCorrect) {
-      // Mark this question as correctly answered
+      // Mark this question as correctly answered ONLY when validation passes
       const updatedAnsweredQuestions = {
         ...answeredQuestions,
         [currentQuestion.id]: true
@@ -506,6 +542,13 @@ const InductionFormPage = () => {
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
+      
+      // Save progress when navigating
+      forceProgressSave(induction.id, {
+        answers,
+        currentQuestionIndex: currentQuestionIndex - 1,
+        answeredQuestions
+      }, setLastSaved);
     }
   };
 
@@ -525,8 +568,8 @@ const InductionFormPage = () => {
         setMobileMenuOpen(false);
       }
       
-      // Save current state
-      saveProgressToLocalStorage(induction.id, {
+      // Save current state when navigating between questions
+      forceProgressSave(induction.id, {
         answers,
         currentQuestionIndex: index,
         answeredQuestions
@@ -540,6 +583,13 @@ const InductionFormPage = () => {
     
     if (validation.isValid) {
       setShowSubmissionScreen(true);
+      
+      // Save progress when moving to submission screen
+      forceProgressSave(induction.id, {
+        answers,
+        currentQuestionIndex,
+        answeredQuestions
+      }, setLastSaved);
     } else {
       const errorMessage = 'Please answer all required questions before submitting.';
       notifyError('Missing Required Answers', errorMessage);
@@ -631,8 +681,9 @@ const InductionFormPage = () => {
           <p>Sorry, we couldn't find the requested induction.</p>
           <button 
             onClick={() => navigate('/inductions/my-inductions')}
-            className="mt-4 px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700"
+            className="mt-4 px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 flex items-center justify-center mx-auto"
           >
+            <ArrowLeftOutlined className="mr-2" />
             Return to My Inductions
           </button>
         </div>
@@ -651,7 +702,17 @@ const InductionFormPage = () => {
           />
         ) : (
           <div className="bg-white shadow-md rounded-lg overflow-hidden">
-            <h1 className="text-2xl font-bold p-6 break-words border-b">{induction.name}</h1>
+            {/* Title section with induction name */}
+            <div className="border-b border-gray-200">
+              <h1 className="text-2xl font-bold p-4 px-6 break-words">{induction.name}</h1>
+              
+              {/* Progress bar */}
+              <ProgressBar 
+                questions={induction.questions}
+                answeredQuestions={answeredQuestions}
+                lastSaved={lastSaved}
+              />
+            </div>
             
             {induction.questions && induction.questions.length > 0 ? (
               <div className="space-y-6">
@@ -681,16 +742,12 @@ const InductionFormPage = () => {
                         >
                           {showAllQuestions ? (
                             <>
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 5l-7 7 7 7" />
-                              </svg>
+                              <ArrowLeftOutlined className="mr-1" />
                               <span>Switch to Slideshow View</span>
                             </>
                           ) : (
                             <>
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                              </svg>
+                              <MenuOutlined className="mr-1" />
                               <span>View All Questions</span>
                             </>
                           )}
@@ -710,14 +767,7 @@ const InductionFormPage = () => {
                         />
                       ) : (
                         /* Slideshow View - Single question */
-                        <>
-                          {/* Progress indicator */}
-                          <ProgressBar 
-                            questions={induction.questions}
-                            answeredQuestions={answeredQuestions}
-                            lastSaved={lastSaved}
-                          />
-                          
+                        <>                          
                           {/* Show either submission screen or current question */}
                           {showSubmissionScreen ? (
                             <InductionCompletion
@@ -752,8 +802,9 @@ const InductionFormPage = () => {
                 <p className="text-xl text-gray-600">No questions available for this induction.</p>
                 <button 
                   onClick={() => navigate('/inductions/my-inductions')}
-                  className="mt-4 px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
+                  className="mt-4 px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 flex items-center justify-center mx-auto"
                 >
+                  <ArrowLeftOutlined className="mr-2" />
                   Return to My Inductions
                 </button>
               </div>
@@ -761,7 +812,7 @@ const InductionFormPage = () => {
           </div>
         )}
       </div>
-
+  
       {/* Feedback Modal */}
       <InductionFeedbackModal
         visible={showFeedbackModal}
@@ -769,6 +820,14 @@ const InductionFormPage = () => {
         inductionId={userInduction?.inductionId || induction?.id}
         inductionName={induction?.name}
         userInductionId={userInduction?.id}
+      />
+      
+      {/* Save Recovery Modal */}
+      <SaveRecoveryModal
+        isVisible={showRecoveryModal}
+        onRecover={handleRecoverProgress}
+        onStartFresh={handleStartFresh}
+        savedProgress={savedProgressData}
       />
     </>
   );
