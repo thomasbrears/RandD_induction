@@ -9,19 +9,16 @@ import InductionFeedbackModal from '../components/InductionFeedbackModal';
 import SaveRecoveryModal from '../components/takeInduction/SaveRecoveryModal';
 import QuestionTypes from '../models/QuestionTypes';
 import { notifyError, notifySuccess, messageError, messageSuccess } from '../utils/notificationService';
-import { MenuOutlined, ArrowLeftOutlined } from '@ant-design/icons';
+import { ArrowLeftOutlined } from '@ant-design/icons';
 
 import InductionIntro from '../components/takeInduction/InductionIntro';
 import ProgressBar from '../components/takeInduction/ProgressBar';
 import QuestionNavigation from '../components/takeInduction/QuestionNavigation';
 import SingleQuestionView from '../components/takeInduction/SingleQuestionView';
-import AllQuestionsView from '../components/takeInduction/AllQuestionsView';
 import InductionCompletion from '../components/takeInduction/InductionCompletion';
 
 // Utility functions
 import {
-  calculateEstimatedTime,
-  formatTimeRange,
   checkAllRequiredQuestionsAnswered,
   validateAnswer,
   formatAnswersForSubmission
@@ -69,7 +66,6 @@ const InductionFormPage = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showAllQuestions, setShowAllQuestions] = useState(false);
   
   // Add feedback state for validation
   const [answerFeedback, setAnswerFeedback] = useState({
@@ -389,20 +385,6 @@ const InductionFormPage = () => {
     setStarted(true);
   };
 
-  // Toggle between slideshow and list view
-  const toggleViewMode = () => {
-    setShowAllQuestions(prev => !prev);
-    
-    // Force save when view mode changes
-    if (induction && induction.id) {
-      forceProgressSave(induction.id, {
-        answers,
-        currentQuestionIndex,
-        answeredQuestions
-      }, setLastSaved);
-    }
-  };
-
   // Handle answer updates
   const handleAnswer = (questionId, answer) => {
     // Only update the answers state
@@ -555,13 +537,8 @@ const InductionFormPage = () => {
   // Handle question navigation from sidebar or mobile menu
   const handleQuestionNavigation = (index) => {
     if (index >= 0 && index < induction.questions.length) {
-      // Allow navigation even in all-questions view
+      // Allow navigation
       setCurrentQuestionIndex(index);
-      
-      // If we're in all-questions view, exit it
-      if (showAllQuestions) {
-        setShowAllQuestions(false);
-      }
       
       // Close mobile menu if open
       if (mobileMenuOpen) {
@@ -615,11 +592,6 @@ const InductionFormPage = () => {
       
       // Show error notification
       notifyError('Missing Required Answers', errorMessage);
-      
-      // If in slideshow view, switch to list view to make it easier to see all questions
-      if (!showAllQuestions) {
-        setShowAllQuestions(true);
-      }
       
       return;
     }
@@ -693,8 +665,8 @@ const InductionFormPage = () => {
 
   return (
     <>
-      <Helmet><title>{induction.name || 'Induction'} | AUT Events Induction Portal</title></Helmet>
-      <div className="p-6 max-w-4xl mx-auto">
+      <Helmet><title>{induction?.name || 'Induction'} | AUT Events Induction Portal</title></Helmet>
+      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
         {!started ? (
           <InductionIntro 
             induction={induction} 
@@ -704,7 +676,7 @@ const InductionFormPage = () => {
           <div className="bg-white shadow-md rounded-lg overflow-hidden">
             {/* Title section with induction name */}
             <div className="border-b border-gray-200">
-              <h1 className="text-2xl font-bold p-4 px-6 break-words">{induction.name}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold p-4 px-6 break-words">{induction.name}</h1>
               
               {/* Progress bar */}
               <ProgressBar 
@@ -715,86 +687,44 @@ const InductionFormPage = () => {
             </div>
             
             {induction.questions && induction.questions.length > 0 ? (
-              <div className="space-y-6">
-                {/* Main flex container for sidebar and content */}
-                <div className="flex flex-col md:flex-row">
-                  {/* Question navigation sidebar - only in slideshow view */}
-                  {!showAllQuestions && (
-                    <QuestionNavigation
-                      questions={induction.questions}
-                      currentIndex={currentQuestionIndex}
-                      onNavClick={handleQuestionNavigation}
-                      answeredQuestions={answeredQuestions}
-                      isOpen={mobileMenuOpen}
-                      onClose={handleMobileMenuToggle}
-                    />
-                  )}
-                  
-                  {/* Main content area */}
-                  <div className={`${showAllQuestions ? 'w-full' : 'md:w-3/4'} p-6`}>
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                      {/* View Mode Toggle */}
-                      <div className="mb-4 flex justify-end">
-                        <button
-                          type="button"
-                          onClick={toggleViewMode}
-                          className="text-gray-700 hover:text-gray-900 font-medium flex items-center px-3 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200"
-                        >
-                          {showAllQuestions ? (
-                            <>
-                              <ArrowLeftOutlined className="mr-1" />
-                              <span>Switch to Slideshow View</span>
-                            </>
-                          ) : (
-                            <>
-                              <MenuOutlined className="mr-1" />
-                              <span>View All Questions</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      
-                      {/* List view or slideshow based on showAllQuestions state */}
-                      {showAllQuestions ? (
-                        /* List View - All questions */
-                        <AllQuestionsView
-                          questions={induction.questions}
-                          answers={answers}
-                          handleAnswerChange={handleAnswer}
-                          answerFeedback={answerFeedback}
-                          handleSubmit={handleSubmit}
-                          isSubmitting={isSubmitting}
-                        />
-                      ) : (
-                        /* Slideshow View - Single question */
-                        <>                          
-                          {/* Show either submission screen or current question */}
-                          {showSubmissionScreen ? (
-                            <InductionCompletion
-                              answeredQuestions={answeredQuestions}
-                              questions={induction.questions}
-                              onBackToQuestions={() => setShowSubmissionScreen(false)}
-                              onSubmit={handleSubmit}
-                              isSubmitting={isSubmitting}
-                            />
-                          ) : (
-                            <SingleQuestionView
-                              question={induction.questions[currentQuestionIndex]}
-                              answer={answers[induction.questions[currentQuestionIndex].id]}
-                              handleAnswerChange={(answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)}
-                              answerFeedback={answerFeedback}
-                              handlePrevQuestion={handlePrevQuestion}
-                              handleNextQuestion={handleNextQuestion}
-                              currentIndex={currentQuestionIndex}
-                              totalQuestions={induction.questions.length}
-                              handleGoToSubmissionScreen={handleGoToSubmissionScreen}
-                              QuestionTypes={QuestionTypes}
-                            />
-                          )}
-                        </>
-                      )}
-                    </form>
-                  </div>
+              <div className="flex flex-col md:flex-row md:h-[calc(100vh-16rem)]">
+                {/* Question navigation sidebar */}
+                <QuestionNavigation
+                  questions={induction.questions}
+                  currentIndex={currentQuestionIndex}
+                  onNavClick={handleQuestionNavigation}
+                  answeredQuestions={answeredQuestions}
+                  isOpen={mobileMenuOpen}
+                  onClose={handleMobileMenuToggle}
+                />
+                
+                {/* Main content area */}
+                <div className="md:w-3/4 p-4 sm:p-6 overflow-y-auto">
+                  <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Show either submission screen or current question */}
+                    {showSubmissionScreen ? (
+                      <InductionCompletion
+                        answeredQuestions={answeredQuestions}
+                        questions={induction.questions}
+                        onBackToQuestions={() => setShowSubmissionScreen(false)}
+                        onSubmit={handleSubmit}
+                        isSubmitting={isSubmitting}
+                      />
+                    ) : (
+                      <SingleQuestionView
+                        question={induction.questions[currentQuestionIndex]}
+                        answer={answers[induction.questions[currentQuestionIndex].id]}
+                        handleAnswerChange={(answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)}
+                        answerFeedback={answerFeedback}
+                        handlePrevQuestion={handlePrevQuestion}
+                        handleNextQuestion={handleNextQuestion}
+                        currentIndex={currentQuestionIndex}
+                        totalQuestions={induction.questions.length}
+                        handleGoToSubmissionScreen={handleGoToSubmissionScreen}
+                        QuestionTypes={QuestionTypes}
+                      />
+                    )}
+                  </form>
                 </div>
               </div>
             ) : (

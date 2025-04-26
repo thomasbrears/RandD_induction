@@ -28,11 +28,19 @@ const QuestionNavigation = ({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Desktop sidebar navigation
+  // Desktop sidebar navigation with scrolling
   const DesktopNavigation = () => (
-    <div className="hidden md:block md:w-1/4 bg-gray-50 p-4 border-r">
-      <h2 className="text-lg font-medium mb-4">Questions</h2>
-      <div className="space-y-2">
+    <div className="hidden md:flex md:flex-col md:w-1/4 bg-gray-50 border-r h-full">
+      {/* Fixed header */}
+      <div className="p-4 border-b bg-white">
+        <h2 className="text-lg font-medium">Questions</h2>
+        <div className="text-sm text-gray-500 mt-1">
+          {Object.values(answeredQuestions).filter(Boolean).length} of {questions.length} completed
+        </div>
+      </div>
+      
+      {/* Scrollable question list */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {questions.map((question, index) => (
           <button
             key={question.id}
@@ -55,7 +63,7 @@ const QuestionNavigation = ({
               {index + 1}
             </span>
             <span className="truncate">
-              {question.question.length > 20 ? question.question.substring(0, 20) + '...' : question.question}
+              {question.question.length > 30 ? question.question.substring(0, 30) + '...' : question.question}
             </span>
           </button>
         ))}
@@ -63,7 +71,7 @@ const QuestionNavigation = ({
     </div>
   );
   
-  // Mobile navigation with side tab
+  // Mobile navigation with side tab (unchanged)
   const MobileNavigation = () => {
     if (!isMobile) return null;
     
