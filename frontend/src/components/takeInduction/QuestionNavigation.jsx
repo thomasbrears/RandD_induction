@@ -30,9 +30,9 @@ const QuestionNavigation = ({
 
   // Desktop sidebar navigation with scrolling
   const DesktopNavigation = () => (
-    <div className="hidden md:flex md:flex-col md:w-1/4 bg-gray-50 border-r h-full">
+    <div className="hidden md:flex md:flex-col md:w-72 lg:w-80 bg-gray-50 border-r h-[calc(100vh-16rem)]">
       {/* Fixed header */}
-      <div className="p-4 border-b bg-white">
+      <div className="p-4 border-b bg-white flex-shrink-0">
         <h2 className="text-lg font-medium">Questions</h2>
         <div className="text-sm text-gray-500 mt-1">
           {Object.values(answeredQuestions).filter(Boolean).length} of {questions.length} completed
@@ -45,7 +45,7 @@ const QuestionNavigation = ({
           <button
             key={question.id}
             onClick={() => onNavClick(index)}
-            className={`w-full text-left px-3 py-2 rounded-md flex items-center ${
+            className={`w-full text-left px-3 py-2 rounded-md flex items-center transition-colors ${
               currentIndex === index 
                 ? 'bg-blue-100 text-blue-800 border border-blue-300'
                 : answeredQuestions[question.id]

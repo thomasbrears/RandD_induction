@@ -85,6 +85,29 @@ export const checkAllRequiredQuestionsAnswered = (questions, answers) => {
           question: question.question
         });
       }
+
+
+      // Ensure short answer questions meets minimum/maximum length
+      if (question.type === QuestionTypes.SHORT_ANSWER && answer) {
+        const minChars = question.minChars || 10;
+        const maxChars = question.maxChars || 1000;
+        
+        if (answer.length < minChars) {
+          missingAnswers.push({
+            index: index + 1,
+            question: question.question,
+            reason: `Answer must be at least ${minChars} characters`
+          });
+        }
+        
+        if (answer.length > maxChars) {
+          missingAnswers.push({
+            index: index + 1,
+            question: question.question,
+            reason: `Answer must not exceed ${maxChars} characters`
+          });
+        }
+      }
     }
   });
   
@@ -141,7 +164,7 @@ export const validateAnswer = (question, answer) => {
         isCorrect: parseInt(answer) === question.answers?.[0],
         message: parseInt(answer) === question.answers?.[0] 
           ? 'Correct! Well done.' 
-          : question.incorrectAnswerMessage || 'Incorrect. Please try again.'
+          : (question.incorrectAnswerMessage || 'Incorrect. Please try again.')
       };
     
     case QuestionTypes.MULTICHOICE:
@@ -155,7 +178,7 @@ export const validateAnswer = (question, answer) => {
           isCorrect,
           message: isCorrect 
             ? 'Correct! Well done.' 
-            : question.incorrectAnswerMessage || 'Incorrect. Please try again.'
+            : (question.incorrectAnswerMessage || 'Incorrect. Please try again.')
         };
       }
       return {
@@ -170,10 +193,31 @@ export const validateAnswer = (question, answer) => {
         isCorrect: parseInt(answer) === question.answers?.[0],
         message: parseInt(answer) === question.answers?.[0] 
           ? 'Correct! Well done.' 
-          : question.incorrectAnswerMessage || 'Incorrect. Please try again.'
+          : (question.incorrectAnswerMessage || 'Incorrect. Please try again.')
       };
       
     case QuestionTypes.SHORT_ANSWER:
+      const minChars = question.minChars || 10;
+      const maxChars = question.maxChars || 1000;
+      
+      // Check if answer meets minumum length requirements
+      if (answer.length < minChars) {
+        return {
+          isValid: false,
+          isCorrect: false,
+          message: `Your answer must be at least ${minChars} characters long.`
+        };
+      }
+      
+      // Check if answer meets maximum length requirements
+      if (answer.length > maxChars) {
+        return {
+          isValid: false,
+          isCorrect: false,
+          message: `Your answer must not exceed ${maxChars} characters.`
+        };
+      }
+      
       // For short answers, we don't validate correctness, but mark as "pending review"
       return {
         isValid: true,
@@ -255,6 +299,9 @@ export const formatAnswersForSubmission = (questions, answers) => {
         
       case QuestionTypes.SHORT_ANSWER:
         answerObj.textValue = answer || '';
+        answerObj.charCount = answer ? answer.length : 0;
+        answerObj.minChars = question.minChars || 10;
+        answerObj.maxChars = question.maxChars || 1000;
         // Don't set isCorrect - these need manual review
         answerObj.flaggedForReview = true;
         break;

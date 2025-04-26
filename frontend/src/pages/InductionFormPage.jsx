@@ -666,81 +666,101 @@ const InductionFormPage = () => {
   return (
     <>
       <Helmet><title>{induction?.name || 'Induction'} | AUT Events Induction Portal</title></Helmet>
-      <div className="p-4 sm:p-6 max-w-6xl mx-auto">
-        {!started ? (
-          <InductionIntro 
-            induction={induction} 
-            onStart={handleStart} 
-          />
-        ) : (
-          <div className="bg-white shadow-md rounded-lg overflow-hidden">
-            {/* Title section with induction name */}
-            <div className="border-b border-gray-200">
-              <h1 className="text-xl sm:text-2xl font-bold p-4 px-6 break-words">{induction.name}</h1>
-              
-              {/* Progress bar */}
-              <ProgressBar 
-                questions={induction.questions}
-                answeredQuestions={answeredQuestions}
-                lastSaved={lastSaved}
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <div className="flex-1 w-full max-w-6xl mx-auto">
+          <div className={`p-4 sm:p-6 ${started ? 'pb-32 md:pb-6' : ''}`}>
+            {!started ? (
+              <InductionIntro 
+                induction={induction} 
+                onStart={handleStart} 
               />
-            </div>
-            
-            {induction.questions && induction.questions.length > 0 ? (
-              <div className="flex flex-col md:flex-row md:h-[calc(100vh-16rem)]">
-                {/* Question navigation sidebar */}
-                <QuestionNavigation
-                  questions={induction.questions}
-                  currentIndex={currentQuestionIndex}
-                  onNavClick={handleQuestionNavigation}
-                  answeredQuestions={answeredQuestions}
-                  isOpen={mobileMenuOpen}
-                  onClose={handleMobileMenuToggle}
-                />
-                
-                {/* Main content area */}
-                <div className="md:w-3/4 p-4 sm:p-6 overflow-y-auto">
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    {/* Show either submission screen or current question */}
-                    {showSubmissionScreen ? (
-                      <InductionCompletion
-                        answeredQuestions={answeredQuestions}
-                        questions={induction.questions}
-                        onBackToQuestions={() => setShowSubmissionScreen(false)}
-                        onSubmit={handleSubmit}
-                        isSubmitting={isSubmitting}
-                      />
-                    ) : (
-                      <SingleQuestionView
-                        question={induction.questions[currentQuestionIndex]}
-                        answer={answers[induction.questions[currentQuestionIndex].id]}
-                        handleAnswerChange={(answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)}
-                        answerFeedback={answerFeedback}
-                        handlePrevQuestion={handlePrevQuestion}
-                        handleNextQuestion={handleNextQuestion}
-                        currentIndex={currentQuestionIndex}
-                        totalQuestions={induction.questions.length}
-                        handleGoToSubmissionScreen={handleGoToSubmissionScreen}
-                        QuestionTypes={QuestionTypes}
-                      />
-                    )}
-                  </form>
-                </div>
-              </div>
             ) : (
-              <div className="text-center py-10">
-                <p className="text-xl text-gray-600">No questions available for this induction.</p>
-                <button 
-                  onClick={() => navigate('/inductions/my-inductions')}
-                  className="mt-4 px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 flex items-center justify-center mx-auto"
-                >
-                  <ArrowLeftOutlined className="mr-2" />
-                  Return to My Inductions
-                </button>
+              <div className="bg-white shadow-md rounded-lg overflow-hidden">
+                {/* Title section with induction name */}
+                <div className="border-b border-gray-200">
+                  <h1 className="text-xl sm:text-2xl font-bold p-4 px-6 break-words">{induction.name}</h1>
+                  
+                  {/* Progress bar */}
+                  <ProgressBar 
+                    questions={induction.questions}
+                    answeredQuestions={answeredQuestions}
+                    lastSaved={lastSaved}
+                  />
+                </div>
+                
+                {induction.questions && induction.questions.length > 0 ? (
+                  <div className="flex flex-col md:flex-row relative">
+                    {/* Question navigation sidebar */}
+                    <div className={`hidden md:block md:w-72 lg:w-80 flex-shrink-0`}>
+                      <QuestionNavigation
+                        questions={induction.questions}
+                        currentIndex={currentQuestionIndex}
+                        onNavClick={handleQuestionNavigation}
+                        answeredQuestions={answeredQuestions}
+                        isOpen={mobileMenuOpen}
+                        onClose={handleMobileMenuToggle}
+                      />
+                    </div>
+                    
+                    {/* Main content area - flexible width */}
+                    <div className="flex-1 min-w-0">
+                      <div className="p-4 sm:p-6">
+                        <form onSubmit={handleSubmit}>
+                          {/* Show either submission screen or current question */}
+                          {showSubmissionScreen ? (
+                            <InductionCompletion
+                              answeredQuestions={answeredQuestions}
+                              questions={induction.questions}
+                              onBackToQuestions={() => setShowSubmissionScreen(false)}
+                              onSubmit={handleSubmit}
+                              isSubmitting={isSubmitting}
+                            />
+                          ) : (
+                            <SingleQuestionView
+                              question={induction.questions[currentQuestionIndex]}
+                              answer={answers[induction.questions[currentQuestionIndex].id]}
+                              handleAnswerChange={(answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)}
+                              answerFeedback={answerFeedback}
+                              handlePrevQuestion={handlePrevQuestion}
+                              handleNextQuestion={handleNextQuestion}
+                              currentIndex={currentQuestionIndex}
+                              totalQuestions={induction.questions.length}
+                              handleGoToSubmissionScreen={handleGoToSubmissionScreen}
+                              QuestionTypes={QuestionTypes}
+                            />
+                          )}
+                        </form>
+                      </div>
+                    </div>
+                    
+                    {/* Mobile navigation */}
+                    <div className="md:hidden">
+                      <QuestionNavigation
+                        questions={induction.questions}
+                        currentIndex={currentQuestionIndex}
+                        onNavClick={handleQuestionNavigation}
+                        answeredQuestions={answeredQuestions}
+                        isOpen={mobileMenuOpen}
+                        onClose={handleMobileMenuToggle}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-10">
+                    <p className="text-xl text-gray-600">No questions available for this induction.</p>
+                    <button 
+                      onClick={() => navigate('/inductions/my-inductions')}
+                      className="mt-4 px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 flex items-center justify-center mx-auto"
+                    >
+                      <ArrowLeftOutlined className="mr-2" />
+                      Return to My Inductions
+                    </button>
+                  </div>
+                )}
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
   
       {/* Feedback Modal */}

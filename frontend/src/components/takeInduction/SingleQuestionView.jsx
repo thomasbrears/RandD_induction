@@ -20,102 +20,95 @@ const SingleQuestionView = ({
   if (!question) return null;
   
   return (
-    <div className="space-y-6">
-      <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
-        <div className="space-y-4">
-          <h2 className="text-xl font-semibold">{question.question}</h2>
-          
-          {question.description && (
-            <div 
-              className="text-gray-600 prose max-w-none"
-              dangerouslySetInnerHTML={{ __html: question.description }}
-            />
-          )}
-          
-          {/* Question content based on type */}
-          <div className="mt-4">
-            <QuestionRenderer 
-              question={question}
-              answer={answer}
-              handleAnswerChange={handleAnswerChange}
-              answerFeedback={answerFeedback}
-            />
-          </div>
-          
-          {/* Answer Feedback */}
-          {answerFeedback.showFeedback && (
-            <div className={`mt-4 p-3 rounded-md ${
-              answerFeedback.isCorrect === true 
-                ? 'bg-green-50 text-green-700 border border-green-200' 
-                : answerFeedback.isCorrect === false
-                  ? 'bg-red-50 text-red-700 border border-red-200'
-                  : 'bg-orange-50 text-orange-700 border border-orange-200'
-            }`}>
-              <div className="flex items-center">
-                {answerFeedback.isCorrect === true ? (
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                  </svg>
-                ) : answerFeedback.isCorrect === false ? (
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                  </svg>
-                ) : (
-                  <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
-                  </svg>
-                )}
-                <span className="font-medium">{answerFeedback.message}</span>
+    <div className="flex flex-col h-full">
+      {/* Scrollable content area */}
+      <div className="flex-1 overflow-y-auto pb-24 md:pb-6">
+        <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
+          <div className="space-y-4">
+            {/* Question header with number */}
+            <div className="flex items-start space-x-3">
+              <div className="flex-shrink-0">
+                <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-600 text-white font-medium">
+                  {currentIndex + 1}
+                </span>
               </div>
+              <h2 className="text-lg sm:text-xl font-semibold flex-1 break-words">
+                {question.question}
+              </h2>
             </div>
-          )}
+            
+            {question.description && (
+              <div 
+                className="text-gray-600 prose max-w-none text-sm sm:text-base break-words overflow-hidden"
+                dangerouslySetInnerHTML={{ __html: question.description }}
+              />
+            )}
+            
+            {/* Question content based on type */}
+            <div className="mt-4">
+              <QuestionRenderer 
+                question={question}
+                answer={answer}
+                handleAnswerChange={handleAnswerChange}
+                answerFeedback={answerFeedback}
+              />
+            </div>
+          </div>
         </div>
       </div>
       
-      {/* Navigation buttons */}
-      <div className="flex justify-between mt-6">
-        <button 
-          type="button"
-          onClick={handlePrevQuestion}
-          disabled={currentIndex === 0}
-          className={`px-4 py-2 border rounded-md ${
-            currentIndex === 0 
-              ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-              : 'bg-white text-gray-800 hover:bg-gray-50'
-          }`}
-        >
-          Previous
-        </button>
-        
-        {currentIndex < totalQuestions - 1 ? (
-          <button 
-            type="button"
-            onClick={handleNextQuestion}
-            disabled={
-              // Only disable for incorrect answers if it's not a short answer question
-              answerFeedback.showFeedback && 
-              !answerFeedback.isCorrect && 
-              question.type !== QuestionTypes.SHORT_ANSWER
-            }
-            className={`px-4 py-2 bg-gray-800 text-white rounded-md ${
-              answerFeedback.showFeedback && 
-              !answerFeedback.isCorrect && 
-              question.type !== QuestionTypes.SHORT_ANSWER
-                ? 'opacity-50 cursor-not-allowed' 
-                : 'hover:bg-gray-700'
-            }`}
-          >
-            Next
-          </button>
-        ) : (
-          <button 
-            type="button"
-            onClick={handleGoToSubmissionScreen}
-            className="px-6 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
-          >
-            Review & Submit
-          </button>
-        )}
+      {/* Fixed bottom navigation for mobile, normal for desktop */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:relative md:border-0 md:p-0 md:mt-6">
+        <div className="max-w-4xl mx-auto">
+          {/* Progress indicator for mobile */}
+          <div className="text-center text-sm text-gray-500 mb-3 md:hidden">
+            Question {currentIndex + 1} of {totalQuestions}
+          </div>
+          
+          <div className="flex justify-between gap-4">
+            <button 
+              type="button"
+              onClick={handlePrevQuestion}
+              disabled={currentIndex === 0}
+              className={`flex-1 px-4 py-3 border rounded-md text-sm sm:text-base ${
+                currentIndex === 0 
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
+                  : 'bg-white text-gray-800 hover:bg-gray-50'
+              }`}
+            >
+              Previous
+            </button>
+            
+            {currentIndex < totalQuestions - 1 ? (
+              <button 
+                type="button"
+                onClick={handleNextQuestion}
+                disabled={
+                  answerFeedback.showFeedback && 
+                  !answerFeedback.isCorrect && 
+                  question.type !== QuestionTypes.SHORT_ANSWER
+                }
+                className={`flex-1 px-4 py-3 bg-blue-600 text-white rounded-md text-sm sm:text-base ${
+                  answerFeedback.showFeedback && 
+                  !answerFeedback.isCorrect && 
+                  question.type !== QuestionTypes.SHORT_ANSWER
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:bg-blue-700'
+                }`}
+              >
+                Next
+              </button>
+            ) : (
+              <button 
+                type="button"
+                onClick={handleGoToSubmissionScreen}
+                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm sm:text-base"
+              >
+                Review & Submit
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
