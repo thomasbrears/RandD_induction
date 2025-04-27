@@ -13,12 +13,98 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
   // Determine if this question is required (default to true)
   const isRequired = question.isRequired !== false;
   
-  // Show hint if available and feedback is showing error
-  const hint = question.hint && answerFeedback.showFeedback && !answerFeedback.isCorrect ? (
-    <div className="mt-2 text-xs italic text-gray-600 bg-gray-100 p-2 rounded-md">
-      <span className="font-semibold">Hint:</span> {question.hint}
-    </div>
-  ) : null;
+  // Character limits for short answer questions
+  const MIN_CHARS = question.minChars || 10;
+  const MAX_CHARS = question.maxChars || 1000;
+  
+  // State for character counting
+  const [charCount, setCharCount] = useState(0);
+  const [validationError, setValidationError] = useState('');
+  
+  // Update character count when answer changes
+  useEffect(() => {
+    if (question.type === QuestionTypes.SHORT_ANSWER && answer) {
+      setCharCount(answer.length);
+    } else {
+      setCharCount(0);
+    }
+  }, [answer, question.type]);
+  
+  // Validation for text fields
+  const validateTextField = (value) => {
+    if (!value && isRequired) {
+      setValidationError('This field is required');
+      return false;
+    }
+    
+    if (value && value.length < MIN_CHARS) {
+      setValidationError(`Answer must be at least ${MIN_CHARS} characters`);
+      return false;
+    }
+    
+    if (value && value.length > MAX_CHARS) {
+      setValidationError(`Answer must not exceed ${MAX_CHARS} characters`);
+      return false;
+    }
+    
+    setValidationError('');
+    return true;
+  };
+  
+  // Feedback display
+  const renderFeedback = () => {
+    // Incorrect answer message
+    const getIncorrectMessage = () => {
+      if (answerFeedback.isCorrect === false) {
+        let message = answerFeedback.message || 'This answer is incorrect.';
+        
+        // Add custom incorrect message if available
+        if (question.incorrectAnswerMessage) {
+          message = question.incorrectAnswerMessage;
+        }
+        
+        // Add hint if available
+        if (question.hint) {
+          message += ` Hint: ${question.hint}`;
+        }
+        
+        return message;
+      }
+      
+      return answerFeedback.message;
+    };
+    
+    if (answerFeedback.showFeedback) {
+      return (
+        <div className={`mt-4 p-3 rounded-md ${
+          answerFeedback.isCorrect === true 
+            ? 'bg-green-50 text-green-700 border border-green-200' 
+            : answerFeedback.isCorrect === false
+              ? 'bg-red-50 text-red-700 border border-red-200'
+              : 'bg-orange-50 text-orange-700 border border-orange-200'
+        }`}>
+          <div className="flex items-start">
+            {answerFeedback.isCorrect === true ? (
+              <svg className="w-5 h-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+              </svg>
+            ) : answerFeedback.isCorrect === false ? (
+              <svg className="w-5 h-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
+              </svg>
+            ) : (
+              <svg className="w-5 h-5 mr-2 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+              </svg>
+            )}
+            <span className="font-medium">{getIncorrectMessage()}</span>
+          </div>
+        </div>
+      );
+    }
+    
+    return null;
+  };
   
   // Show required indicator if needed
   const requiredIndicator = isRequired ? (
@@ -114,7 +200,6 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
           <div className="flex items-center">
             <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
           </div>
-          {hint}
           {question.options.map((option, index) => (
             <div key={index} className="flex items-center">
               <input
@@ -126,11 +211,12 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
                 onChange={() => handleAnswerChange(index)}
                 className="w-5 h-5 text-gray-800 border-gray-300 focus:ring-gray-500"
               />
-              <label htmlFor={`option-${question.id}-${index}`} className="ml-2 block text-gray-700">
+              <label htmlFor={`option-${question.id}-${index}`} className="ml-2 block text-gray-700 break-words">
                 {option}
               </label>
             </div>
           ))}
+          {renderFeedback()}
         </div>
       );
       
@@ -140,7 +226,6 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
           <div className="flex items-center">
             <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
           </div>
-          {hint}
           {question.options.map((option, index) => (
             <div key={index} className="flex items-center">
               <input
@@ -157,6 +242,7 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
               </label>
             </div>
           ))}
+          {renderFeedback()}
         </div>
       );
 
@@ -166,7 +252,6 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
           <div className="flex items-center">
             <p className="text-sm font-medium text-gray-700">Select option(s){requiredIndicator}</p>
           </div>
-          {hint}
           {question.options.map((option, index) => (
             <div key={index} className="flex items-center">
               <input
@@ -193,6 +278,7 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
               </label>
             </div>
           ))}
+          {renderFeedback()}
         </div>
       );
       
@@ -202,7 +288,6 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
           <div className="flex items-center mb-2">
             <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
           </div>
-          {hint}
           <select
             value={answer !== undefined ? answer : ''}
             onChange={(e) => handleAnswerChange(e.target.value === '' ? '' : e.target.value)}
@@ -215,23 +300,64 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
               </option>
             ))}
           </select>
+          {renderFeedback()}
         </div>
       );
 
     case QuestionTypes.SHORT_ANSWER:
       return (
         <div>
-          <div className="flex items-center mb-2">
+          <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium text-gray-700">Enter your answer{requiredIndicator}</p>
+            <p className={`text-xs ${
+              charCount > MAX_CHARS ? 'text-red-600 font-medium' : 
+              charCount > MAX_CHARS * 0.9 ? 'text-orange-600' : 'text-gray-500'
+            }`}>
+              {charCount}/{MAX_CHARS} characters
+            </p>
           </div>
-          {hint}
+          
           <textarea
-            rows={4}
+            rows={8}
             value={answer || ''}
-            onChange={(e) => handleAnswerChange(e.target.value)}
-            placeholder="Type your answer here..."
-            className="block w-full p-2 rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-base"
+            onChange={(e) => {
+              const newValue = e.target.value;
+              handleAnswerChange(newValue);
+              validateTextField(newValue);
+              setCharCount(newValue.length);
+            }}
+            onBlur={(e) => validateTextField(e.target.value)}
+            placeholder={`Type your answer here (${MIN_CHARS}-${MAX_CHARS} characters)...`}
+            className={`block w-full p-2 rounded-md shadow-sm focus:ring focus:ring-opacity-50 text-base ${
+              validationError 
+                ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
+                : charCount > MAX_CHARS * 0.9 
+                  ? 'border-orange-300 focus:border-orange-500 focus:ring-orange-500'
+                  : 'border-gray-300 focus:border-gray-500 focus:ring-gray-500'
+            }`}
+            maxLength={MAX_CHARS + 50} // Allow some overflow
           />
+          
+          {/* Inline validation error */}
+          {validationError && (
+            <p className="mt-1 text-sm text-red-600">{validationError}</p>
+          )}
+          
+          {/* Character count warning */}
+          {charCount > MAX_CHARS * 0.9 && charCount <= MAX_CHARS && (
+            <p className="mt-1 text-sm text-orange-600">
+              Approaching character limit
+            </p>
+          )}
+          
+          {/* Minimum character hint */}
+          {charCount > 0 && charCount < MIN_CHARS && (
+            <p className="mt-1 text-sm text-gray-500">
+              {MIN_CHARS - charCount} more character{MIN_CHARS - charCount !== 1 ? 's' : ''} needed
+            </p>
+          )}
+          
+          {renderFeedback()}
         </div>
       );
 
@@ -243,18 +369,16 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
           ) : (
             <p className="text-gray-500 italic">Information block</p>
           )}
-          {hint}
+          {renderFeedback()}
         </div>
       );
       
     case QuestionTypes.FILE_UPLOAD:
-      // Enhanced file upload UI with Ant Design
       return (
         <div>
           <div className="flex items-center mb-2">
             <p className="text-sm font-medium text-gray-700">Upload a file{requiredIndicator}</p>
           </div>
-          {hint}
           
           {/* Display file if one is selected */}
           {fileList.length > 0 ? (
@@ -322,7 +446,7 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
               multiple={false}
               fileList={fileList}
               accept={acceptedFileTypes}
-              beforeUpload={() => false} // Disable actual upload, just capture the file
+              beforeUpload={() => false} // Disable upload, just capture the file
               onChange={handleFileChange}
               className="mt-2"
             >
@@ -335,6 +459,8 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
               </p>
             </Dragger>
           )}
+          
+          {renderFeedback()}
         </div>
       );
       
@@ -352,7 +478,9 @@ QuestionRenderer.propTypes = {
     options: PropTypes.array,
     isRequired: PropTypes.bool,
     hint: PropTypes.string,
-    incorrectAnswerMessage: PropTypes.string
+    incorrectAnswerMessage: PropTypes.string,
+    minChars: PropTypes.number,
+    maxChars: PropTypes.number
   }).isRequired,
   answer: PropTypes.oneOfType([
     PropTypes.string,

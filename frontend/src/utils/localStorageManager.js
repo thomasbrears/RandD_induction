@@ -11,133 +11,249 @@
  * @param {number} progressData.currentQuestionIndex - Current question index
  * @param {object} progressData.answeredQuestions - Object tracking which questions are answered
  * @param {Function} setLastSaved - State setter function to update last saved timestamp
+ * @returns {boolean} - Success status of save operation
  */
 export const saveProgressToLocalStorage = (inductionId, progressData, setLastSaved) => {
-    if (!inductionId) return;
-    
-    const { answers, currentQuestionIndex, answeredQuestions } = progressData;
-    
-    const progress = {
-      inductionId,
-      answers,
-      currentQuestionIndex,
-      answeredQuestions,
-      lastUpdated: new Date().toISOString()
-    };
-    
-    try {
-      // Stringify the data to ensure it's saved correctly
-      const serializedData = JSON.stringify(progress);
-      localStorage.setItem(`induction_progress_${inductionId}`, serializedData);
-      
-      // Update last saved timestamp if setter is provided
-      if (setLastSaved) {
-        setLastSaved(new Date());
-      }
-    } catch (error) {
-      console.error('Error saving progress to localStorage:', error);
-    }
+  if (!inductionId) return false;
+  
+  const { answers, currentQuestionIndex, answeredQuestions } = progressData;
+  
+  // Check if there have been meaningful changes before saving
+  const existingData = loadProgressFromLocalStorage(inductionId);
+  if (existingData && !hasSignificantChanges(existingData, progressData)) {
+    return false; // No need to save if nothing important changed
+  }
+  
+  const progress = {
+    inductionId,
+    answers,
+    currentQuestionIndex,
+    answeredQuestions,
+    lastUpdated: new Date().toISOString()
   };
   
-  /**
-   * Load induction progress from localStorage
-   * 
-   * @param {string} inductionId - The ID of the induction
-   * @returns {object|null} The progress data or null if not found/expired
-   */
-  export const loadProgressFromLocalStorage = (inductionId) => {
-    if (!inductionId) return null;
+  try {
+    // Stringify the data to ensure it's saved correctly
+    const serializedData = JSON.stringify(progress);
+    localStorage.setItem(`induction_progress_${inductionId}`, serializedData);
     
-    try {
-      const savedProgress = localStorage.getItem(`induction_progress_${inductionId}`);
-      if (!savedProgress) {
-        return null;
+    // Update last saved timestamp if setter is provided
+    if (setLastSaved) {
+      setLastSaved(new Date());
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error saving progress to localStorage:', error);
+    return false;
+  }
+};
+
+/**
+ * Determine if there have been significant changes that warrant saving
+ * 
+ * @param {object} oldData - Previous progress data
+ * @param {object} newData - Current progress data
+ * @returns {boolean} - True if there are significant changes
+ */
+const hasSignificantChanges = (oldData, newData) => {
+  // If question index changed, thats significant
+  if (oldData.currentQuestionIndex !== newData.currentQuestionIndex) {
+    return true;
+  }
+  
+  // Check if any new questions were answered
+  const oldAnsweredCount = Object.keys(oldData.answeredQuestions || {}).length;
+  const newAnsweredCount = Object.keys(newData.answeredQuestions || {}).length;
+  
+  if (newAnsweredCount > oldAnsweredCount) {
+    return true;
+  }
+  
+  // Check if any answers have changed
+  const oldAnswers = oldData.answers || {};
+  const newAnswers = newData.answers || {};
+  
+  for (const questionId in newAnswers) {
+    // If this is a new answer that wasn't in old data
+    if (!oldAnswers.hasOwnProperty(questionId)) {
+      return true;
+    }
+    
+    // If the answer changed from previous save
+    const oldAnswer = oldAnswers[questionId];
+    const newAnswer = newAnswers[questionId];
+    
+    // Deep comparison for arrays (multi-choice)
+    if (Array.isArray(oldAnswer) && Array.isArray(newAnswer)) {
+      if (oldAnswer.length !== newAnswer.length) {
+        return true;
       }
       
-      const progress = JSON.parse(savedProgress);
-      
-      // Check if the saved progress is recent (within the last 24 hours)
-      const lastUpdated = new Date(progress.lastUpdated);
-      const now = new Date();
-      const hoursSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60);
-      
-      // Validate the date to make sure it's not in the future
-      if (lastUpdated > now) {
-        lastUpdated.setTime(now.getTime());
+      // Check if array contents match
+      for (let i = 0; i < oldAnswer.length; i++) {
+        if (oldAnswer[i] !== newAnswer[i]) {
+          return true;
+        }
       }
-      
-      if (hoursSinceUpdate > 24) {
-        // Remove stale data
-        localStorage.removeItem(`induction_progress_${inductionId}`);
-        return null;
-      }
-      
-      // Make sure we're using structurally valid data
-      const validAnswers = progress.answers && typeof progress.answers === 'object' ? progress.answers : {};
-      const validAnsweredQuestions = progress.answeredQuestions && typeof progress.answeredQuestions === 'object' ? progress.answeredQuestions : {};
-      const validCurrentIndex = typeof progress.currentQuestionIndex === 'number' && progress.currentQuestionIndex >= 0 ? 
-        progress.currentQuestionIndex : 0;
-      
-      // Return validated data
-      return {
-        answers: validAnswers,
-        currentQuestionIndex: validCurrentIndex,
-        answeredQuestions: validAnsweredQuestions,
-        lastUpdated
-      };
-    } catch (error) {
-      console.error('Error loading progress from localStorage:', error);
-      // Try to clean up any corrupted data
+    } 
+    // Simple comparison for other types
+    else if (oldAnswer !== newAnswer) {
+      return true;
+    }
+  }
+  
+  // No significant changes detected
+  return false;
+};
+
+/**
+ * Load induction progress from localStorage
+ * 
+ * @param {string} inductionId - The ID of the induction
+ * @returns {object|null} The progress data or null if not found/expired
+ */
+export const loadProgressFromLocalStorage = (inductionId) => {
+  if (!inductionId) return null;
+  
+  try {
+    const savedProgress = localStorage.getItem(`induction_progress_${inductionId}`);
+    if (!savedProgress) {
+      return null;
+    }
+    
+    const progress = JSON.parse(savedProgress);
+    
+    // Check if the saved progress is recent (within the last 24 hours)
+    const lastUpdated = new Date(progress.lastUpdated);
+    const now = new Date();
+    const hoursSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60);
+    
+    // Validate the date to make sure it's not in the future
+    if (lastUpdated > now) {
+      lastUpdated.setTime(now.getTime());
+    }
+    
+    if (hoursSinceUpdate > 24) {
+      // Remove stale data
       localStorage.removeItem(`induction_progress_${inductionId}`);
       return null;
     }
+    
+    // Make sure we're using structurally valid data
+    const validAnswers = progress.answers && typeof progress.answers === 'object' ? progress.answers : {};
+    const validAnsweredQuestions = progress.answeredQuestions && typeof progress.answeredQuestions === 'object' ? progress.answeredQuestions : {};
+    const validCurrentIndex = typeof progress.currentQuestionIndex === 'number' && progress.currentQuestionIndex >= 0 ? 
+      progress.currentQuestionIndex : 0;
+    
+    // Return validated data
+    return {
+      answers: validAnswers,
+      currentQuestionIndex: validCurrentIndex,
+      answeredQuestions: validAnsweredQuestions,
+      lastUpdated
+    };
+  } catch (error) {
+    console.error('Error loading progress from localStorage:', error);
+    // Try to clean up any corrupted data
+    localStorage.removeItem(`induction_progress_${inductionId}`);
+    return null;
+  }
+};
+
+/**
+ * Force an immediate save of progress to localStorage
+ * Useful for critical moments like question completion or tab visibility change
+ * 
+ * @param {string} inductionId - The ID of the induction
+ * @param {object} progressData - Object containing progress data
+ * @param {Function} setLastSaved - State setter function to update last saved timestamp
+ * @returns {boolean} - Success status of save operation
+ */
+export const forceProgressSave = (inductionId, progressData, setLastSaved) => {
+  if (!inductionId) return false;
+  
+  // Use the standard save function but bypass change detection
+  const progress = {
+    ...progressData,
+    _forceSave: true // Internal flag to force save
   };
   
-  /**
-   * Force an immediate save of progress to localStorage
-   * 
-   * @param {string} inductionId - The ID of the induction
-   * @param {object} progressData - Object containing progress data
-   * @param {object} progressData.answers - Current answers keyed by question ID
-   * @param {number} progressData.currentQuestionIndex - Current question index
-   * @param {object} progressData.answeredQuestions - Object tracking which questions are answered
-   * @param {Function} setLastSaved - State setter function to update last saved timestamp
-   */
-  export const forceProgressSave = (inductionId, progressData, setLastSaved) => {
-    if (!inductionId) return;
-    
-    // Use the standard save function but with current data
-    saveProgressToLocalStorage(inductionId, progressData, setLastSaved);
-  };
+  return saveProgressToLocalStorage(inductionId, progress, setLastSaved);
+};
+
+/**
+ * Clear saved progress for an induction from localStorage
+ * 
+ * @param {string} inductionId - The ID of the induction to clear progress for
+ * @returns {boolean} - Success status of clear operation
+ */
+export const clearSavedProgress = (inductionId) => {
+  if (!inductionId) return false;
   
-  /**
-   * Clear saved progress for an induction from localStorage
-   * 
-   * @param {string} inductionId - The ID of the induction to clear progress for
-   */
-  export const clearSavedProgress = (inductionId) => {
-    if (!inductionId) return;
-    
-    try {
-      localStorage.removeItem(`induction_progress_${inductionId}`);
-    } catch (error) {
-      console.error('Error clearing saved progress:', error);
+  try {
+    localStorage.removeItem(`induction_progress_${inductionId}`);
+    return true;
+  } catch (error) {
+    console.error('Error clearing saved progress:', error);
+    return false;
+  }
+};
+
+/**
+ * Check if there is saved progress for an induction
+ * 
+ * @param {string} inductionId - The ID of the induction
+ * @returns {boolean} True if there is saved progress, false otherwise
+ */
+export const hasSavedProgress = (inductionId) => {
+  if (!inductionId) return false;
+  
+  try {
+    const progress = loadProgressFromLocalStorage(inductionId);
+    return progress !== null;
+  } catch (error) {
+    return false;
+  }
+};
+
+/**
+ * Save progress when tab visibility changes or before page unload
+ * 
+ * @param {string} inductionId - The ID of the induction
+ * @param {Function} getProgressData - Function that returns current progress data
+ * @param {Function} setLastSaved - State setter function to update last saved timestamp
+ * @returns {Function} - Cleanup function to remove event listeners
+ */
+export const setupVisibilityChangeTracking = (inductionId, getProgressData, setLastSaved) => {
+  if (!inductionId || typeof getProgressData !== 'function') return () => {};
+  
+  // Handler for visibility change (tab switching)
+  const handleVisibilityChange = () => {
+    if (document.visibilityState === 'hidden') {
+      // User is navigating away from tab, save progress
+      const currentData = getProgressData();
+      if (currentData) {
+        forceProgressSave(inductionId, currentData, setLastSaved);
+      }
     }
   };
   
-  /**
-   * Check if there is saved progress for an induction
-   * 
-   * @param {string} inductionId - The ID of the induction
-   * @returns {boolean} True if there is saved progress, false otherwise
-   */
-  export const hasSavedProgress = (inductionId) => {
-    if (!inductionId) return false;
-    
-    try {
-      const progress = loadProgressFromLocalStorage(inductionId);
-      return progress !== null;
-    } catch (error) {
-      return false;
+  // Handler for page unload (closing tab/browser)
+  const handleBeforeUnload = () => {
+    const currentData = getProgressData();
+    if (currentData) {
+      forceProgressSave(inductionId, currentData, setLastSaved);
     }
   };
+  
+  // Set up event listeners
+  document.addEventListener('visibilitychange', handleVisibilityChange);
+  window.addEventListener('beforeunload', handleBeforeUnload);
+  
+  // Return cleanup function
+  return () => {
+    document.removeEventListener('visibilitychange', handleVisibilityChange);
+    window.removeEventListener('beforeunload', handleBeforeUnload);
+  };
+};
