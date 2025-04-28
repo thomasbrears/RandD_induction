@@ -4,8 +4,8 @@ const QuestionTypes = Object.freeze({
     DROPDOWN: "dropdown",
     FILE_UPLOAD: "file_upload",
     YES_NO: "yes_no",
-    INFORMATION: "information",
     SHORT_ANSWER: "short_answer",
+    INFORMATION: "information"
 });
 
 export default QuestionTypes;

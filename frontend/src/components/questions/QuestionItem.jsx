@@ -15,6 +15,8 @@ import { FaBars, FaChevronDown, FaChevronUp, FaEdit } from 'react-icons/fa';
 import QuestionTypes from "../../models/QuestionTypes";
 import ConfirmationModal from "../ConfirmationModal";
 import { Trash } from "lucide-react";
+import ShortAnswerQuestion from "./ShortAnswerQuestion";
+import InformationQuestion from "./InformationQuestion";
 
 const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index, getImageUrl }) => {
     const [hasExpandedBefore, setHasExpandedBefore] = useState(false);
@@ -86,6 +88,14 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index, getIm
                     question={question}
                     getImageUrl={getImageUrl}
                 />;
+            case QuestionTypes.YES_NO:
+                return <TrueFalseQuestion
+                    question={question}
+                    onChange={onChange}
+                    isExpanded={isExpanded}
+                    saveAllFields={saveAllFields}
+                    updateFieldsBeingEdited={updateFieldsBeingEdited}
+                />;
             case QuestionTypes.MULTICHOICE:
                 return <MultichoiceQuestion
                     question={question}
@@ -116,6 +126,22 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index, getIm
                     question={question}
                     getImageUrl={getImageUrl}
                 />;
+            case QuestionTypes.SHORT_ANSWER:
+                return <ShortAnswerQuestion
+                    question={question}
+                    onChange={onChange}
+                    isExpanded={isExpanded}
+                    saveAllFields={saveAllFields}
+                    updateFieldsBeingEdited={updateFieldsBeingEdited}
+                />;
+            case QuestionTypes.INFORMATION:
+                return <InformationQuestion
+                    question={question}
+                    onChange={onChange}
+                    isExpanded={isExpanded}
+                    saveAllFields={saveAllFields}
+                    updateFieldsBeingEdited={updateFieldsBeingEdited}
+                />;
             default:
                 return <span>{question.question}</span>;
         }
@@ -125,14 +151,14 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index, getIm
         switch (question.type) {
             case QuestionTypes.TRUE_FALSE:
                 return "True/False";
+            case QuestionTypes.YES_NO:
+                return "Yes/No";
             case QuestionTypes.MULTICHOICE:
                 return "Multi Choice";
             case QuestionTypes.DROPDOWN:
                 return "Dropdown";
             case QuestionTypes.FILE_UPLOAD:
                 return "File Upload";
-            case QuestionTypes.YES_NO:
-                return "Yes/No";
             case QuestionTypes.SHORT_ANSWER:
                 return "Short Answer";
             case QuestionTypes.INFORMATION:

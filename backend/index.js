@@ -9,6 +9,7 @@ import contactRoutes from "./routes/contactRoutes.js";
 import locationRoutes from "./routes/locationRoutes.js";
 import positionRoutes from "./routes/positionRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
+import contentRoutes from "./routes/contentRoutes.js";
 
 const app = express();
 
@@ -75,6 +76,9 @@ app.use("/api/contact", contactRoutes);
 
 //File Routes
 app.use("/api/files", fileRoutes);
+
+// Content Routes
+app.use("/api/content", contentRoutes);
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {

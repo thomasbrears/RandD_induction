@@ -2,11 +2,17 @@ import { db } from "../firebase.js";
 import { sendEmail } from "../utils/mailjet.js";
 import admin from "firebase-admin";
 
+// Utility for email validation
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
 // Submit contact form
 export const submitContactForm = async (req, res) => {
   try {
     const { 
-      fullName, 
+      fullName,  
       email, 
       contactType, 
       subject, 
@@ -17,9 +23,25 @@ export const submitContactForm = async (req, res) => {
       feedbackData
     } = req.body;
     
-    // Validate required fields
-    if (!fullName || !email || !subject || !message) {
-      return res.status(400).json({ message: 'Missing required fields' });
+    // Explicit validation
+    if (!fullName) {
+      return res.status(400).json({ message: 'Full name is required' });
+    }
+
+    if (!email) {
+      return res.status(400).json({ message: 'Email is required' });
+    }
+
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ message: 'Invalid email format' });
+    }
+
+    if (!subject) {
+      return res.status(400).json({ message: 'Subject is required' });
+    }
+
+    if (!message) {
+      return res.status(400).json({ message: 'Message is required' });
     }
     
     // Initialize variables for department routing
@@ -301,10 +323,10 @@ export const deleteContact = async (req, res) => {
     if (!docSnapshot.exists) {
       return res.status(404).json({ message: "Contact submission not found" });
     }
-    
+
     await docRef.delete();
-    
-    res.json({ message: "Contact deleted successfully" });
+
+    res.json({ message: "Contact submission deleted successfully" });
   } catch (error) {
     console.error("Error deleting contact:", error);
     res.status(500).json({ message: "Failed to delete contact", error: error.message });

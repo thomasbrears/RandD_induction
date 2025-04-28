@@ -18,7 +18,7 @@ export const getAllUsers = async (req, res) => {
         firstName: userRecord.displayName ? userRecord.displayName.split(" ")[0] : "firstName",
         lastName: userRecord.displayName ? userRecord.displayName.split(" ")[1] || "" : "lastName",
       }))
-    );
+    ); 
 
     res.json(users);
   } catch (error) {
@@ -79,10 +79,25 @@ export const createUser = async (req, res) => {
       assignedInductions,
     } = req.body;
 
-    if (!email || !permission) {
-      return res
-        .status(400)
-        .json({ message: "Email and permission are required." });
+    // Validation for email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format" });
+    }
+
+    // Validation for name field
+    if (!firstName || !lastName) {
+      return res.status(400).json({ message: "Name is required" });
+    }
+
+    // Validation for position
+    if (!position || typeof position !== "string" || position.trim() === "") {
+      return res.status(400).json({ message: "Position is required and must be a valid string" });
+    }
+
+    // Validation for locations
+    if (!Array.isArray(locations) || locations.length === 0) {
+      return res.status(400).json({ message: "At least one location must be provided" });
     }
 
     const userRecord = await admin.auth().createUser({
@@ -155,7 +170,7 @@ export const createUser = async (req, res) => {
   }
 };
 
-export const updateUser = async (req, res) => {
+export const updateUser = async (req, res) => { 
   try {
     const {
       uid,
@@ -168,6 +183,37 @@ export const updateUser = async (req, res) => {
       locations,
       assignedInductions = [],
     } = req.body;
+
+        // Validate required fields
+        if (!uid || typeof uid !== "string") {
+          return res.status(400).json({ message: "A valid UID is required." });
+        }
+    
+        if (!firstName || typeof firstName !== "string" || firstName.trim() === "") {
+          return res.status(400).json({ message: "First name is required." });
+        }
+    
+        if (!lastName || typeof lastName !== "string") {
+          return res.status(400).json({ message: "Last name is required." });
+        }
+    
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!email || !emailRegex.test(email)) {
+          return res.status(400).json({ message: "Invalid email format." });
+        }
+    
+        if (!permission || typeof permission !== "string") {
+          return res.status(400).json({ message: "Permission is required." });
+        }
+    
+        if (!position || typeof position !== "string" || position.trim() === "") {
+          return res.status(400).json({ message: "Position is required." });
+        }
+    
+        if (!Array.isArray(locations) || locations.length === 0) {
+          return res.status(400).json({ message: "At least one location must be provided." });
+        }
 
     // Fetch existing user data
     const userRef = db.collection("users").doc(uid);
@@ -304,39 +350,46 @@ export const deleteUser = async (req, res) => {
   }
 };
 
-// Deactivate a user
 export const deactivateUser = async (req, res) => {
   try {
-    const uid = req.query.uid;
-    
-    // Disable the user in Firebase Authentication
-    await admin.auth().updateUser(uid, { disabled: true });
+    const { uid } = req.body;
+    if (!uid) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
 
-    res.status(200).json({
-      message: "User deactivated successfully",
-    });
+    const user = await admin.auth().getUser(uid).catch(() => null);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    await admin.auth().updateUser(uid, { disabled: true });
+    res.json({ message: "User deactivated successfully" });
   } catch (error) {
     console.error("Error deactivating user:", error);
-    res.status(500).send(error);
+    res.status(500).json({ message: error.message });
   }
 };
 
-// Reactivate a user
 export const reactivateUser = async (req, res) => {
   try {
-    const uid = req.query.uid;
+    const { uid } = req.body;
+    if (!uid) {
+      return res.status(400).json({ message: "User ID is required" });
+    }
 
-    // Reactivate the user in Firebase Authentication
+    const user = await admin.auth().getUser(uid).catch(() => null);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
     await admin.auth().updateUser(uid, { disabled: false });
-
-    res.status(200).json({
-      message: "User reactivated successfully",
-    });
+    res.json({ message: "User reactivated successfully" });
   } catch (error) {
     console.error("Error reactivating user:", error);
-    res.status(500).send(error);
+    res.status(500).json({ message: error.message });
   }
 };
+
 
 // Get assigned inductions for a user
 export const getAssignedInductions = async (req, res) => {

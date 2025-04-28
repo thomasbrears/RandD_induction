@@ -1,5 +1,8 @@
 import { db } from "../firebase.js";
 
+// Utility for email validation
+const isValidEmail = (email) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
 // Get all departments
 export const getAllDepartments = async (req, res) => {
   try {
@@ -18,32 +21,33 @@ export const getAllDepartments = async (req, res) => {
 // Create a new department
 export const createDepartment = async (req, res) => {
   const { name, email } = req.body;
-  
-  // Validate required fields
-  if (!name) {
-    return res.status(400).json({ message: 'Department name is required' });
+
+  // Validate name
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    return res.status(400).json({ message: 'Name is required' });
   }
-  
+
+  // Validate character limit
+  if (name.length > 50) {
+    return res.status(400).json({ message: 'Name must be 50 characters or less' });
+  }
+ 
   // Validate email format if provided
-  if (email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: 'Invalid email format' });
-    }
+  if (email && !isValidEmail(email)) {
+    return res.status(400).json({ message: 'Invalid email format' });
   }
-  
+
   try {
-    // Create department with both name and email
     const departmentData = {
-      name,
-      email: email || `${name.toLowerCase().replace(/\s+/g, '.')}@autevents.example.com`, // Default email if not provided
-      createdAt: new Date()
+      name: name.trim(),
+      email: email?.trim() || `${name.toLowerCase().replace(/\s+/g, '.')}@aut.ac.nz`,
+      createdAt: new Date(),
     };
-    
+
     const newDepartment = await db.collection("departments").add(departmentData);
-    res.status(201).json({ 
-      id: newDepartment.id, 
-      ...departmentData 
+    res.status(201).json({
+      id: newDepartment.id,
+      ...departmentData,
     });
   } catch (error) {
     console.error("Error adding department:", error);
@@ -55,36 +59,41 @@ export const createDepartment = async (req, res) => {
 export const updateDepartment = async (req, res) => {
   const { name, email } = req.body;
   const { id } = req.params;
-  
-  // Validate required fields
-  if (!name) {
-    return res.status(400).json({ message: 'Department name is required' });
+
+  if (!name || typeof name !== 'string' || name.trim() === '') {
+    return res.status(400).json({ message: 'Name is required' });
   }
-  
-  // Validate email format if provided
-  if (email) {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
-      return res.status(400).json({ message: 'Invalid email format' });
-    }
+
+  if (name.length > 50) {
+    return res.status(400).json({ message: 'Name must be 50 characters or less' });
   }
-  
+
+  if (email && !isValidEmail(email)) {
+    return res.status(400).json({ message: 'Invalid email format' });
+  }
+
   try {
-    const updateData = {
-      name,
-      updatedAt: new Date()
-    };
-    
-    // Only include email in the update if it's provided
-    if (email !== undefined) {
-      updateData.email = email;
+    const departmentRef = db.collection("departments").doc(id);
+    const doc = await departmentRef.get();
+
+    if (!doc.exists) {
+      return res.status(404).json({ message: "Department not found" });
     }
-    
-    await db.collection("departments").doc(id).update(updateData);
+
+    const updateData = {
+      name: name.trim(),
+      updatedAt: new Date(),
+    };
+
+    if (email !== undefined) {
+      updateData.email = email.trim();
+    }
+
+    await departmentRef.update(updateData);
     res.status(200).json({
       message: "Department updated successfully",
       id,
-      ...updateData
+      ...updateData,
     });
   } catch (error) {
     console.error("Error updating department:", error);
@@ -100,34 +109,6 @@ export const deleteDepartment = async (req, res) => {
     res.status(200).json({ message: "Department deleted successfully" });
   } catch (error) {
     console.error("Error deleting department:", error);
-    res.status(500).send(error);
-  }
-};
-
-// Migration script to add email field to existing departments
-export const addEmailFieldToDepartments = async (req, res) => {
-  try {
-    const snapshot = await db.collection("departments").get();
-    
-    if (snapshot.empty) {
-      return res.status(200).json({ message: "No departments found to update" });
-    }
-    
-    const batch = db.batch();
-    
-    snapshot.docs.forEach(doc => {
-      const departmentData = doc.data();
-      if (!departmentData.email) {
-        const departmentName = departmentData.name || "Unknown";
-        const defaultEmail = `${departmentName.toLowerCase().replace(/\s+/g, '.')}@autevents.example.com`;
-        batch.update(doc.ref, { email: defaultEmail });
-      }
-    });
-    
-    await batch.commit();
-    res.status(200).json({ message: "Email fields added to all departments successfully" });
-  } catch (error) {
-    console.error("Error updating departments with email field:", error);
     res.status(500).send(error);
   }
 };

@@ -46,6 +46,10 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                 newOptions = ["True", "False"];
                 newAnswers = [0];
                 break;
+            case QuestionTypes.YES_NO:
+                setOptions(["Yes", "No"]);
+                setAnswers([0]);
+                break;
             case QuestionTypes.DROPDOWN:
             case QuestionTypes.MULTICHOICE:
                 newOptions = [""];
@@ -57,6 +61,15 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
             case QuestionTypes.SHORT_ANSWER:
                 newOptions = ["Yes", "No"];
                 newAnswers = [0];
+                break;
+            case QuestionTypes.SHORT_ANSWER:
+                setOptions([]);
+                setAnswers([]);
+                break;
+            case QuestionTypes.INFORMATION:
+                setOptions([]);
+                setAnswers([]);
+                setIsRequired(false); // Information questions are never required
                 break;
             default:
                 newOptions = [];
@@ -133,6 +146,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                 ? answers.filter((answer) => answer !== index)
                 : [...answers, index];
         }
+
 
         form.setFieldsValue({ answers });
         form.validateFields(["options"]);

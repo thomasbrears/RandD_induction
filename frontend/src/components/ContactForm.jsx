@@ -8,6 +8,7 @@ import { getAllDepartments } from '../api/DepartmentApi';
 import { FaInfoCircle } from "react-icons/fa";
 import { Skeleton, Button } from 'antd';
 import { SendOutlined, ReloadOutlined } from '@ant-design/icons';
+import DynamicContent from '../components/DynamicContent.jsx';
 
 const ContactForm = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -154,9 +155,10 @@ const ContactForm = () => {
     <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
 
       <p className="mt-4 text-base text-center text-black mb-6">
-        Have questions or feedback? We'd love to hear from you!
-        <br /> 
-        Fill out the form below and we'll get back to you as soon as possible.
+        <DynamicContent 
+          section="contact-page-content" 
+          fallbackText="Have questions or feedback? We'd love to hear from you! Fill out the form below and we'll get back to you as soon as possible."
+        />
       </p>
 
       {successMessage && (

@@ -181,7 +181,7 @@ const UsersTable = () => {
                 <FaUserPlus className="inline mr-2" /> Add New User
               </button>
             </Link>
-            <Link to={"/management/inductions/results"}>
+            <Link to={"/management/results"}>
               <button className="text-white bg-blue-500 hover:bg-blue-600 px-3 py-2 rounded-md">
                 <FaChartBar className="inline mr-2" /> View Results
               </button>

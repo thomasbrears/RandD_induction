@@ -19,9 +19,34 @@ export const getAllInductions = async (req, res) => {
 
 // Create a new induction
 export const createInduction = async (req, res) => {
-  const newInduction = req.body;
+  const { name, department, description, questions } = req.body;
+
+  // Basic validations
+  if (!name || typeof name !== "string" || name.trim() === "") {
+    return res.status(400).json({ message: "Name is required." });
+  }
+
+  if (name.length > 50) {
+    return res.status(400).json({ message: "Name must be 50 characters or less." });
+  }
+
+  if (!department || !Object.values(Departments).includes(department)) {
+    return res.status(400).json({ message: "Invalid or missing department" });
+  }
+
+  if (description !== undefined && typeof description !== "string") {
+    return res.status(400).json({ message: "Description must be a string." });
+  }
 
   try {
+    const newInduction = {
+      name: name.trim(),
+      department,
+      description: description?.trim() || "",
+      questions: questions || [],
+      createdAt: new Date(),
+    };
+
     const addedInduction = await db.collection("inductions").add(newInduction);
     res.status(201).json({ id: addedInduction.id, ...newInduction });
   } catch (error) {
@@ -29,6 +54,7 @@ export const createInduction = async (req, res) => {
     res.status(500).send(error);
   }
 };
+
 
 // Get a specific induction by ID
 export const getInductionById = async (req, res) => {
@@ -55,31 +81,47 @@ export const getInductionById = async (req, res) => {
 };
 
 export const updateInductionById = async (req, res) => {
+  const { id, name, department, description, questions } = req.body;
+
+  if (!id || typeof id !== "string") {
+    return res.status(400).json({ message: "Valid induction ID is required" });
+  }
+
+  if (name && (typeof name !== "string" || name.trim() === "")) {
+    return res.status(400).json({ message: "Name must be a non-empty string if provided" });
+  }
+
+  if (name && name.length > 50) {
+    return res.status(400).json({ message: "Name must be 50 characters or less" });
+  }
+
+  if (department && !Object.values(Departments).includes(department)) {
+    return res.status(400).json({ message: "Invalid department" });
+  }
+
+  if (description !== undefined && typeof description !== "string") {
+    return res.status(400).json({ message: "Description must be a string." });
+  }
+
   try {
-    const { id, name, department, description, questions } = req.body;
-
-    if (!id) {
-      return res.status(400).json({ message: "Induction ID is required" });
-    }
-
     const inductionRef = db.collection("inductions").doc(id);
-
-    // Check if the induction exists
     const inductionDoc = await inductionRef.get();
+
     if (!inductionDoc.exists) {
       return res.status(404).json({ message: "Induction not found" });
     }
 
-    // Update the induction document
-    await inductionRef.update({
-      name,
-      department,
-      description,
-      questions,
-    });
+    const updateData = {
+      ...(name && { name: name.trim() }),
+      ...(department && { department }),
+      ...(description !== undefined && { description: description.trim() }),
+      ...(questions !== undefined && { questions }),
+      updatedAt: new Date(),
+    };
 
-    res.json({ message: "Induction updated successfully" });
-
+    await inductionRef.update(updateData);
+    res.json({ message: "Induction updated successfully", id, ...updateData });
+  
   } catch (error) {
     console.error("Error updating induction:", error);
     res.status(500).send(error);

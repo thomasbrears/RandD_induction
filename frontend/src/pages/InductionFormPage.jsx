@@ -3,11 +3,32 @@ import { Helmet } from 'react-helmet-async';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import useAuth from '../hooks/useAuth';
 import { getInduction } from '../api/InductionApi';
+import { updateUserInduction, getUserInductionById } from '../api/UserInductionApi';
 import Loading from '../components/Loading';
+import InductionFeedbackModal from '../components/InductionFeedbackModal';
+import SaveRecoveryModal from '../components/takeInduction/SaveRecoveryModal';
 import QuestionTypes from '../models/QuestionTypes';
 import { notifyError, notifySuccess, messageError, messageSuccess } from '../utils/notificationService';
-import InductionFeedbackModal from '../components/InductionFeedbackModal';
-import { updateUserInduction, getUserInductionById } from '../api/UserInductionApi';
+import { ArrowLeftOutlined } from '@ant-design/icons';
+
+import InductionIntro from '../components/takeInduction/InductionIntro';
+import ProgressBar from '../components/takeInduction/ProgressBar';
+import QuestionNavigation from '../components/takeInduction/QuestionNavigation';
+import SingleQuestionView from '../components/takeInduction/SingleQuestionView';
+import InductionCompletion from '../components/takeInduction/InductionCompletion';
+
+// Utility functions
+import {
+  checkAllRequiredQuestionsAnswered,
+  validateAnswer,
+  formatAnswersForSubmission
+} from '../utils/inductionHelpers';
+import {
+  saveProgressToLocalStorage,
+  loadProgressFromLocalStorage,
+  forceProgressSave,
+  setupVisibilityChangeTracking
+} from '../utils/localStorageManager';
 
 const STATES = {
   LOADING: 'LOADING',
@@ -45,7 +66,6 @@ const InductionFormPage = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showAllQuestions, setShowAllQuestions] = useState(false);
   
   // Add feedback state for validation
   const [answerFeedback, setAnswerFeedback] = useState({
@@ -59,6 +79,19 @@ const InductionFormPage = () => {
 
   // Add state to track answered questions
   const [answeredQuestions, setAnsweredQuestions] = useState({});
+
+  // Track if user is on the submission screen
+  const [showSubmissionScreen, setShowSubmissionScreen] = useState(false);
+
+  // Add state to track when progress was last saved
+  const [lastSaved, setLastSaved] = useState(null);
+  
+  // Mobile menu state
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  
+  // State for save recovery modal
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [savedProgressData, setSavedProgressData] = useState(null);
 
   // Load induction data just once on mount
   useEffect(() => {
@@ -241,9 +274,103 @@ const InductionFormPage = () => {
     };
   }, [idParam, user, navigate, loadAttempts]);
 
+  // Optimised auto-save
+  useEffect(() => {
+    if (!started || !induction || !induction.id) return;
+    
+    // Function to get current progress data
+    const getCurrentProgressData = () => ({
+      answers,
+      currentQuestionIndex,
+      answeredQuestions
+    });
+    
+    // Set up event listeners for tab switching and page close
+    const cleanupListeners = setupVisibilityChangeTracking(
+      induction.id,
+      getCurrentProgressData,
+      setLastSaved
+    );
+    
+    // Clean up event listeners on unmount
+    return cleanupListeners;
+  }, [started, induction?.id, answers, currentQuestionIndex, answeredQuestions]);
+
+  // Load saved progress when induction loads and user starts
+  useEffect(() => {
+    if (started && induction && induction.id) {
+      const progressData = loadProgressFromLocalStorage(induction.id);
+      
+      if (progressData) {
+        // total questions count to progress data for the recovery modal
+        const progressWithTotal = {
+          ...progressData,
+          totalQuestions: induction.questions.length
+        };
+        
+        // Update state to show recovery modal
+        setSavedProgressData(progressWithTotal);
+        setShowRecoveryModal(true);
+      } else {
+        // Initialise with empty answers if no saved progress
+        const initialAnswers = {};
+        induction.questions.forEach(question => {
+          initialAnswers[question.id] = question.type === QuestionTypes.MULTICHOICE ? [] : '';
+        });
+        setAnswers(initialAnswers);
+      }
+    }
+  }, [started, induction?.id]);
+
+  // Handler for mobile menu toggle
+  const handleMobileMenuToggle = (value) => {
+    // If no value is provided, toggle the current state
+    // Otherwise use the provided value
+    if (typeof value === 'boolean') {
+      setMobileMenuOpen(value);
+    } else {
+      setMobileMenuOpen(!mobileMenuOpen);
+    }
+  };
+  
+  // Handler for recovering saved progress
+  const handleRecoverProgress = () => {
+    if (savedProgressData) {
+      // Load the saved progress data
+      setAnswers(savedProgressData.answers || {});
+      setCurrentQuestionIndex(savedProgressData.currentQuestionIndex || 0);
+      setAnsweredQuestions(savedProgressData.answeredQuestions || {});
+      setLastSaved(savedProgressData.lastUpdated ? new Date(savedProgressData.lastUpdated) : null);
+      
+      // Close the modal
+      setShowRecoveryModal(false);
+    }
+  };
+  
+  // Handler for starting fresh
+  const handleStartFresh = () => {
+    // Initialise with empty answers
+    const initialAnswers = {};
+    if (induction && induction.questions) {
+      induction.questions.forEach(question => {
+        initialAnswers[question.id] = question.type === QuestionTypes.MULTICHOICE ? [] : '';
+      });
+    }
+    
+    // Reset progress
+    setAnswers(initialAnswers);
+    setCurrentQuestionIndex(0);
+    setAnsweredQuestions({});
+    setLastSaved(null);
+    
+    // Close the modal
+    setShowRecoveryModal(false);
+  };
+
+  // Handle starting the induction
   const handleStart = async () => {
-    // Mark induction as in progress in the database
-    if (userInduction && userInduction.status === 'assigned') {
+    // If user is logged in, try to update their induction status
+    if (user && userInduction) {
       try {
         await updateUserInduction(user, userInduction.id, {
           status: 'in_progress',
@@ -256,23 +383,20 @@ const InductionFormPage = () => {
     }
     
     setStarted(true);
-    const initialAnswers = {};
-    induction.questions.forEach(question => {
-      initialAnswers[question.id] = question.type === QuestionTypes.MULTICHOICE ? [] : '';
-    });
-    setAnswers(initialAnswers);
   };
 
-  // New function to toggle between slideshow and list view
-  const toggleViewMode = () => {
-    setShowAllQuestions(prev => !prev);
-  };
-
+  // Handle answer updates
   const handleAnswer = (questionId, answer) => {
-    setAnswers(prev => ({
-      ...prev,
-      [questionId]: answer
-    }));
+    // Only update the answers state
+    setAnswers(prev => {
+      const newAnswers = {
+        ...prev,
+        [questionId]: answer
+      };
+      
+      return newAnswers;
+    });
+    
     // Clear feedback when a new answer is selected
     setAnswerFeedback({
       isCorrect: null,
@@ -281,78 +405,68 @@ const InductionFormPage = () => {
     });
   };
 
+  // Handle moving to the next question
   const handleNextQuestion = () => {
     // Get current question and answer
     const currentQuestion = induction.questions[currentQuestionIndex];
     const currentAnswer = answers[currentQuestion.id];
     
-    // Log for debugging
-    console.log('Current Question:', currentQuestion);
-    console.log('Current Answer:', currentAnswer);
+    // For information questions, always allow proceeding and mark as answered
+    if (currentQuestion.type === QuestionTypes.INFORMATION) {
+      // Mark this question as answered only now
+      const updatedAnsweredQuestions = {
+        ...answeredQuestions,
+        [currentQuestion.id]: true
+      };
+      setAnsweredQuestions(updatedAnsweredQuestions);
+      
+      // Save progress
+      forceProgressSave(induction.id, {
+        answers,
+        currentQuestionIndex,
+        answeredQuestions: updatedAnsweredQuestions
+      }, setLastSaved);
+      
+      // Proceed to next question
+      if (currentQuestionIndex < induction.questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      }
+      return;
+    }
     
-    // Check if answer is provided
-    if (currentAnswer === undefined || currentAnswer === '' || 
-        (Array.isArray(currentAnswer) && currentAnswer.length === 0)) {
+    // Validate the answer
+    const validation = validateAnswer(currentQuestion, currentAnswer);
+    
+    if (!validation.isValid) {
       setAnswerFeedback({
         isCorrect: false,
-        message: 'Please select an answer before proceeding.',
+        message: validation.message,
         showFeedback: true
       });
       return;
     }
-
-    // Validate the answer based on question type
-    let isCorrect = false;
     
-    switch (currentQuestion.type) {
-      case QuestionTypes.TRUE_FALSE:
-        // For TRUE_FALSE, the correct answer is stored in the answers array
-        console.log('Validating TRUE_FALSE answer:', currentQuestion.answers, currentAnswer);
-        isCorrect = parseInt(currentAnswer) === currentQuestion.answers[0];
-        break;
-      
-      case QuestionTypes.MULTICHOICE:
-        // For multiple choice, answers array contains indices of correct options
-        console.log('Validating MULTICHOICE answer:', currentQuestion.answers, currentAnswer);
-        if (Array.isArray(currentQuestion.answers) && Array.isArray(currentAnswer)) {
-          // All selected options should be correct and all correct options should be selected
-          isCorrect = 
-            currentAnswer.length === currentQuestion.answers.length && 
-            currentAnswer.every(answer => 
-              currentQuestion.answers.includes(parseInt(answer))
-            );
-        }
-        break;
-      
-      case QuestionTypes.DROPDOWN:
-        // For dropdown, answers array typically contains one correct index
-        console.log('Validating DROPDOWN answer:', currentQuestion.answers, currentAnswer);
-        isCorrect = parseInt(currentAnswer) === currentQuestion.answers[0];
-        break;
-        
-      case QuestionTypes.FILE_UPLOAD:
-        // For file uploads, we always allow proceeding
-        isCorrect = true;
-        break;
-        
-      default:
-        console.warn('Unknown question type:', currentQuestion.type);
-        isCorrect = true; // Default to true for unknown types
-    }
-
-    // Show feedback based on answer validation
-    if (isCorrect) {
+    // Handle short answer questions differently
+    if (currentQuestion.type === QuestionTypes.SHORT_ANSWER) {
       setAnswerFeedback({
-        isCorrect: true,
-        message: 'Correct! Well done.',
+        isCorrect: null, // null means pending review
+        message: 'Answer submitted for review.',
         showFeedback: true
       });
       
-      // Mark this question as correctly answered
-      setAnsweredQuestions(prev => ({
-        ...prev,
+      // Mark this question as answered only after submission
+      const updatedAnsweredQuestions = {
+        ...answeredQuestions,
         [currentQuestion.id]: true
-      }));
+      };
+      setAnsweredQuestions(updatedAnsweredQuestions);
+      
+      // Save progress
+      forceProgressSave(induction.id, {
+        answers,
+        currentQuestionIndex,
+        answeredQuestions: updatedAnsweredQuestions
+      }, setLastSaved);
       
       // Proceed to next question after a short delay
       setTimeout(() => {
@@ -366,108 +480,127 @@ const InductionFormPage = () => {
           });
         }
       }, 1000);
-    } else {
-      setAnswerFeedback({
-        isCorrect: false,
-        message: 'Incorrect. Please try again.',
-        showFeedback: true
-      });
+      return;
+    }
+    
+    // Show feedback based on answer validation
+    setAnswerFeedback({
+      isCorrect: validation.isCorrect,
+      message: validation.message,
+      showFeedback: true
+    });
+    
+    if (validation.isCorrect) {
+      // Mark this question as correctly answered ONLY when validation passes
+      const updatedAnsweredQuestions = {
+        ...answeredQuestions,
+        [currentQuestion.id]: true
+      };
+      setAnsweredQuestions(updatedAnsweredQuestions);
+      
+      // Save progress
+      forceProgressSave(induction.id, {
+        answers,
+        currentQuestionIndex,
+        answeredQuestions: updatedAnsweredQuestions
+      }, setLastSaved);
+      
+      // Proceed to next question after a short delay
+      setTimeout(() => {
+        if (currentQuestionIndex < induction.questions.length - 1) {
+          setCurrentQuestionIndex(currentQuestionIndex + 1);
+          // Reset feedback for the next question
+          setAnswerFeedback({
+            isCorrect: null,
+            message: '',
+            showFeedback: false
+          });
+        }
+      }, 1000);
     }
   };
 
+  // Handle going to the previous question
   const handlePrevQuestion = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
+      
+      // Save progress when navigating
+      forceProgressSave(induction.id, {
+        answers,
+        currentQuestionIndex: currentQuestionIndex - 1,
+        answeredQuestions
+      }, setLastSaved);
+    }
+  };
+
+  // Handle question navigation from sidebar or mobile menu
+  const handleQuestionNavigation = (index) => {
+    if (index >= 0 && index < induction.questions.length) {
+      // Allow navigation
+      setCurrentQuestionIndex(index);
+      
+      // Close mobile menu if open
+      if (mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+      
+      // Save current state when navigating between questions
+      forceProgressSave(induction.id, {
+        answers,
+        currentQuestionIndex: index,
+        answeredQuestions
+      }, setLastSaved);
+    }
+  };
+
+  // Handler for moving to submission screen with validation
+  const handleGoToSubmissionScreen = () => {
+    const validation = checkAllRequiredQuestionsAnswered(induction.questions, answers);
+    
+    if (validation.isValid) {
+      setShowSubmissionScreen(true);
+      
+      // Save progress when moving to submission screen
+      forceProgressSave(induction.id, {
+        answers,
+        currentQuestionIndex,
+        answeredQuestions
+      }, setLastSaved);
+    } else {
+      const errorMessage = 'Please answer all required questions before submitting.';
+      notifyError('Missing Required Answers', errorMessage);
     }
   };
 
   // Submit the induction
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    
+    // Validate all required fields
+    const validation = checkAllRequiredQuestionsAnswered(induction.questions, answers);
+    
+    // If there are missing required answers, show error and prevent submission
+    if (!validation.isValid) {
+      // Create error message with list of missing answers
+      let errorMessage = 'Please answer the following required questions:';
+      
+      validation.missingAnswers.forEach(item => {
+        errorMessage += `\n• Question ${item.index}: ${item.question.length > 30 ? 
+          item.question.substring(0, 30) + '...' : item.question}`;
+      });
+      
+      // Show error notification
+      notifyError('Missing Required Answers', errorMessage);
+      
+      return;
+    }
+    
     setIsSubmitting(true);
     
     try {
-      // Format answers as an array for storage
-      const formattedAnswers = [];
-      
-      // Get all questions to determine their types
-      const questions = induction.questions || [];
-      
-      // Process each answer based on its question type
-      questions.forEach(question => {
-        const answer = answers[question.id];
-        const answerObj = {
-          questionId: question.id,
-          questionType: question.type,
-          // Save question title/text for context
-          questionTitle: question.title || question.question || `Question ${questions.indexOf(question) + 1}`,
-          questionText: question.text || '',
-          description: question.description || ''
-        };
-        
-        // Format differently based on question type
-        switch (question.type) {
-          case 'multichoice':
-            // Save all options and which ones were selected
-            answerObj.allOptions = question.options || [];
-            answerObj.selectedOptions = Array.isArray(answer) ? answer : [];
-            
-            // Evaluate if the answer is correct (only for questions with defined correct answers)
-            if (question.correctOptions) {
-              // Check if selected options match correct options
-              const isCorrect = JSON.stringify(answerObj.selectedOptions.sort()) === 
-                              JSON.stringify(question.correctOptions.sort());
-              answerObj.isCorrect = isCorrect;
-            }
-            break;
-            
-          case 'true_false':
-          case 'yes_no':
-            answerObj.selectedOption = answer !== undefined ? answer : null;
-            answerObj.allOptions = question.options || [];
-            // Check correctness (only if a correct answer is defined)
-            if (question.correctOption !== undefined) {
-              answerObj.isCorrect = answerObj.selectedOption === question.correctOption;
-            }
-            break;
-            
-          case 'dropdown':
-            answerObj.selectedOption = answer !== undefined ? answer : null;
-            answerObj.allOptions = question.options || [];
-            // Check correctness (only if a correct answer is defined)
-            if (question.correctOption !== undefined) {
-              answerObj.isCorrect = answerObj.selectedOption === question.correctOption;
-            }
-            break;
-            
-          case 'short_answer':
-            answerObj.textValue = answer || '';
-            // Don't set isCorrect - these need manual review
-            answerObj.flaggedForReview = true;
-            break;
-            
-          case 'file_upload':
-            answerObj.fileUploaded = !!answer;
-            answerObj.fileReference = answer || null;
-            // Don't set isCorrect - these need manual review
-            answerObj.flaggedForReview = true;
-            break;
-            
-          case 'info_block':
-            answerObj.acknowledged = !!answer;
-            break;
-            
-          default:
-            answerObj.value = answer;
-        }
-        
-        // Flag important questions for review
-        if (question.isImportant || question.important) {
-          answerObj.flaggedForReview = true;
-        }
-        
-        formattedAnswers.push(answerObj);
-      });
+      // Format answers for storage
+      const formattedAnswers = formatAnswersForSubmission(induction.questions, answers);
       
       // Mark induction as complete in the database with answers
       if (userInduction) {
@@ -506,27 +639,6 @@ const InductionFormPage = () => {
     navigate('/inductions/my-inductions');
   };
 
-  // Calculate estimated time (assumed 2 minutes per question as a default)
-  const estimatedTime = induction?.questions?.length ? induction.questions.length * 2 : 0;
-
-  // New function to handle sidebar navigation
-  const handleQuestionNavigation = (index) => {
-    setCurrentQuestionIndex(index);
-    // Reset feedback when navigating
-    setAnswerFeedback({
-      isCorrect: null,
-      message: '',
-      showFeedback: false
-    });
-  };
-
-  // Mobile sidebar state
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const toggleMobileMenu = () => {
-    setMobileMenuOpen(prev => !prev);
-  };
-
   // Render based on view state
   if (viewState === STATES.LOADING) {
     return <Loading />;
@@ -541,8 +653,9 @@ const InductionFormPage = () => {
           <p>Sorry, we couldn't find the requested induction.</p>
           <button 
             onClick={() => navigate('/inductions/my-inductions')}
-            className="mt-4 px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700"
+            className="mt-4 px-4 py-2 bg-gray-800 text-white rounded hover:bg-gray-700 flex items-center justify-center mx-auto"
           >
+            <ArrowLeftOutlined className="mr-2" />
             Return to My Inductions
           </button>
         </div>
@@ -552,303 +665,104 @@ const InductionFormPage = () => {
 
   return (
     <>
-      <Helmet><title>{induction.name || 'Induction'} | AUT Events Induction Portal</title></Helmet>
-      <div className="p-6 max-w-4xl mx-auto">
-        {!started ? (
-          <div className="bg-white shadow-md rounded-lg p-6">
-            <h1 className="text-2xl font-bold text-gray-800 mb-4 break-words">{induction.name}</h1>
-            
-            <div className="mb-6 space-y-4">
-              <div className="p-4 bg-gray-50 rounded-md">
-                <div className="prose !max-w-none w-full break-words overflow-hidden">
-                  <p 
-                    className="text-gray-700"
-                    dangerouslySetInnerHTML={{ __html: induction.description || 'No description provided.' }}
+      <Helmet><title>{induction?.name || 'Induction'} | AUT Events Induction Portal</title></Helmet>
+      <div className="min-h-screen flex flex-col bg-gray-50">
+        <div className="flex-1 w-full max-w-6xl mx-auto">
+          <div className={`p-4 sm:p-6 ${started ? 'pb-32 md:pb-6' : ''}`}>
+            {!started ? (
+              <InductionIntro 
+                induction={induction} 
+                onStart={handleStart} 
+              />
+            ) : (
+              <div className="bg-white shadow-md rounded-lg overflow-hidden">
+                {/* Title section with induction name */}
+                <div className="border-b border-gray-200">
+                  <h1 className="text-xl sm:text-2xl font-bold p-4 px-6 break-words">{induction.name}</h1>
+                  
+                  {/* Progress bar */}
+                  <ProgressBar 
+                    questions={induction.questions}
+                    answeredQuestions={answeredQuestions}
+                    lastSaved={lastSaved}
                   />
                 </div>
-              </div>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-blue-50 p-4 rounded-md">
-                  <span className="block text-sm font-medium text-gray-600">Question Count</span>
-                  <span className="text-lg font-semibold">{induction.questions?.length || 0} questions</span>
-                </div>
                 
-                <div className="bg-green-50 p-4 rounded-md">
-                  <span className="block text-sm font-medium text-gray-600">Estimated Time</span>
-                  <span className="text-lg font-semibold">
-                    {estimatedTime} {estimatedTime === 1 ? 'minute' : 'minutes'}
-                  </span>
-                </div>
-              </div>
-            </div>
-            
-            <button 
-              onClick={handleStart}
-              className="w-full md:w-auto px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors font-medium"
-            >
-              Start Induction
-            </button>
-          </div>
-        ) : (
-          <div className="bg-white shadow-md rounded-lg overflow-hidden">
-            <h1 className="text-2xl font-bold p-6 break-words border-b">{induction.name}</h1>
-            
-            {induction.questions && induction.questions.length > 0 ? (
-              <div className="space-y-6">
-                {/* View Mode Toggle - Mobile only */}
-                <div className="mb-4 flex justify-end md:hidden">
-                  <button
-                    onClick={toggleMobileMenu}
-                    className="w-full flex items-center justify-between px-4 py-2 bg-gray-100 rounded-md text-gray-700"
-                  >
-                    <span>Question Navigator</span>
-                    <svg 
-                      xmlns="http://www.w3.org/2000/svg" 
-                      className={`h-5 w-5 transition-transform ${mobileMenuOpen ? 'transform rotate-180' : ''}`} 
-                      viewBox="0 0 20 20" 
-                      fill="currentColor"
-                    >
-                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
-                
-                {/* Main flex container for sidebar and content */}
-                <div className="flex flex-col md:flex-row">
-                  {/* Question numbers side panel - hidden on mobile unless toggled */}
-                  <div className={`${mobileMenuOpen ? 'block' : 'hidden'} md:block md:w-1/4 bg-gray-50 p-4 border-r`}>
-                    <h2 className="text-lg font-medium mb-4">Questions</h2>
-                    <div className="space-y-2">
-                      {induction.questions.map((question, index) => (
-                        <button
-                          key={question.id}
-                          onClick={() => handleQuestionNavigation(index)}
-                          className={`w-full text-left px-3 py-2 rounded-md flex items-center ${
-                            currentQuestionIndex === index 
-                              ? 'bg-gray-800 text-white' 
-                              : answeredQuestions[question.id]
-                                ? 'bg-green-50 text-green-700 border border-green-200'
-                                : 'text-gray-700 hover:bg-gray-100'
-                          }`}
-                          disabled={!showAllQuestions && !answeredQuestions[question.id] && index > currentQuestionIndex}
-                        >
-                          <span className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full mr-2 text-sm ${
-                            currentQuestionIndex === index 
-                              ? 'bg-white text-gray-800' 
-                              : answeredQuestions[question.id]
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-gray-200 text-gray-700'
-                          }`}>
-                            {index + 1}
-                          </span>
-                          <span className="truncate">{question.question.length > 20 ? question.question.substring(0, 20) + '...' : question.question}</span>
-                        </button>
-                      ))}
+                {induction.questions && induction.questions.length > 0 ? (
+                  <div className="flex flex-col md:flex-row relative">
+                    {/* Question navigation sidebar */}
+                    <div className={`hidden md:block md:w-72 lg:w-80 flex-shrink-0`}>
+                      <QuestionNavigation
+                        questions={induction.questions}
+                        currentIndex={currentQuestionIndex}
+                        onNavClick={handleQuestionNavigation}
+                        answeredQuestions={answeredQuestions}
+                        isOpen={mobileMenuOpen}
+                        onClose={handleMobileMenuToggle}
+                      />
+                    </div>
+                    
+                    {/* Main content area - flexible width */}
+                    <div className="flex-1 min-w-0">
+                      <div className="p-4 sm:p-6">
+                        <form onSubmit={handleSubmit}>
+                          {/* Show either submission screen or current question */}
+                          {showSubmissionScreen ? (
+                            <InductionCompletion
+                              answeredQuestions={answeredQuestions}
+                              questions={induction.questions}
+                              onBackToQuestions={() => setShowSubmissionScreen(false)}
+                              onSubmit={handleSubmit}
+                              isSubmitting={isSubmitting}
+                            />
+                          ) : (
+                            <SingleQuestionView
+                              question={induction.questions[currentQuestionIndex]}
+                              answer={answers[induction.questions[currentQuestionIndex].id]}
+                              handleAnswerChange={(answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)}
+                              answerFeedback={answerFeedback}
+                              handlePrevQuestion={handlePrevQuestion}
+                              handleNextQuestion={handleNextQuestion}
+                              currentIndex={currentQuestionIndex}
+                              totalQuestions={induction.questions.length}
+                              handleGoToSubmissionScreen={handleGoToSubmissionScreen}
+                              QuestionTypes={QuestionTypes}
+                            />
+                          )}
+                        </form>
+                      </div>
+                    </div>
+                    
+                    {/* Mobile navigation */}
+                    <div className="md:hidden">
+                      <QuestionNavigation
+                        questions={induction.questions}
+                        currentIndex={currentQuestionIndex}
+                        onNavClick={handleQuestionNavigation}
+                        answeredQuestions={answeredQuestions}
+                        isOpen={mobileMenuOpen}
+                        onClose={handleMobileMenuToggle}
+                      />
                     </div>
                   </div>
-                  
-                  {/* Main content area */}
-                  <div className="md:w-3/4 p-6">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                      {/* View Mode Toggle */}
-                      <div className="mb-4 flex justify-end">
-                        <button
-                          type="button"
-                          onClick={toggleViewMode}
-                          className="text-gray-600 hover:text-gray-800 text-sm font-medium flex items-center"
-                        >
-                          {showAllQuestions ? (
-                            <>
-                              <span>Switch to Slideshow View</span>
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
-                              </svg>
-                            </>
-                          ) : (
-                            <>
-                              <span>View All Questions</span>
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                              </svg>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                      
-                      {/* List view or slideshow based on showAllQuestions state */}
-                      {showAllQuestions ? (
-                        /* List View - All questions displayed */
-                        <div className="space-y-8">
-                          {induction.questions.map((question, index) => (
-                            <div 
-                              key={question.id}
-                              className="bg-gray-50 p-4 sm:p-6 rounded-lg"
-                            >
-                              <h2 className="text-xl font-semibold mb-2 flex items-center">
-                                <span className="bg-gray-800 text-white rounded-full w-7 h-7 flex items-center justify-center mr-2 text-sm flex-shrink-0">
-                                  {index + 1}
-                                </span>
-                                <span className="break-words">{question.question}</span>
-                              </h2>
-                              
-                              {question.description && (
-                                <div 
-                                  className="text-gray-600 prose max-w-none mb-4"
-                                  dangerouslySetInnerHTML={{ __html: question.description }}
-                                />
-                              )}
-                              
-                              <div className="mt-2">
-                                {renderQuestionByType(
-                                  question, 
-                                  answers[question.id], 
-                                  (answer) => handleAnswer(question.id, answer)
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        /* Slideshow View - Single question displayed */
-                        <>
-                          {/* Progress indicator */}
-                          <div className="mb-4">
-                            <div className="flex justify-between mb-2">
-                              <span className="text-sm font-medium">Progress</span>
-                              <span className="text-sm font-medium">{currentQuestionIndex + 1} of {induction.questions.length}</span>
-                            </div>
-                            <div className="w-full bg-gray-200 rounded-full h-2.5">
-                              <div 
-                                className="bg-gray-800 h-2.5 rounded-full" 
-                                style={{ width: `${((currentQuestionIndex + 1) / induction.questions.length) * 100}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                          
-                          {/* Current question */}
-                          <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
-                            {induction.questions[currentQuestionIndex] && (
-                              <div className="space-y-4">
-                                <h2 className="text-xl font-semibold">{induction.questions[currentQuestionIndex].question}</h2>
-                                
-                                {induction.questions[currentQuestionIndex].description && (
-                                  <div 
-                                    className="text-gray-600 prose max-w-none"
-                                    dangerouslySetInnerHTML={{ __html: induction.questions[currentQuestionIndex].description }}
-                                  />
-                                )}
-                                
-                                {/* Question content based on type */}
-                                <div className="mt-4">
-                                  {renderQuestionByType(
-                                    induction.questions[currentQuestionIndex], 
-                                    answers[induction.questions[currentQuestionIndex].id], 
-                                    (answer) => handleAnswer(induction.questions[currentQuestionIndex].id, answer)
-                                  )}
-                                </div>
-                                
-                                {/* Answer Feedback */}
-                                {answerFeedback.showFeedback && (
-                                  <div className={`mt-4 p-3 rounded-md ${
-                                    answerFeedback.isCorrect 
-                                      ? 'bg-green-50 text-green-700 border border-green-200' 
-                                      : 'bg-red-50 text-red-700 border border-red-200'
-                                  }`}>
-                                    <div className="flex items-center">
-                                      {answerFeedback.isCorrect ? (
-                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
-                                        </svg>
-                                      ) : (
-                                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-                                        </svg>
-                                      )}
-                                      <span className="font-medium">{answerFeedback.message}</span>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          
-                          {/* Navigation buttons */}
-                          <div className="flex justify-between mt-6">
-                            <button 
-                              type="button"
-                              onClick={handlePrevQuestion}
-                              disabled={currentQuestionIndex === 0}
-                              className={`px-4 py-2 border rounded-md ${
-                                currentQuestionIndex === 0 
-                                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed' 
-                                  : 'bg-white text-gray-800 hover:bg-gray-50'
-                              }`}
-                            >
-                              Previous
-                            </button>
-                            
-                            {currentQuestionIndex < induction.questions.length - 1 ? (
-                              <button 
-                                type="button"
-                                onClick={handleNextQuestion}
-                                disabled={answerFeedback.showFeedback && !answerFeedback.isCorrect}
-                                className={`px-4 py-2 bg-gray-800 text-white rounded-md ${
-                                  answerFeedback.showFeedback && !answerFeedback.isCorrect 
-                                    ? 'opacity-50 cursor-not-allowed' 
-                                    : 'hover:bg-gray-700'
-                                }`}
-                              >
-                                Next
-                              </button>
-                            ) : (
-                              <button 
-                                type="submit"
-                                disabled={isSubmitting}
-                                className={`px-6 py-2 bg-gray-800 text-white rounded-md ${
-                                  isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-700'
-                                }`}
-                              >
-                                {isSubmitting ? 'Submitting...' : 'Complete Induction'}
-                              </button>
-                            )}
-                          </div>
-                        </>
-                      )}
-                      
-                      {/* Submit button for list view */}
-                      {showAllQuestions && (
-                        <div className="mt-8 flex justify-center">
-                          <button 
-                            type="submit"
-                            disabled={isSubmitting}
-                            className={`px-6 py-3 bg-gray-800 text-white rounded-md w-full sm:w-auto ${
-                              isSubmitting ? 'opacity-70 cursor-not-allowed' : 'hover:bg-gray-700'
-                            }`}
-                          >
-                            {isSubmitting ? 'Submitting...' : 'Complete Induction'}
-                          </button>
-                        </div>
-                      )}
-                    </form>
+                ) : (
+                  <div className="text-center py-10">
+                    <p className="text-xl text-gray-600">No questions available for this induction.</p>
+                    <button 
+                      onClick={() => navigate('/inductions/my-inductions')}
+                      className="mt-4 px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700 flex items-center justify-center mx-auto"
+                    >
+                      <ArrowLeftOutlined className="mr-2" />
+                      Return to My Inductions
+                    </button>
                   </div>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-10">
-                <p className="text-xl text-gray-600">No questions available for this induction.</p>
-                <button 
-                  onClick={() => navigate('/inductions/my-inductions')}
-                  className="mt-4 px-4 py-2 bg-gray-800 text-white rounded-md hover:bg-gray-700"
-                >
-                  Return to My Inductions
-                </button>
+                )}
               </div>
             )}
           </div>
-        )}
+        </div>
       </div>
-
+  
       {/* Feedback Modal */}
       <InductionFeedbackModal
         visible={showFeedbackModal}
@@ -857,119 +771,16 @@ const InductionFormPage = () => {
         inductionName={induction?.name}
         userInductionId={userInduction?.id}
       />
+      
+      {/* Save Recovery Modal */}
+      <SaveRecoveryModal
+        isVisible={showRecoveryModal}
+        onRecover={handleRecoverProgress}
+        onStartFresh={handleStartFresh}
+        savedProgress={savedProgressData}
+      />
     </>
   );
 };
-
-// Helper function to render the appropriate question type
-function renderQuestionByType(question, answer, handleAnswerChange) {
-  switch (question.type) {
-    case QuestionTypes.TRUE_FALSE:
-      return (
-        <div className="space-y-3">
-          {question.options.map((option, index) => (
-            <div key={index} className="flex items-center">
-              <input
-                type="radio"
-                id={`option-${question.id}-${index}`}
-                name={`question-${question.id}`}
-                value={index}
-                checked={answer === index}
-                onChange={() => handleAnswerChange(index)}
-                className="w-5 h-5 text-gray-800 border-gray-300 focus:ring-gray-500"
-              />
-              <label htmlFor={`option-${question.id}-${index}`} className="ml-2 block text-gray-700">
-                {option}
-              </label>
-            </div>
-          ))}
-        </div>
-      );
-      
-    case QuestionTypes.MULTICHOICE:
-      return (
-        <div className="space-y-3">
-          {question.options.map((option, index) => (
-            <div key={index} className="flex items-center">
-              <input
-                type="checkbox"
-                id={`option-${question.id}-${index}`}
-                name={`question-${question.id}`}
-                value={index}
-                checked={Array.isArray(answer) && answer.includes(index)}
-                onChange={() => {
-                  if (Array.isArray(answer)) {
-                    if (answer.includes(index)) {
-                      handleAnswerChange(answer.filter(i => i !== index));
-                    } else {
-                      handleAnswerChange([...answer, index]);
-                    }
-                  } else {
-                    handleAnswerChange([index]);
-                  }
-                }}
-                className="w-5 h-5 text-gray-800 border-gray-300 rounded focus:ring-gray-500"
-              />
-              <label htmlFor={`option-${question.id}-${index}`} className="ml-2 block text-gray-700 text-base">
-                {option}
-              </label>
-            </div>
-          ))}
-        </div>
-      );
-      
-    case QuestionTypes.DROPDOWN:
-      return (
-        <select
-          value={answer}
-          onChange={(e) => handleAnswerChange(e.target.value)}
-          className="block w-full p-2 mt-1 rounded-md border-gray-300 shadow-sm focus:border-gray-500 focus:ring focus:ring-gray-500 focus:ring-opacity-50 text-base"
-        >
-          <option value="">Select an answer</option>
-          {question.options.map((option, index) => (
-            <option key={index} value={index}>
-              {option}
-            </option>
-          ))}
-        </select>
-      );
-      
-    case QuestionTypes.FILE_UPLOAD:
-      return (
-        <div className="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
-          <div className="space-y-1 text-center">
-            <svg
-              className="mx-auto h-12 w-12 text-gray-400"
-              stroke="currentColor"
-              fill="none"
-              viewBox="0 0 48 48"
-              aria-hidden="true"
-            >
-              <path
-                d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <div className="flex flex-col sm:flex-row text-sm text-gray-600 justify-center">
-              <label
-                htmlFor={`file-upload-${question.id}`}
-                className="relative cursor-pointer bg-white rounded-md font-medium text-gray-800 hover:text-gray-700 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-gray-500"
-              >
-                <span>Upload a file</span>
-                <input id={`file-upload-${question.id}`} name={`file-upload-${question.id}`} type="file" className="sr-only" />
-              </label>
-              <p className="pl-1 mt-1 sm:mt-0">or drag and drop</p>
-            </div>
-            <p className="text-xs text-gray-500">PNG, JPG, PDF up to 10MB</p>
-          </div>
-        </div>
-      );
-      
-    default:
-      return <p className="text-red-500">Unknown question type: {question.type}</p>;
-  }
-}
 
 export default InductionFormPage;
