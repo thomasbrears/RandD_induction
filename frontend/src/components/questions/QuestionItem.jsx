@@ -15,8 +15,6 @@ import { FaBars, FaChevronDown, FaChevronUp, FaEdit } from 'react-icons/fa';
 import QuestionTypes from "../../models/QuestionTypes";
 import ConfirmationModal from "../ConfirmationModal";
 import { Trash } from "lucide-react";
-import ShortAnswerQuestion from "./ShortAnswerQuestion";
-import InformationQuestion from "./InformationQuestion";
 
 const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index, getImageUrl }) => {
     const [hasExpandedBefore, setHasExpandedBefore] = useState(false);
