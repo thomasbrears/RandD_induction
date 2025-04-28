@@ -1,114 +1,88 @@
-import { useState, useEffect } from "react";
-import { FaEdit, FaCheck, FaTimes } from "react-icons/fa";
-import { Button } from "antd";
-import TiptapEditor from "../TiptapEditor";
+import { FaCheck, FaTimes } from "react-icons/fa";
+import { useEffect, useState } from "react";
 
-const TrueFalseQuestion = ({ question, onChange, isExpanded, saveAllFields, updateFieldsBeingEdited }) => {
-  const [editingField, setEditingField] = useState(null);
-  const [localValues, setLocalValues] = useState({ ...question });
+const TrueFalseQuestion = ({ question, getImageUrl }) => {
+  const [imageUrl, setImageUrl] = useState(null);
 
   useEffect(() => {
-    if (editingField && (saveAllFields || !isExpanded)) {
-      stopEditing(editingField, localValues[editingField]);
-      setEditingField(null);
+    if (question.imageFile) {
+      const loadImage = async () => {
+        const url = await getImageUrl(question.id);
+        setImageUrl(url);
+      };
+
+      loadImage();
+    } else {
+      setImageUrl(null);
     }
-    updateFieldsBeingEdited(`${question.id}_content`, editingField);
-    
-  }, [isExpanded, editingField, saveAllFields]);
+  }, [question.imageFile]);
 
-  const startEditing = (field) => setEditingField(field);
-  const stopEditing = (field, value) => {
-    onChange(question.id, field, value);
-    setEditingField(null);
-  };
+  const handleExpiredImage = async () => {
+    if (question.imageFile) {
+      const loadImage = async () => {
+        const url = await getImageUrl(question.id);
+        setImageUrl(url);
+      };
 
-  const handleLocalChange = (field, value) => {
-    setLocalValues((prev) => ({ ...prev, [field]: value }));
-  };
-
-  const handleCancel = (field) => {
-    setLocalValues((prev) => ({ ...prev, [field]: question[field] }));
-    setEditingField(null);
-  };
-
-  const handleTrueFalseAnswerSelect = (index) => {
-    setLocalValues((prev) => ({
-      ...prev,
-      answers: [index],
-    }));
-    onChange(question.id, "answers", [index]);
+      loadImage();
+    } else {
+      setImageUrl(null);
+    }
   };
 
   return (
-    <div className="p-4 rounded-md bg-white">
+    <div className="rounded-md bg-white">
       {/* Description */}
-      <div className="mb-2">
-        <div className="flex items-center">
-          <p className="font-semibold mr-2">Description: <span className="font-normal text-gray-500">(optional)</span></p>
-          {editingField === "description" ? (
-            <div className="flex gap-2">
-              {/* Update Button */}
-              <Button
-                onClick={() => stopEditing("description", localValues.description)}
-                className="bg-gray-800 font-normal text-white px-2 py-1 rounded-md text-sm flex items-center"
-                title="Save Changes"
-              >
-                <FaCheck className="inline mr-2" /> Update
-              </Button>
-              {/* Cancel Button */}
-              <Button
-                onClick={() => handleCancel("description")}
-                className="bg-red-500 text-white px-2 py-1 rounded-md text-sm flex items-center h-8"
-                title="Discard Changes"
-              >
-                <FaTimes className="mr-1 w-4 h-4" /> Cancel
-              </Button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => startEditing("description")}
-              className="ml-2 text-gray-600 hover:text-gray-800"
-              title="Edit description"
-            >
-              <FaEdit />
-            </button>
-          )}
+      <div className="mb-4 p-3 rounded-md bg-gray-100 border border-gray-200">
+        <p className="font-semibold">Description: <span className="font-normal text-gray-500">(optional)</span></p>
+        <div className="prose !max-w-none w-full break-words mt-2 text-gray-600">
+          <p dangerouslySetInnerHTML={{ __html: question.description || "No description" }} />
         </div>
-
-        {editingField === "description" ? (
-          <TiptapEditor localDescription={localValues.description} handleLocalChange={handleLocalChange}/>
-        ) : (
-          <div className="prose !max-w-none w-full break-words mt-2">
-            <p className="text-base cursor-pointer text-gray-600" dangerouslySetInnerHTML={{ __html: question.description || "No description" }} />
-          </div>
-        )}
       </div>
 
+      {/* Image */}
+      {imageUrl && (
+        <div className="mb-4 p-4 rounded-md bg-gray-100 border border-gray-200 flex justify-center items-center">
+          <img
+            src={imageUrl}
+            alt={question.imageFile}
+            onError={handleExpiredImage}
+            className="max-w-[500px] w-full h-auto object-contain"
+          />
+        </div>
+      )}
+
       {/* Options (True/False) */}
-      <div className="mt-4">
+      <div className="rounded-md bg-gray-100 border border-gray-200 p-3 mt-4">
         <div className="flex justify-between items-center">
           <p className="font-semibold">Options:</p>
-          <p className="text-base text-gray-500">Choose the correct answer.</p>
         </div>
 
-        {localValues.options.map((option, index) => (
+        {question.options.map((option, index) => (
           <div
             key={index}
-            className={`flex items-center gap-2 mt-2 p-2 rounded-md cursor-pointer border-2 ${localValues.answers.length > 0 && localValues.answers[0] === index
+            className={`flex items-center gap-2 mt-2 p-2 rounded-md cursor-pointer border-2 ${question.answers.length > 0 && question.answers[0] === index
               ? "bg-green-100 border-green-500"
               : "bg-gray-200 border-gray-400"
               }`}
-            onClick={() => handleTrueFalseAnswerSelect(index)}
           >
-            <input
-              type="radio"
-              name="trueFalseAnswer"
-              value={index}
-              checked={localValues.answers.length > 0 ? localValues.answers[0] === index : index === 0}
-              onChange={() => handleTrueFalseAnswerSelect(index)}
-              className="cursor-pointer"
-            />
+            {/*Correct/Incorrect Signifier*/}
+            <div
+              className={`relative w-7 h-7 flex items-center justify-center rounded-md cursor-pointer transition-all ${question.answers.includes(index) ? "bg-green-500" : "bg-gray-400"
+                }`}
+              title={
+                question.answers.includes(index) ? "Correct answer" : "Incorrect answer"
+              }
+            >
+              <span className="group">
+                {question.answers.includes(index) ? (
+                  <FaCheck className="text-white w-5 h-5" />
+                ) : (
+                  <FaTimes className="text-white w-5 h-5" />
+                )}
+              </span>
+            </div>
+
             <span className="text-gray-700 text-base">{option}</span>
           </div>
         ))}

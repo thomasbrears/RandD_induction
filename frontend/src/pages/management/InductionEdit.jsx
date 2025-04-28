@@ -13,6 +13,8 @@ import Loading from "../../components/Loading";
 import "react-quill/dist/quill.snow.css";
 import InductionFormContent from "../../components/InductionFormContent";
 import { Modal, Button } from "antd";
+import { messageWarning, notifySuccess } from '../../utils/notificationService';
+import { getSignedUrl, uploadFile, deleteFile } from "../../api/FileApi";
 
 const InductionEdit = () => {
   const { user, loading: authLoading } = useAuth();
@@ -22,25 +24,10 @@ const InductionEdit = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const id = location.state?.id;
-  const [fieldsBeingEdited, setFieldsBeingEdited] = useState({});
-  const [saveAllFields, setSaveAllFields] = useState(false);
   const [actionType, setActionType] = useState(null);
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
-  const [expandOnError, setExpandOnError] = useState(false);
-  const [savingInProgress, setSavingInProgress] = useState(false);
-  const [saveTimeoutId, setSaveTimeoutId] = useState(null);
-
-  const updateFieldsBeingEdited = (field, state) => {
-    setFieldsBeingEdited((prev) => {
-      if (state === null) {
-        const updatedFields = { ...prev };
-        delete updatedFields[field];
-        return updatedFields;
-      }
-
-      return { ...prev, [field]: state };
-    });
-  };
+  const [originalQuestions, setOriginalQuestions] = useState([]);
+  const [fileBuffer, setFileBuffer] = useState(new Map());
 
   useEffect(() => {
     if (id && !authLoading) {
@@ -50,6 +37,13 @@ const InductionEdit = () => {
           setLoadingMessage(`Loading the inductions's details...`);
           const inductionData = await getInduction(user, id);
           setInduction(inductionData);
+
+          // Create snapshot of original questions
+          const snapshot = inductionData.questions.map((q) => ({
+            id: q.id,
+            imageFile: q.imageFile || null,
+          }));
+          setOriginalQuestions(snapshot);
         } catch (err) {
           toast.error(err.response?.data?.message || "An error occurred");
         } finally {
@@ -63,98 +57,179 @@ const InductionEdit = () => {
     }
   }, [id, user, authLoading, navigate]);
 
+  //File handling
+  const handleFileBufferUpdate = (questionId, file) => {
+    setFileBuffer(prev => {
+      const newBuffer = new Map(prev);
+      if (file) {
+        newBuffer.set(questionId, file);
+      } else {
+        newBuffer.delete(questionId);
+      }
+      return newBuffer;
+    });
+  };
+
+  const getImageUrl = async (questionId) => {
+    const fileFromBuffer = fileBuffer.get(questionId);
+    const fileFromInduction = induction.questions.find(q => q.id === questionId)?.imageFile;
+
+    if (fileFromBuffer) {
+      return URL.createObjectURL(fileFromBuffer); // Local preview
+    } else if (fileFromInduction && user) {
+      try {
+        const result = await getSignedUrl(user, fileFromInduction);
+        return result.url;
+      } catch (err) {
+        messageWarning(err.response?.data?.message || "Could not retrieve image");
+        return null;
+      }
+    } else {
+      return null;
+    }
+  };
+
+  const handleSubmitFileChanges = async () => {
+    const deletes = [];
+    const uploads = [];
+
+    const oldMap = new Map(originalQuestions.map(q => [q.id, q]));
+    const currentIds = new Set(induction.questions.map(q => q.id));
+
+    for (const newQ of induction.questions) {
+      const oldQ = oldMap.get(newQ.id);
+      const newFileName = newQ.imageFile;
+      const oldFileName = oldQ?.imageFile;
+
+      // === CASE: DELETE ===
+      if (oldFileName && !newFileName) {
+        deletes.push(deleteFile(user, oldFileName));
+        continue;
+      }
+
+      // === CASE: UPLOAD NEW (no old file, new file exists) ===
+      if (!oldFileName && newFileName) {
+        const file = fileBuffer.get(newQ.id);
+        if (file) {
+          const finalFileName = `${newQ.id}_${file.name}`;
+          uploads.push({ file, finalFileName, question: newQ });
+        }
+        continue;
+      }
+
+      // === CASE: FILENAME CHANGED ===
+      if (oldFileName && newFileName && oldFileName !== newFileName) {
+        deletes.push(deleteFile(user, oldFileName));
+        const file = fileBuffer.get(newQ.id);
+        if (file) {
+          const finalFileName = `${newQ.id}_${file.name}`;
+          uploads.push({ file, finalFileName, question: newQ });
+        }
+        continue;
+      }
+
+      // === CASE: New question with file ===
+      if (!oldQ && newFileName) {
+        const file = fileBuffer.get(newQ.id);
+        if (file) {
+          const finalFileName = `${newQ.id}_${file.name}`;
+          uploads.push({ file, finalFileName, question: newQ });
+        }
+      }
+
+      // CASE: No changes — skip
+    }
+
+    // === CASE: OLD QUESTION DELETED ENTIRELY ===
+    for (const [oldId, oldQ] of oldMap) {
+      if (!currentIds.has(oldId) && oldQ.imageFile) {
+        deletes.push(deleteFile(user, oldQ.imageFile));
+      }
+    }
+
+    // === Run deletes ===
+    try {
+      await Promise.all(deletes);
+    } catch (err) {
+      messageWarning("Some deletions failed", err);
+    }
+
+    // === Run uploads and update imageFile ===
+    const updatedInduction = { ...induction };
+    for (const { file, finalFileName, question } of uploads) {
+      try {
+        const response = await uploadFile(user, file, finalFileName);
+        const newFileName = response.gcsFileName || finalFileName;
+
+        updatedInduction.questions = updatedInduction.questions.map(q =>
+          q.id === question.id ? { ...q, imageFile: newFileName } : q
+        );
+      } catch (err) {
+        messageWarning(`Upload failed for ${file.name}`, err);
+      }
+    }
+
+    return updatedInduction;
+  };
+
+  const handleDeleteFileChanges = async () => {
+    const deletes = [];
+
+    for (const q of originalQuestions) {
+      if (q.imageFile) {
+        deletes.push(deleteFile(user, q.imageFile));
+      }
+    }
+
+    try {
+      await Promise.all(deletes);
+      notifySuccess("All old files deleted successfully!");
+    } catch (err) {
+      messageWarning("Some deletions failed", err);
+    }
+  };
+
+  //Submit functions
   const handleSubmitButton = () => {
     const missingFields = checkForMissingFields();
-    const hasEdits = Object.keys(fieldsBeingEdited).length > 0;
 
     if (missingFields.length === 0) {
-      setActionType(hasEdits ? "unsaved" : "submit");
+      setActionType("submit");
     } else {
-      setActionType(hasEdits ? "unfinished" : "prompt");
+      messageWarning(`Please fill in the following fields: ${missingFields.join(", ")}`);
+      setActionType("prompt");
     }
 
     setConfirmModalVisible(true);
   };
 
   const confirmSubmitActionHandler = () => {
-    if (actionType === "submit" || actionType === "unsaved") {
+    if (actionType === "submit") {
       handleSubmit();
       setConfirmModalVisible(false);
       return;
     }
   };
 
-  const handleSaveAndCheck = () => {
-    if (actionType === "unsaved" || actionType === "unfinished") {
-      if (savingInProgress) return;
-      setSaveAllFields(true);
-      setSavingInProgress(true);
-
-      const timeoutId = setTimeout(handleFailedSave, 5000);
-      setSaveTimeoutId(timeoutId);
-    } else {
-      setConfirmModalVisible(false);
-    }
-  };
-
-  const handleFailedSave = () => {
-    if (!savingInProgress && (actionType === "submit" || actionType === "prompt")) return;
-    setSavingInProgress(false);
-    setSaveAllFields(false);
-    setActionType("failedSave");
-  };
-
-  useEffect(() => {
-    setExpandOnError(false)
-  }, [expandOnError]);
-
   const handleCancel = () => {
     setConfirmModalVisible(false);
-    if (checkForMissingFields().length > 0 || Object.keys(fieldsBeingEdited).length > 0) {
-      setExpandOnError(true);
-    }
   };
 
-  useEffect(() => {
-    if (!savingInProgress) return;
-
-    const updatedMissingFields = checkForMissingFields();
-    const hasEditsAfterSaving = Object.keys(fieldsBeingEdited).length > 0;
-
-    if (!hasEditsAfterSaving) {
-      setSavingInProgress(false);
-      setSaveAllFields(false);
-      if (saveTimeoutId) {
-        clearTimeout(saveTimeoutId);
-        setSaveTimeoutId(null);
-      }
-
-      if (updatedMissingFields.length === 0) {
-        setActionType("submit");
-      } else {
-        setActionType("prompt");
-      }
-    }
-
-  }, [savingInProgress, fieldsBeingEdited])
-
-  // Function to handle form submission, validate inputs and call API
   const handleSubmit = async () => {
+    setLoading(true);
+    setLoadingMessage(`Saving the induction's details...`);
 
-    // Double check if any required fields are missing and show warning if so
-    const missingFields = checkForMissingFields();
+    // Handle all of the file uploads and deletion
+    const updatedInduction = await handleSubmitFileChanges();
 
-    if (missingFields.length > 0) {
-      toast.warn(`Please fill in the following fields: ${missingFields.join(", ")}`);
-      console.log(missingFields);
-      return;
-    }
-
-    // user exists, send api request to update induction
     if (user) {
-      const result = await updateInduction(user, induction);
-      console.log(result);
-      toast.success("Induction updated successfully!");
+      const result = await updateInduction(user, updatedInduction);
+      setLoading(false);
+      if (result) {
+        notifySuccess("Induction updated successfully!");
+      } else {
+        messageWarning("Error while updating induction.");
+      }
     }
   };
 
@@ -175,57 +250,8 @@ const InductionEdit = () => {
     if (induction.department === "Select a department" || !induction.department) {
       missingFields.push("Please select a department.");
     }
-
-    // Check if there is at least one question
     if (!induction.questions || induction.questions.length === 0) {
       missingFields.push("Add at least one question.");
-    } else {
-      let questionsMissingAnswer = 0;
-      let questionsMissingText = 0;
-      let questionsMissingType = 0;
-      let questionsMissingOptions = 0;
-      let optionsMissingText = 0;
-
-      induction.questions.forEach((question) => {
-        if (!question.question || question.question.trim() === "") {
-          questionsMissingText++;
-        }
-
-        if (!question.type || question.type.trim() === "") {
-          questionsMissingType++;
-        }
-
-        if (!question.answers || question.answers.length === 0) {
-          questionsMissingAnswer++;
-        }
-
-        if (!question.options || question.options.length === 0) {
-          questionsMissingOptions++;
-        } else {
-          question.options.forEach((option) => {
-            if (!option.trim()) {
-              optionsMissingText++;
-            }
-          });
-        }
-      });
-
-      // Summarize missing fields for questions
-      if (questionsMissingText > 0) {
-        missingFields.push(`${questionsMissingText} question${questionsMissingText > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} text.`);
-      }
-      if (questionsMissingType > 0) {
-        missingFields.push(`${questionsMissingType} question${questionsMissingType > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} a type.`);
-      }
-      if (questionsMissingAnswer > 0) {
-        missingFields.push(`${questionsMissingAnswer} question${questionsMissingAnswer > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} at least one answer.`);
-      }
-      if (questionsMissingOptions > 0) {
-        missingFields.push(`${questionsMissingOptions} question${questionsMissingOptions > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} options.`);
-      }
-      if (optionsMissingText > 0) {
-        missingFields.push(`${optionsMissingText} option${optionsMissingText > 1 ? "s" : ""} need${questionsMissingText > 1 ? "" : "s"} text.`);
-      }
     }
 
     return missingFields;
@@ -233,10 +259,16 @@ const InductionEdit = () => {
 
   const onDeleteInduction = async () => {
     if (user) {
+      //Delete all files from gcs
+      await handleDeleteFileChanges();
+
       const result = await deleteInduction(user, induction.id);
-      console.log(result);
-      toast.success("Induction deleted successfully!");
-      navigate(-1);
+      if (result) {
+        notifySuccess("Induction deleted successfully!");
+        navigate(-1);
+      } else {
+        messageWarning("Error while deleting induction.");
+      }
     }
   };
 
@@ -245,10 +277,7 @@ const InductionEdit = () => {
       <Helmet><title>Edit Induction | AUT Events Induction Portal</title></Helmet>
 
       {/* Page Header */}
-      <PageHeader
-        title="Edit Induction"
-        subtext={`Edit ${induction.name}`}
-      />
+      <PageHeader title="Edit Induction" subtext={""} />
 
       {/* Main content area */}
       {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
@@ -274,22 +303,12 @@ const InductionEdit = () => {
                       Submit
                     </Button>
                   )}
-                  {actionType === "unsaved" && (
-                    <Button key="unsavedConfirm" type="primary" danger className="w-auto min-w-0 text-sm" onClick={confirmSubmitActionHandler}>
-                      Discard & Submit
-                    </Button>
-                  )}
-                  {(actionType === "unsaved" || actionType === "unfinished") && (
-                    <Button key="saveAndCheck" type="primary" className="w-auto min-w-0 text-sm" onClick={handleSaveAndCheck} disabled={savingInProgress}>
-                      Save & Check
-                    </Button>
-                  )}
-                  {(actionType === "prompt" || actionType === "unfinished" || actionType === "failedSave") && (
+                  {(actionType === "prompt") && (
                     <Button key="continueEditing" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
                       Continue Editing
                     </Button>
                   )}
-                  {(!(actionType === "prompt" || actionType === "unfinished" || actionType === "failedSave")) && (
+                  {(!(actionType === "prompt")) && (
                     <Button key="cancel" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
                       Cancel
                     </Button>
@@ -297,55 +316,28 @@ const InductionEdit = () => {
                 </div>
               }
             >
-              {savingInProgress ? (
-                <div className="flex justify-center items-center">
-                  <Loading message="Saving changes..." />
-                </div>
-              ) : (
-                <>
-                  {actionType === "submit" && <p>Are you sure you want to submit this induction?</p>}
-                  {actionType === "unsaved" && <p>You have unsaved changes. Are you sure you want to discard them and submit?</p>}
-                  {actionType === "prompt" && (
-                    <>
-                      <p>Some details are missing. Please review the list below and try again.</p>
+              <>
+                {actionType === "submit" && <p>Are you sure you want to submit this induction?</p>}
+                {actionType === "prompt" && (
+                  <>
+                    <p>Some details are missing. Please review the list below and try again.</p>
 
-                      {checkForMissingFields().length > 0 && (
-                        <>
-                          <div className="mt-4"></div>
-                          <div className="p-4 bg-gray-50 border-l-4 border-gray-300 text-gray-700 rounded-md">
-                            <p className="font-medium">Issues that need attention:</p>
-                            <ul className="list-disc list-inside mt-2 space-y-1">
-                              {checkForMissingFields().map((field) => (
-                                <li key={field} className="ml-4">{field}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )}
-                  {actionType === "unfinished" && <p>You have unsaved and missing fields. Would you like to save first?</p>}
-                  {actionType === "failedSave" && (
-                    <>
-                      <p>Some fields couldn't be saved. Please check the details and try again.</p>
-
-                      {checkForMissingFields().length > 0 && (
-                        <>
-                          <div className="mt-4"></div>
-                          <div className="p-4 bg-gray-50 border-l-4 border-gray-300 text-gray-700 rounded-md">
-                            <p className="font-medium">Issues that need attention:</p>
-                            <ul className="list-disc list-inside mt-2 space-y-1">
-                              {checkForMissingFields().map((field) => (
-                                <li key={field} className="ml-4">{field}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        </>
-                      )}
-                    </>
-                  )}
-                </>
-              )}
+                    {checkForMissingFields().length > 0 && (
+                      <>
+                        <div className="mt-4"></div>
+                        <div className="p-4 bg-gray-50 border-l-4 border-gray-300 text-gray-700 rounded-md">
+                          <p className="font-medium">Issues that need attention:</p>
+                          <ul className="list-disc list-inside mt-2 space-y-1">
+                            {checkForMissingFields().map((field) => (
+                              <li key={field} className="ml-4">{field}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </>
+                    )}
+                  </>
+                )}
+              </>
             </Modal>
 
             <div className="flex-1 min-w-0">
@@ -355,8 +347,6 @@ const InductionEdit = () => {
                 setInduction={setInduction}
                 handleSubmit={handleSubmitButton}
                 isCreatingInduction={false}
-                saveAllFields={saveAllFields}
-                updateFieldsBeingEdited={updateFieldsBeingEdited}
                 onDeleteInduction={onDeleteInduction}
               />
 
@@ -366,9 +356,8 @@ const InductionEdit = () => {
                 <InductionFormContent
                   induction={induction}
                   setInduction={setInduction}
-                  saveAllFields={saveAllFields}
-                  expandOnError={expandOnError}
-                  updateFieldsBeingEdited={updateFieldsBeingEdited}
+                  getImageUrl={getImageUrl}
+                  saveFileChange={handleFileBufferUpdate}
                 />
 
                 {/* Save Button */}

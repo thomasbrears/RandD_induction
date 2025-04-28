@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React from "react";
 import {
   DndContext,
   closestCenter,
@@ -15,7 +15,7 @@ import {
 } from "@dnd-kit/sortable";
 import QuestionItem from "./QuestionItem";
 
-const QuestionList = ({ questions = [], setQuestions, saveAllFields, expandOnError, updateFieldsBeingEdited }) => {
+const QuestionList = ({ questions = [], setQuestions, onQuestionEdit, getImageUrl}) => {
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -34,32 +34,22 @@ const QuestionList = ({ questions = [], setQuestions, saveAllFields, expandOnErr
     });
   };
 
-  const handleQuestionChange = (id, field, value) => {
-    setQuestions((prevQuestions) =>
-      prevQuestions.map((q) =>
-        q.id === id ? { ...q, [field]: value } : q
-      )
-    );
-  };
-
   const handleQuestionDelete = (id) => {
     setQuestions((prevQuestions) => prevQuestions.filter((q) => q.id !== id));
-    updateFieldsBeingEdited(`${id}_header`, null);
-    updateFieldsBeingEdited(`${id}_content`, null);
   };
 
   return (
     <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd} sensors={sensors}>
       <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
         <ul className="space-y-2">
-          {questions.map((question) => (
-            <QuestionItem key={question.id}
+          {questions.map((question, index) => (
+            <QuestionItem
+              key={question.id}
               question={question}
-              onChange={handleQuestionChange}
               onDeleteQuestion={handleQuestionDelete}
-              saveAllFields={saveAllFields}
-              expandOnError={expandOnError}
-              updateFieldsBeingEdited={updateFieldsBeingEdited}
+              onQuestionEdit={onQuestionEdit}
+              index={index} 
+              getImageUrl={getImageUrl}
             />
           ))}
         </ul>

@@ -7,11 +7,10 @@ import QuestionTypes from './QuestionTypes';
  * @property {string} [description]
  * @property {QuestionTypes} [type]
  * @property {string[]} [options]
- * @property {Array[]} [answers]
- * @property {File | null} [imageFile]
- * @property {boolean} [isRequired]
+ * @property {number[]} [answers]
+ * @property {boolean} [requiresValidation]
  * @property {string} [hint]
- * @property {string} [incorrectAnswerMessage]
+ * @property {string | null} [imageFile]
  */
 
 /** @type {Question} */
@@ -22,8 +21,7 @@ export const DefaultNewQuestion = {
     type: QuestionTypes.MULTICHOICE,
     options: [],
     answers: [],
-    imageFile: null,
-    isRequired: true,
+    requiresValidation: true,
     hint: "",
-    incorrectAnswerMessage: ""
+    imageFile: null,
 };

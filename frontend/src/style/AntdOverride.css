@@ -1,0 +1,22 @@
+/* Override Ant Design's default collapse header styling */
+.ant-collapse > .ant-collapse-item > .ant-collapse-header {
+    background-color: #e5e7eb !important; /* Ensure background is consistent */
+    font-weight: 600;
+    padding: 12px 16px;
+    border-top-left-radius: 4px !important;
+    border-top-right-radius: 4px !important;
+    border-bottom-left-radius: 0 !important;
+    border-bottom-right-radius: 0 !important;
+    transition: all 0.3s ease-in-out;
+}
+
+/* Override the content box to round the bottom corners */
+.ant-collapse > .ant-collapse-item > .ant-collapse-content {
+    border-bottom-left-radius: 4px;
+    border-bottom-right-radius: 4px;
+}
+
+/* Ensure padding is consistent inside the collapse */
+.ant-collapse-content-box {
+    padding: 16px;
+}
