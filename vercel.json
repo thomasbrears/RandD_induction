@@ -17,8 +17,7 @@
       "dest": "/backend/index.js"
     },
     {
-      "src": "/(static|fonts\\.css|favicon\\.ico|manifest\\.json)",
-      "dest": "/frontend/$1"
+      "handle": "filesystem"
     },
     {
       "src": "/(.*)",
