@@ -88,14 +88,6 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index, getIm
                     question={question}
                     getImageUrl={getImageUrl}
                 />;
-            case QuestionTypes.YES_NO:
-                return <TrueFalseQuestion
-                    question={question}
-                    onChange={onChange}
-                    isExpanded={isExpanded}
-                    saveAllFields={saveAllFields}
-                    updateFieldsBeingEdited={updateFieldsBeingEdited}
-                />;
             case QuestionTypes.MULTICHOICE:
                 return <MultichoiceQuestion
                     question={question}
@@ -125,22 +117,6 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index, getIm
                 return <InformationQuestion
                     question={question}
                     getImageUrl={getImageUrl}
-                />;
-            case QuestionTypes.SHORT_ANSWER:
-                return <ShortAnswerQuestion
-                    question={question}
-                    onChange={onChange}
-                    isExpanded={isExpanded}
-                    saveAllFields={saveAllFields}
-                    updateFieldsBeingEdited={updateFieldsBeingEdited}
-                />;
-            case QuestionTypes.INFORMATION:
-                return <InformationQuestion
-                    question={question}
-                    onChange={onChange}
-                    isExpanded={isExpanded}
-                    saveAllFields={saveAllFields}
-                    updateFieldsBeingEdited={updateFieldsBeingEdited}
                 />;
             default:
                 return <span>{question.question}</span>;
