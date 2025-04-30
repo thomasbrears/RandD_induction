@@ -3876,7 +3876,7 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
               doc.fontSize(9)
                  .font('Helvetica')
                  .fillColor('#000000')
-                 .text(`A:`, 60, doc.y, { width: 485 })
+                 .text(``, 60, doc.y, { width: 485 })
                  .moveDown(0.2);
               
               // Split answer by lines to process each option
@@ -3936,7 +3936,7 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
           doc.fontSize(9)
              .font('Helvetica')
              .fillColor('#000000')
-             .text(`A:`, 60, doc.y, { width: 485 })
+             .text(``, 60, doc.y, { width: 485 })
              .moveDown(0.2);
           
           // Split answer by lines to process each option
@@ -3976,7 +3976,7 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
         
         // Overall Rating
         if (feedback.overallRating) {
-          doc.fontSize(12)
+          doc.fontSize(10)
              .fillColor('#000000')
              .font('Helvetica-Bold')
              .text('Overall Experience Rating:', 50, doc.y)
@@ -4002,7 +4002,7 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
               ratingText = `Rating: ${feedback.overallRating}`;
           }
           
-          doc.fontSize(12)
+          doc.fontSize(10)
              .fillColor(ratingColor)
              .font('Helvetica')
              .text(ratingText, 60, doc.y)
@@ -4045,7 +4045,7 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
               usabilityText = feedback.websiteUsability;
           }
           
-          doc.fontSize(12)
+          doc.fontSize(10)
              .fillColor(usabilityColor)
              .font('Helvetica')
              .text(usabilityText, 60, doc.y)
@@ -4054,7 +4054,7 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
         
         // Content Clarity
         if (feedback.contentClarity) {
-          doc.fontSize(12)
+          doc.fontSize(10)
              .fillColor('#000000')
              .font('Helvetica-Bold')
              .text('Content Clarity:', 50, doc.y)
@@ -4084,7 +4084,7 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
               clarityText = feedback.contentClarity;
           }
           
-          doc.fontSize(12)
+          doc.fontSize(10)
              .fillColor(clarityColor)
              .font('Helvetica')
              .text(clarityText, 60, doc.y)
@@ -4093,7 +4093,7 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
         
         // Detailed Feedback
         if (feedback.detailedFeedback) {
-          doc.fontSize(12)
+          doc.fontSize(10)
              .fillColor('#000000')
              .font('Helvetica-Bold')
              .text('Additional Feedback:', 50, doc.y)
@@ -4106,13 +4106,6 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
              .moveDown(1);
         }
       }
-    }
-    
-    // Add debug footer in development environments
-    if (process.env.NODE_ENV !== 'production') {
-      doc.fontSize(6)
-         .fillColor('#999999')
-         .text(`Debug: Generated from ${req.headers['host'] || 'unknown host'} with ${userInduction.answers ? userInduction.answers.length : 0} answers`, 50, doc.page.height - 20);
     }
     
     // Finalise the PDF document
