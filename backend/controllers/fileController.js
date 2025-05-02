@@ -1,7 +1,5 @@
-import { bucket } from "../gcs.js";
-import { Storage } from "@google-cloud/storage";
+import { bucket, storage } from "../gcs.js";
 
-const storage = new Storage();
 const BUCKET_NAME = "r_and_d_induction_files";
 
 export const uploadFile = async (req, res) => {
