@@ -102,7 +102,6 @@ export const submitContactForm = async (req, res) => {
       }
     }
 
-    
     // For logged-in users (Staff) use their department or contactType if provided
     // For non-logged-in users (public users) do not set a department as will send to the main email address
     const targetDepartment = isLoggedIn ? (contactType || userDepartment) : null;
@@ -143,6 +142,19 @@ export const submitContactForm = async (req, res) => {
     
     const docRef = await db.collection("contactform").add(newContact);
     
+    // Fetch email settings from the database
+    const emailSettingsSnapshot = await db.collection("emailSettings").get();
+    let replyToEmail = "autevents@brears.xyz"; // Default
+    let adminEmail = "autevents@brears.xyz"; // Default
+
+    if (!emailSettingsSnapshot.empty) {
+      const emailSettings = emailSettingsSnapshot.docs[0].data();
+      replyToEmail = emailSettings.defaultReplyTo || replyToEmail;
+      
+      // Use the defaultFrom as the admin email
+      adminEmail = emailSettings.defaultFrom || emailSettings.defaultReplyTo || adminEmail;
+    }
+    
     // Only send user confirmation if not skipped (feedback form skips)
     if (!skipUserConfirmation) {
       // Create user confirmation email body
@@ -167,7 +179,7 @@ export const submitContactForm = async (req, res) => {
         email, 
         `Thank you for contacting us: ${subject}`,
         userEmailBody,
-        null, // No reply-to for confirmation email
+        replyToEmail, // Use the reply-to from settings
         [] // No CC for confirmation email
       );
     }
@@ -205,9 +217,6 @@ export const submitContactForm = async (req, res) => {
        `;
     }
     
-    // Get admin email from environment or use default email
-    const adminEmail = process.env.ADMIN_EMAIL || "autevents@brears.xyz";
-    
     // Determine where to send the notification email
     if (isLoggedIn && departmentEmail) {
       // If logged-in user has a department with email, send to that department and CC admin
@@ -215,8 +224,8 @@ export const submitContactForm = async (req, res) => {
         departmentEmail, // Send to department
         adminEmailSubject,
         adminEmailBody,
-        email, // Set reply-to as user's email
-        [adminEmail] // CC admin as an array
+        email, // Set reply-to as users email
+        [] // No CC
       );
     } else {
       // For non-logged-in users or if no department email, send to admin only
@@ -224,7 +233,8 @@ export const submitContactForm = async (req, res) => {
         adminEmail,
         adminEmailSubject,
         adminEmailBody,
-        email // Set reply-to as user's email
+        email, // Set reply-to as users email
+        [] // No CC
       );
     }
     

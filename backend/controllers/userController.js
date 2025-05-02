@@ -73,7 +73,7 @@ export const createUser = async (req, res) => {
       lastName,
       email,
       permission,
-      position,
+      position, // optional
       department,
       locations,
       assignedInductions,
@@ -90,10 +90,7 @@ export const createUser = async (req, res) => {
       return res.status(400).json({ message: "Name is required" });
     }
 
-    // Validation for position
-    if (!position || typeof position !== "string" || position.trim() === "") {
-      return res.status(400).json({ message: "Position is required and must be a valid string" });
-    }
+    // Position is optional - no validation needed
 
     // Validation for locations
     if (!Array.isArray(locations) || locations.length === 0) {
@@ -117,16 +114,23 @@ export const createUser = async (req, res) => {
         userFirstName: firstName,
         userLastName: lastName,
         permission: permission,
-        position: position,
+        position: position || "", // Default to empty string if not provided
         department: department,
         locations: Array.isArray(locations) ? locations : [],
-        assignedInductions: Array.isArray(assignedInductions)
-          ? assignedInductions
-          : [],
+        // Inductions are managed by a separate controller
       });
     } catch (firestoreError) {
       console.error("Firestore error: ", firestoreError);
       return res.status(500).json({ message: "Error writing to Firestore." });
+    }
+
+    // Fetch email settings
+    const emailSettingsSnapshot = await db.collection("emailSettings").get();
+    let replyToEmail = "autevents@brears.xyz"; // Default
+    
+    if (!emailSettingsSnapshot.empty) {
+      const emailSettings = emailSettingsSnapshot.docs[0].data();
+      replyToEmail = emailSettings.defaultReplyTo || replyToEmail;
     }
 
     // Prepare email content
@@ -152,11 +156,8 @@ export const createUser = async (req, res) => {
       <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
     `;
 
-    const replyToEmail = 'autevents@brears.xyz'; // reply to aut events
-    const ccEmails = ['manager@brears.xyz']; // Cc Rinus
-
-    // Send welcome email with ReplyTo and CC, using the default template
-    await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
+    // Send welcome email
+    await sendEmail(email, emailSubject, emailBody, replyToEmail, []);
     
     res.status(201).json({
       uid: userRecord.uid,
@@ -170,6 +171,7 @@ export const createUser = async (req, res) => {
   }
 };
 
+// Update a user
 export const updateUser = async (req, res) => { 
   try {
     const {
@@ -178,42 +180,40 @@ export const updateUser = async (req, res) => {
       lastName,
       email,
       permission,
-      position,
+      position, // optional
       department,
       locations,
       assignedInductions = [],
     } = req.body;
 
-        // Validate required fields
-        if (!uid || typeof uid !== "string") {
-          return res.status(400).json({ message: "A valid UID is required." });
-        }
-    
-        if (!firstName || typeof firstName !== "string" || firstName.trim() === "") {
-          return res.status(400).json({ message: "First name is required." });
-        }
-    
-        if (!lastName || typeof lastName !== "string") {
-          return res.status(400).json({ message: "Last name is required." });
-        }
-    
-        // Validate email format
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!email || !emailRegex.test(email)) {
-          return res.status(400).json({ message: "Invalid email format." });
-        }
-    
-        if (!permission || typeof permission !== "string") {
-          return res.status(400).json({ message: "Permission is required." });
-        }
-    
-        if (!position || typeof position !== "string" || position.trim() === "") {
-          return res.status(400).json({ message: "Position is required." });
-        }
-    
-        if (!Array.isArray(locations) || locations.length === 0) {
-          return res.status(400).json({ message: "At least one location must be provided." });
-        }
+    // Validate required fields
+    if (!uid || typeof uid !== "string") {
+      return res.status(400).json({ message: "A valid UID is required." });
+    }
+
+    if (!firstName || typeof firstName !== "string" || firstName.trim() === "") {
+      return res.status(400).json({ message: "First name is required." });
+    }
+
+    if (!lastName || typeof lastName !== "string") {
+      return res.status(400).json({ message: "Last name is required." });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailRegex.test(email)) {
+      return res.status(400).json({ message: "Invalid email format." });
+    }
+
+    if (!permission || typeof permission !== "string") {
+      return res.status(400).json({ message: "Permission is required." });
+    }
+
+    // Position is optional - no validation needed
+
+    if (!Array.isArray(locations) || locations.length === 0) {
+      return res.status(400).json({ message: "At least one location must be provided." });
+    }
 
     // Fetch existing user data
     const userRef = db.collection("users").doc(uid);
@@ -221,30 +221,6 @@ export const updateUser = async (req, res) => {
     if (!userDoc.exists) {
       return res.status(404).json({ message: "User not found" });
     }
-
-    const existingData = userDoc.data();
-    const existingInductions = existingData.assignedInductions || [];
-
-    // Identify new inductions (not already assigned by assignmentID)
-    const newInductions = assignedInductions.filter(
-      (induction) =>
-        !existingInductions.some((existing) => existing.assignmentID === induction.assignmentID)
-    );
-
-    // Preserve existing inductions, ensuring updates are assignment-specific
-    const updatedInductions = assignedInductions.map((induction) => {
-      const existing = existingInductions.find((ex) => ex.assignmentID === induction.assignmentID);
-
-      if (existing) {
-        return { ...existing, ...induction }; // Merge updates while keeping assignment reference
-      }
-
-      // Ensure unique assignmentID
-      return {
-        ...induction,
-        assignmentID: `${uid}_${induction.id}_${Date.now()}_${Math.random().toString(36).substr(2, 5)}`, // assignmentID is the user's ID, the induction's ID, the date, and a random string of 5 characters to ensure uniqueness
-      };
-    });
 
     // Update user in Firebase Auth
     const userResult = await admin.auth().updateUser(uid, {
@@ -259,71 +235,15 @@ export const updateUser = async (req, res) => {
     await userRef.update({
       usersName: `${firstName} ${lastName}`,
       permission: permission,
-      position: position,
+      position: position || "", // Default to empty string if not provided
       department: department,
       locations: Array.isArray(locations) ? locations : [],
-      assignedInductions: updatedInductions,
+      // assignedInductions are no longer managed in this controller
     });
-
-    // Send emails for newly assigned inductions
-    const emailResults = [];
-    for (const induction of newInductions) {
-      try {
-        const formattedAvailableFrom = induction.availableFrom
-          ? format(new Date(induction.availableFrom), "d MMMM yyyy")
-          : "Unavailable";
-        const formattedDueDate = induction.dueDate
-          ? format(new Date(induction.dueDate), "d MMMM yyyy")
-          : "Unavailable";
-        const description = induction.description || "No description available.";
-
-        const emailSubject = `You have a new induction to complete: ${induction.name || "Unnamed Induction"}`;
-        const emailBody = `
-          <h1>Kia ora ${firstName} ${lastName}!</h1>
-          <p>You have been assigned a new induction module to complete.</p>
-          <br>
-          
-          <h3>Here are the details:</h3>
-          <p><strong>Induction Name:</strong> ${induction.name || "Unnamed Induction"}</p>
-          <p><strong>Available from:</strong> ${formattedAvailableFrom}</p>
-          <p><strong>Due Date:</strong> ${formattedDueDate}</p>
-
-          <br>
-          <h3>How to complete the induction?</h3>
-          <p>Simply head to our induction portal website (${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://your-portal-url.com'}) and log in using this email address. Navigate to the "My Inductions" tab, find this induction, and click "Start".</p>
-          <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://your-portal-url.com'}/inductions/my-inductions" class="button">AUT Events Induction Portal</a>
-
-          <p>If you have any questions, please feel free to reach out to your manager or reply to this email.</p>
-
-          <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
-        `;
-
-        const replyToEmail = "autevents@brears.xyz";
-        const ccEmails = ["manager@brears.xyz"];
-
-        // Attempt to send email and capture result
-        const emailResult = await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
-        emailResults.push({
-          induction: induction.name || "Unnamed Induction",
-          result: emailResult,
-          success: true
-        });
-        
-      } catch (emailError) {
-        console.error(`Failed to send email for induction "${induction.name || "Unnamed"}":`, emailError);
-        emailResults.push({
-          induction: induction.name || "Unnamed Induction",
-          error: emailError.message || "Unknown error",
-          success: false
-        });
-        // Continue the loop to try sending other emails even if one fails
-      }
-    }
 
     res.json({
       data: userResult,
-      message: "User updated successfully",
-      emailResults: emailResults
+      message: "User updated successfully"
     });
   } catch (error) {
     console.error("Error updating user:", error);
