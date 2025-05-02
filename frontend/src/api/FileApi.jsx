@@ -8,10 +8,9 @@ const API_URL = process.env.NODE_ENV === 'production'
 export const getSignedUrl = async (user, fileName) => {
   try {
     const token = user?.token;
-    const headers = token ? { authtoken: token } : {};
+    const headers = token ? { authtoken: token , filename: fileName} : {};
     const response = await axios.get(`${API_URL}/files/signed-url`, {
       headers,
-      params: { fileName },
     });
     return response.data;
   } catch (error) {
@@ -49,11 +48,10 @@ export const uploadFile = async (user, file, customFileName = null) => {
 export const deleteFile = async (user, fileName) =>{
   try{
     const token = user?.token;
-    const headers = token ? { authtoken: token } : {};
+    const headers = token ? { authtoken: token, filename: fileName } : {};
 
     const response = await axios.delete(`${API_URL}/files/delete-file`, {
       headers,
-      data: { fileName }, 
     });
 
     return response.data;

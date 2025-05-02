@@ -62,7 +62,7 @@ export const uploadFile = async (req, res) => {
 
 export const getSignedUrl = async (req, res) => {
   try {
-    const { fileName } = req.query;
+    const fileName = req.headers['filename'];
 
     if (!fileName) {
       return res.status(400).json({ error: "Filename is required" });
@@ -88,7 +88,7 @@ export const getSignedUrl = async (req, res) => {
 
 export const deleteFile = async (req, res) => {
   try {
-    const { fileName } = req.body;
+    const fileName = req.headers['filename'];
 
     if (!fileName) {
       return res.status(400).send("File name is required.");

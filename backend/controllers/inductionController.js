@@ -30,9 +30,9 @@ export const createInduction = async (req, res) => {
     return res.status(400).json({ message: "Name must be 50 characters or less." });
   }
 
-  if (!department || !Object.values(Departments).includes(department)) {
+  /*if (!department || !Object.values(Departments).includes(department)) {
     return res.status(400).json({ message: "Invalid or missing department" });
-  }
+  }*///Departments are changable now so this doesnt work
 
   if (description !== undefined && typeof description !== "string") {
     return res.status(400).json({ message: "Description must be a string." });
@@ -95,9 +95,9 @@ export const updateInductionById = async (req, res) => {
     return res.status(400).json({ message: "Name must be 50 characters or less" });
   }
 
-  if (department && !Object.values(Departments).includes(department)) {
+  /*if (department && !Object.values(Departments).includes(department)) {
     return res.status(400).json({ message: "Invalid department" });
-  }
+  }*///Departments are changable now so this doesnt work
 
   if (description !== undefined && typeof description !== "string") {
     return res.status(400).json({ message: "Description must be a string." });
