@@ -31,8 +31,10 @@ import {
   FilePdfOutlined,
   FileImageOutlined
 } from '@ant-design/icons';
-import { getWebsiteContent, updateWebsiteContent } from '../../api/ContentApi';
+import { getWebsiteContent, updateWebsiteContent, getBackgroundImages, updateBackgroundImage } from '../../api/ContentApi';
 import ContentRichEditor from '../ContentRichEditor';
+import useAuth from "../../hooks/useAuth";
+import { deleteFile, uploadPublicFile } from '../../api/FileApi';
 
 const { Text } = Typography;
 const { Sider, Content } = Layout;
@@ -40,7 +42,14 @@ const { useBreakpoint } = Grid;
 const { TabPane } = Tabs;
 const { Dragger } = Upload;
 
+const defaultBackgrounds = {
+  homeBg: { url: '/images/WG_OUTSIDE_AUT.webp', name: 'WG_OUTSIDE_AUT.webp', type: 'image/webp', size: 250000 },
+  authBg: { url: '/images/WG_OUTSIDE_AUT.webp', name: 'WG_OUTSIDE_AUT.webp', type: 'image/webp', size: 250000 },
+  aboutBg: { url: '/images/AUTEventsStaff.jpg', name: 'AUTEventsStaff.jpg', type: 'image/jpeg', size: 215000 }
+};
+
 const ManageContent = () => {
+  const { user, loading: authLoading } = useAuth();
   const [content, setContent] = useState({
     about: { text: '' },
     contact: { text: '' },
@@ -71,11 +80,9 @@ const ManageContent = () => {
   ]);
   
   // Mock data for background images (TODO: Replace with live images)
-  const [bgImages, setBgImages] = useState({
-    homeBg: { url: '/images/WG_OUTSIDE_AUT.webp', name: 'WG_OUTSIDE_AUT.webp', type: 'image/webp', size: 250000 },
-    authBg: { url: '/images/WG_OUTSIDE_AUT.webp', name: 'WG_OUTSIDE_AUT.webp', type: 'image/webp', size: 250000 },
-    aboutBg: { url: '/images/AUTEventsStaff.jpg', name: 'AUTEventsStaff.jpg', type: 'image/jpeg', size: 215000 }
-  });
+  const [bgImages, setBgImages] = useState(defaultBackgrounds);
+  const [originalBgImages, setOriginalBgImages] = useState(defaultBackgrounds);
+  const [bgFileBuffer, setBgFileBuffer] = useState(new Map());
   
   const screens = useBreakpoint();
   const isMobile = !screens.md;
@@ -85,6 +92,7 @@ const ManageContent = () => {
 
   useEffect(() => {
     fetchContent();
+    fetchBackgroundImages();
   }, []);
 
   useEffect(() => {
@@ -123,6 +131,18 @@ const ManageContent = () => {
       console.error('Error fetching content:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchBackgroundImages = async () => {
+    try {
+      const data = await getBackgroundImages();
+
+      setBgImages(data);
+      setOriginalBgImages(data);
+    } catch (error) {
+      message.error('Failed to fetch background images');
+      console.error('Error fetching background images:', error);
     }
   };
 
@@ -187,7 +207,81 @@ const ManageContent = () => {
   };
   
   const handleCancel = () => setPreviewVisible(false);
+
+  const handleBackgroundImageSave = async () => {
+    try {
+      setSaving(true);
   
+      const updatedBgImages = { ...bgImages };
+  
+      for (const key of Object.keys(bgImages)) {
+        const current = bgImages[key];
+        const original = originalBgImages[key];
+        const defaultImg = defaultBackgrounds[key];
+  
+        const imageChanged =
+          (!current && original) ||
+          (current && !original) ||
+          (current?.name !== original?.name);
+  
+        if (!imageChanged) continue;
+  
+        const isResetToDefault = current?.name === defaultImg.name;
+        const wasDefault = original?.name === defaultImg.name;
+  
+        //Case: Reset to default
+        if (isResetToDefault && !wasDefault) {
+          if (original?.name) {
+            await deleteFile(user, `background_images/${original.name}`);
+          }
+        
+          // Actually remove from Firestore (triggers FieldValue.delete())
+          await updateBackgroundImage(key, null);
+        
+          updatedBgImages[key] = defaultImg;
+        }
+  
+        //Case: Uploading a new image
+        else if (current && current.name !== defaultImg.name) {
+          const fileToUpload = bgFileBuffer.get(key);
+          if (!fileToUpload) {
+            console.warn(`No file buffer found for ${key}, skipping upload.`);
+            continue;
+          }
+  
+          const safeFileName = `${Date.now()}_${current.name.replace(/\s+/g, "_")}`;
+          const filePath = `background_images/${safeFileName}`;
+  
+          const uploadedFile = await uploadPublicFile(user, fileToUpload, filePath);
+  
+          if (!wasDefault && original?.name) {
+            await deleteFile(user, `background_images/${original.name}`);
+          }
+  
+          const updatedEntry = {
+            ...current,
+            url: uploadedFile.url,
+            name: safeFileName,
+          };
+  
+          await updateBackgroundImage(key, updatedEntry);
+          updatedBgImages[key] = updatedEntry;
+        }
+      }
+  
+      setBgImages(updatedBgImages);
+      setOriginalBgImages(updatedBgImages);
+      setBgFileBuffer(new Map());
+  
+      message.success("Background images updated successfully!");
+    } catch (error) {
+      message.error("Failed to update background images.");
+      console.error("Error updating background images:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Placeholder for image upload functionality (TODO: Implement actual upload)
   const handleImageUpload = ({ file, onSuccess }) => {
     setTimeout(() => {
@@ -201,11 +295,58 @@ const ManageContent = () => {
     message.info("Image delete functionality will be implemented soon");
   };
 
-  // Placeholder for background image change (TODO: Implement actual change)
+  // Placeholder for background image change
   const handleBgImageChange = (type, info) => {
-    message.info(`Background image ${type} change functionality will be implemented soon`);
-  };
+    const file = info.file.originFileObj || info.file;
+    if (!file) {
+      message.error("No file selected.");
+      return;
+    }
   
+    // Validate allowed image types
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
+    if (!allowedTypes.includes(file.type)) {
+      message.error("Unsupported file type.");
+      return;
+    }
+  
+    // Save file to buffer
+    setBgFileBuffer(prev => {
+      const newBuffer = new Map(prev);
+      newBuffer.set(type, file);
+      return newBuffer;
+    });
+  
+    // Create preview data
+    const tempUrl = URL.createObjectURL(file);
+    const updatedImage = {
+      name: file.name,
+      type: file.type,
+      size: file.size,
+      url: tempUrl
+    };
+  
+    setBgImages(prev => ({
+      ...prev,
+      [type]: updatedImage
+    }));
+  };
+
+  const handleBgImageRemove = (type) => {
+    // Remove from file buffer
+    setBgFileBuffer(prev => {
+      const newBuffer = new Map(prev);
+      newBuffer.delete(type);
+      return newBuffer;
+    });
+  
+    // Reset to default image data
+    setBgImages(prev => ({
+      ...prev,
+      [type]: defaultBackgrounds[type]
+    }));
+  };
+
   // Function to get the appropriate icon based on file type
   const getFileIcon = (fileType) => {
     if (!fileType) return <FileOutlined />;
@@ -575,24 +716,33 @@ const ManageContent = () => {
                   </div>
                 </div>
                 <div className="md:w-1/2">
-                  <div className="p-4 border border-gray-200 rounded-md bg-white mb-4">
-                    <div className="flex items-start space-x-3">
-                      {getFileIcon(bgImages.homeBg.type)}
-                      <div>
-                        <p className="text-sm font-medium">{bgImages.homeBg.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {(bgImages.homeBg.size / 1024).toFixed(2)} KB · {bgImages.homeBg.type || 'Image'}
-                        </p>
-                      </div>
+                <div className="p-4 border border-gray-200 rounded-md bg-white mb-4">
+                  <div className="flex items-start gap-3">
+                    {getFileIcon(bgImages.homeBg.type)}
+                    <div className="flex-grow">
+                      <p className="text-sm font-medium">{bgImages.homeBg.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {(bgImages.homeBg.size / 1024).toFixed(2)} KB · {bgImages.homeBg.type || 'Image'}
+                      </p>
                     </div>
+                    {bgImages.homeBg.name !== defaultBackgrounds.homeBg.name && (
+                      <button
+                        onClick={() => handleBgImageRemove("homeBg")}
+                        className="text-red-600 hover:text-red-800 ml-auto transition-colors"
+                        title="Remove image"
+                      >
+                        <DeleteOutlined style={{ fontSize: "20px" }} />
+                      </button>
+                    )}
                   </div>
+                </div>
                   
                   <Dragger
                     name="home-bg"
                     multiple={false}
                     accept=".jpg,.jpeg,.png,.webp"
                     beforeUpload={() => false} // Disable upload
-                    onChange={(info) => handleBgImageChange('home', info)}
+                    onChange={(info) => handleBgImageChange('homeBg', info)}
                     showUploadList={false}
                     className="bg-white"
                   >
@@ -625,24 +775,35 @@ const ManageContent = () => {
                   </div>
                 </div>
                 <div className="md:w-1/2">
-                  <div className="p-4 border border-gray-200 rounded-md bg-white mb-4">
-                    <div className="flex items-start space-x-3">
-                      {getFileIcon(bgImages.authBg.type)}
-                      <div>
-                        <p className="text-sm font-medium">{bgImages.authBg.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {(bgImages.authBg.size / 1024).toFixed(2)} KB · {bgImages.authBg.type || 'Image'}
-                        </p>
-                      </div>
+                <div className="p-4 border border-gray-200 rounded-md bg-white mb-4">
+                  <div className="flex items-start gap-3">
+                    {getFileIcon(bgImages.authBg.type)}
+
+                    <div className="flex-grow">
+                      <p className="text-sm font-medium">{bgImages.authBg.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {(bgImages.authBg.size / 1024).toFixed(2)} KB · {bgImages.authBg.type || 'Image'}
+                      </p>
                     </div>
+
+                    {bgImages.authBg.name !== defaultBackgrounds.authBg.name && (
+                      <button
+                        onClick={() => handleBgImageRemove("authBg")}
+                        className="text-red-600 hover:text-red-800 ml-auto transition-colors"
+                        title="Remove image"
+                      >
+                        <DeleteOutlined style={{ fontSize: "20px" }} />
+                      </button>
+                    )}
                   </div>
+                </div>
                   
                   <Dragger
                     name="auth-bg"
                     multiple={false}
                     accept=".jpg,.jpeg,.png,.webp"
                     beforeUpload={() => false} // Disable upload
-                    onChange={(info) => handleBgImageChange('auth', info)}
+                    onChange={(info) => handleBgImageChange('authBg', info)}
                     showUploadList={false}
                     className="bg-white"
                   >
@@ -675,24 +836,35 @@ const ManageContent = () => {
                   </div>
                 </div>
                 <div className="md:w-1/2">
-                  <div className="p-4 border border-gray-200 rounded-md bg-white mb-4">
-                    <div className="flex items-start space-x-3">
-                      {getFileIcon(bgImages.aboutBg.type)}
-                      <div>
-                        <p className="text-sm font-medium">{bgImages.aboutBg.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {(bgImages.aboutBg.size / 1024).toFixed(2)} KB · {bgImages.aboutBg.type || 'Image'}
-                        </p>
-                      </div>
+                <div className="p-4 border border-gray-200 rounded-md bg-white mb-4">
+                  <div className="flex items-start gap-3">
+                    {getFileIcon(bgImages.aboutBg.type)}
+
+                    <div className="flex-grow">
+                      <p className="text-sm font-medium">{bgImages.aboutBg.name}</p>
+                      <p className="text-xs text-gray-500">
+                        {(bgImages.aboutBg.size / 1024).toFixed(2)} KB · {bgImages.aboutBg.type || 'Image'}
+                      </p>
                     </div>
+
+                    {bgImages.aboutBg.name !== defaultBackgrounds.aboutBg.name && (
+                      <button
+                        onClick={() => handleBgImageRemove("aboutBg")}
+                        className="text-red-600 hover:text-red-800 ml-auto transition-colors"
+                        title="Remove image"
+                      >
+                        <DeleteOutlined style={{ fontSize: "20px" }} />
+                      </button>
+                    )}
                   </div>
+                </div>
                   
                   <Dragger
                     name="about-bg"
                     multiple={false}
                     accept=".jpg,.jpeg,.png,.webp"
                     beforeUpload={() => false} // Disable upload
-                    onChange={(info) => handleBgImageChange('about', info)}
+                    onChange={(info) => handleBgImageChange('aboutBg', info)}
                     showUploadList={false}
                     className="bg-white"
                   >
@@ -713,7 +885,7 @@ const ManageContent = () => {
             <Button 
               icon={<SaveOutlined />} 
               type="primary"
-              onClick={() => message.info("Save functionality will be implemented soon")}
+              onClick={handleBackgroundImageSave}
             >
               Save Changes
             </Button>

@@ -12,7 +12,7 @@ import InductionFormHeader from "../../components/InductionFormHeader";
 import InductionFormContent from "../../components/InductionFormContent";
 import { getAllDepartments } from "../../api/DepartmentApi";
 import Loading from "../../components/Loading";
-import { createNewInduction } from "../../api/InductionApi";
+import { updateInduction, createNewInduction } from "../../api/InductionApi";
 import { useNavigate } from "react-router-dom";
 import TiptapEditor from "../../components/TiptapEditor";
 import { uploadFile } from "../../api/FileApi";
@@ -63,8 +63,10 @@ const InductionCreate = () => {
     return file ? URL.createObjectURL(file) : null;
   };
 
-  const handleUploadNewQuestionFiles = async () => {
+  const handleUploadNewQuestionFiles = async (inductionId) => {
     let updatedInduction = { ...induction };
+
+    const getFileName = (question, file) => `induction_images/${inductionId}/${question.id}_${file.name}`;
 
     for (const q of induction.questions) {
       const hasFileInBuffer = fileBuffer.has(q.id);
@@ -72,7 +74,7 @@ const InductionCreate = () => {
 
       if (hasFileInBuffer) {
         const file = fileBuffer.get(q.id);
-        const finalFileName = `${q.id}_${file.name}`;
+        const finalFileName = getFileName(q, file);
 
         if (currentFileName !== finalFileName) {
           try {
@@ -130,18 +132,32 @@ const InductionCreate = () => {
     setLoading(true);
     setLoadingMessage(`Creating new Induction...`);
 
-    // Upload files first
-    const updatedInduction = await handleUploadNewQuestionFiles();
+    if (!user) return;
 
-    if (user) {
-      const result = await createNewInduction(user, updatedInduction);
+    const result = await createNewInduction(user, induction);
+
+    if (!result || !result.id) {
       setLoading(false);
-      if (result) {
-        notifySuccess("Induction created successfully!");
-      } else {
-        messageWarning("Error while creating induction.");
-      }
+      messageWarning("Error while creating induction.");
+      return;
     }
+
+    // Upload files
+    const updatedInduction = await handleUploadNewQuestionFiles(result.id);
+
+    const fullUpdatedInduction = {
+      ...updatedInduction,
+      id: result.id,
+    };
+    const updateResult = await updateInduction(user, fullUpdatedInduction);
+
+    setLoading(false);
+    if (updateResult) {
+      notifySuccess("Induction created successfully!");
+    } else {
+      messageWarning("Induction created but failed to update image references.");
+    }
+  
     setShowResult(true);
   };
 

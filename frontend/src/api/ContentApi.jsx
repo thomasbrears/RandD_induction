@@ -48,3 +48,81 @@ export const updateWebsiteContent = async (section, content) => {
     throw error;
   }
 };
+
+export const getBackgroundImages = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/content/get-backgrounds`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching website backgrounds:", error);
+    throw error;
+  }
+};
+
+export const updateBackgroundImage = async (key, image) => {
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      throw new Error("Authentication required");
+    }
+
+    const token = await user.getIdToken();
+
+    const response = await axios.put(
+      `${API_URL}/content/update-background-image`,
+      { key, image }, // image can be an object or null
+      {
+        headers: {
+          "Content-Type": "application/json",
+          authtoken: token,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error updating background image:", error);
+    throw error;
+  }
+};
+
+export const getHeaderImages = async () => {
+  try {
+    const response = await axios.get(`${API_URL}/content/get-header-images`);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching website header images:", error);
+    throw error;
+  }
+};
+
+export const updateHeaderImages = async (headerImages) => {
+  try {
+    const auth = getAuth();
+    const user = auth.currentUser;
+
+    if (!user) {
+      throw new Error("Authentication required");
+    }
+
+    const token = await user.getIdToken();
+
+    const response = await axios.put(
+      `${API_URL}/content/update-header-images`,
+      { headerImages }, // Expects full array of headers
+      {
+        headers: {
+          "Content-Type": "application/json",
+          authtoken: token,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    console.error("Error updating header images:", error);
+    throw error;
+  }
+};
