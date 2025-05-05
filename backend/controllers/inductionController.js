@@ -19,7 +19,7 @@ export const getAllInductions = async (req, res) => {
 
 // Create a new induction
 export const createInduction = async (req, res) => {
-  const { name, department, description, questions } = req.body;
+  const { name, department, description, questions, expiryMonths } = req.body;
 
   // Basic validations
   if (!name || typeof name !== "string" || name.trim() === "") {
@@ -44,6 +44,7 @@ export const createInduction = async (req, res) => {
       department,
       description: description?.trim() || "",
       questions: questions || [],
+      expiryMonths: expiryMonths || null,
       createdAt: new Date(),
     };
 
@@ -71,6 +72,7 @@ export const getInductionById = async (req, res) => {
         : Departments.RETAIL,
       description: inductionDoc.exists ? inductionDoc.data().description : " ",
       questions: inductionDoc.exists ? inductionDoc.data().questions : [],
+      expiryMonths: inductionDoc.exists ? inductionDoc.data().expiryMonths : null,
     };
 
     res.json(inductionData);
@@ -81,7 +83,7 @@ export const getInductionById = async (req, res) => {
 };
 
 export const updateInductionById = async (req, res) => {
-  const { id, name, department, description, questions } = req.body;
+  const { id, name, department, description, questions, expiryMonths } = req.body;
 
   if (!id || typeof id !== "string") {
     return res.status(400).json({ message: "Valid induction ID is required" });
@@ -116,6 +118,7 @@ export const updateInductionById = async (req, res) => {
       ...(department && { department }),
       ...(description !== undefined && { description: description.trim() }),
       ...(questions !== undefined && { questions }),
+      ...(expiryMonths !== undefined && { expiryMonths }),
       updatedAt: new Date(),
     };
 
