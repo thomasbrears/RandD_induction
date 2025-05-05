@@ -31,10 +31,11 @@ import {
   FilePdfOutlined,
   FileImageOutlined
 } from '@ant-design/icons';
-import { getWebsiteContent, updateWebsiteContent, getBackgroundImages, updateBackgroundImage } from '../../api/ContentApi';
+import { getWebsiteContent, updateWebsiteContent, getBackgroundImages, updateBackgroundImage, getHeaderImages, updateHeaderImages } from '../../api/ContentApi';
 import ContentRichEditor from '../ContentRichEditor';
 import useAuth from "../../hooks/useAuth";
 import { deleteFile, uploadPublicFile } from '../../api/FileApi';
+import { messageWarning, notifyError, notifySuccess } from '../../utils/notificationService';
 
 const { Text } = Typography;
 const { Sider, Content } = Layout;
@@ -67,22 +68,14 @@ const ManageContent = () => {
   const [previewImage, setPreviewImage] = useState('');
   const [previewTitle, setPreviewTitle] = useState('');
   
-  // Mock data for header images (TODO: Replace with live images)
-  const [headerImages, setHeaderImages] = useState([
-    { uid: '1', name: 'new-header-bg-1.jpg', status: 'done', url: '/images/new-header-bg-1.jpg' },
-    { uid: '2', name: 'new-header-bg-2.jpg', status: 'done', url: '/images/new-header-bg-2.jpg' },
-    { uid: '3', name: 'new-header-bg-3.jpg', status: 'done', url: '/images/new-header-bg-3.jpg' },
-    { uid: '4', name: 'new-header-bg-4.jpg', status: 'done', url: '/images/new-header-bg-4.jpg' },
-    { uid: '5', name: 'new-header-bg-5.jpg', status: 'done', url: '/images/new-header-bg-5.jpg' },
-    { uid: '6', name: 'new-header-bg-6.jpg', status: 'done', url: '/images/new-header-bg-6.jpg' },
-    { uid: '7', name: 'new-header-bg-7.jpg', status: 'done', url: '/images/new-header-bg-7.jpg' },
-    { uid: '8', name: 'WG_OUTSIDE_AUT.webp', status: 'done', url: '/images/WG_OUTSIDE_AUT.webp' },
-  ]);
-  
   // Mock data for background images (TODO: Replace with live images)
   const [bgImages, setBgImages] = useState(defaultBackgrounds);
   const [originalBgImages, setOriginalBgImages] = useState(defaultBackgrounds);
+  const [headerImages, setHeaderImages] = useState([]);
+  const [originalHeaderImages, setOriginalHeaderImages] = useState([]);
+
   const [bgFileBuffer, setBgFileBuffer] = useState(new Map());
+  const [headerFileBuffer, setHeaderFileBuffer] = useState(new Map());
   
   const screens = useBreakpoint();
   const isMobile = !screens.md;
@@ -93,6 +86,7 @@ const ManageContent = () => {
   useEffect(() => {
     fetchContent();
     fetchBackgroundImages();
+    fetchHeaderImages();
   }, []);
 
   useEffect(() => {
@@ -146,6 +140,19 @@ const ManageContent = () => {
     }
   };
 
+  const fetchHeaderImages = async () => {
+    try {
+      const data = await getHeaderImages();
+      
+      setHeaderImages(data.images || []); 
+      setOriginalHeaderImages(data.images || []);
+    } catch (error) {
+      message.error('Failed to fetch header images');
+      console.error('Error fetching header images:', error);
+    }
+  };
+
+  //Content handlers
   const handleSaveContent = async (section) => {
     try {
       setSaving(true);
@@ -207,7 +214,8 @@ const ManageContent = () => {
   };
   
   const handleCancel = () => setPreviewVisible(false);
-
+  
+  //Background Image Handlers
   const handleBackgroundImageSave = async () => {
     try {
       setSaving(true);
@@ -234,10 +242,7 @@ const ManageContent = () => {
           if (original?.name) {
             await deleteFile(user, `background_images/${original.name}`);
           }
-        
-          // Actually remove from Firestore (triggers FieldValue.delete())
           await updateBackgroundImage(key, null);
-        
           updatedBgImages[key] = defaultImg;
         }
   
@@ -273,40 +278,26 @@ const ManageContent = () => {
       setOriginalBgImages(updatedBgImages);
       setBgFileBuffer(new Map());
   
-      message.success("Background images updated successfully!");
+      notifySuccess("Background images updated successfully!");
     } catch (error) {
-      message.error("Failed to update background images.");
+      notifyError("Failed to update background images.");
       console.error("Error updating background images:", error);
     } finally {
       setSaving(false);
     }
   };
-
-  // Placeholder for image upload functionality (TODO: Implement actual upload)
-  const handleImageUpload = ({ file, onSuccess }) => {
-    setTimeout(() => {
-      message.info("Image upload functionality will be implemented soon");
-      onSuccess("ok");
-    }, 1000);
-  };
-
-  // Placeholder for image delete functionality (TODO: Implement actual delete)
-  const handleImageDelete = (imageId) => {
-    message.info("Image delete functionality will be implemented soon");
-  };
-
-  // Placeholder for background image change
+  
   const handleBgImageChange = (type, info) => {
     const file = info.file.originFileObj || info.file;
     if (!file) {
-      message.error("No file selected.");
+      messageWarning("No file selected.");
       return;
     }
   
     // Validate allowed image types
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/jpg"];
     if (!allowedTypes.includes(file.type)) {
-      message.error("Unsupported file type.");
+      messageWarning("Unsupported file type.");
       return;
     }
   
@@ -345,6 +336,111 @@ const ManageContent = () => {
       ...prev,
       [type]: defaultBackgrounds[type]
     }));
+  };
+
+  //Header Image Handlers
+  const handleHeaderImageSave = async () => {
+    try {
+      setSaving(true);
+  
+      const updatedHeaderImages = [];
+  
+      //Upload new image 
+      for (const current of headerImages) {
+        const original = originalHeaderImages.find(
+          img => img?.uid === current?.uid || img?.name === current?.name
+        );
+  
+        if (original) {
+          // Unchanged image
+          updatedHeaderImages.push(current);
+          continue;
+        }
+  
+        // New image to upload
+        const fileToUpload = headerFileBuffer.get(current.uid);
+        if (!fileToUpload) {
+          console.warn(`No file buffer found for uid ${current.uid}, skipping upload.`);
+          updatedHeaderImages.push(current);
+          continue;
+        }
+  
+        const safeFileName = `${Date.now()}_${current.name.replace(/\s+/g, "_")}`;
+        const filePath = `header_images/${safeFileName}`;
+        const uploadedFile = await uploadPublicFile(user, fileToUpload, filePath);
+  
+        const updatedEntry = {
+          ...current,
+          url: uploadedFile.url,
+          name: safeFileName,
+        };
+  
+        updatedHeaderImages.push(updatedEntry);
+      }
+  
+      //Delete old images
+      for (const original of originalHeaderImages) {
+        const stillExists = headerImages.find(
+          current => current?.uid === original?.uid || current?.name === original?.name
+        );
+  
+        if (!stillExists && original?.name) {
+          await deleteFile(user, `header_images/${original.name}`);
+        }
+      }
+  
+      await updateHeaderImages(updatedHeaderImages);
+      setOriginalHeaderImages(updatedHeaderImages);
+      setHeaderFileBuffer(new Map());
+  
+      notifySuccess("Header images updated successfully!");
+    } catch (error) {
+      notifyError("Failed to update header images.");
+      console.error("Error updating header images:", error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleHeaderImageUpload = (info) => {
+    const file = info.file.originFileObj || info.file;
+  
+    if (!file) {
+      message.warning("No file selected.");
+      return;
+    }
+  
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      message.warning("Unsupported file type.");
+      return;
+    }
+
+    setHeaderFileBuffer(prev => {
+      const newBuffer = new Map(prev);
+      newBuffer.set(newImage.uid, file);
+      return newBuffer;
+    });
+  
+    const tempUrl = URL.createObjectURL(file);
+    const newImage = {
+      uid: Date.now().toString(),
+      name: file.name,
+      url: tempUrl,
+      type: file.type
+    };
+  
+    setHeaderImages(prev => [...prev, newImage]);
+  };
+
+  const handleHeaderImageDelete = (uid) => {
+    setHeaderFileBuffer(prev => {
+      const newBuffer = new Map(prev);
+      newBuffer.delete(uid);
+      return newBuffer;
+    });
+
+    setHeaderImages(prev => prev.filter(img => img.uid !== uid));
   };
 
   // Function to get the appropriate icon based on file type
@@ -580,9 +676,6 @@ const ManageContent = () => {
   };
 
   const renderHeaderImageManager = () => {
-    // Define accepted file types for header images
-    const acceptedFileTypes = '.jpg,.jpeg,.png,.webp';
-    
     return (
       <div className="mb-6">
         <Card 
@@ -631,7 +724,7 @@ const ManageContent = () => {
                         type="text" 
                         danger 
                         icon={<DeleteOutlined />} 
-                        onClick={() => handleImageDelete(image.uid)}
+                        onClick={() => handleHeaderImageDelete(image.uid)}
                         size="small"
                       />
                     </div>
@@ -643,18 +736,23 @@ const ManageContent = () => {
               ))}
               
               {/* Add new image square */}
-              <div className="border border-dashed border-gray-300 rounded-md h-64 flex flex-col items-center justify-center">
-                <Upload
-                  accept={acceptedFileTypes}
-                  showUploadList={false}
-                  customRequest={handleImageUpload}
-                >
-                  <div className="text-center p-6">
-                    <PlusOutlined className="text-2xl text-gray-400 mb-2" />
-                    <p className="text-gray-500">Add new header image</p>
-                  </div>
-                </Upload>
-              </div>
+              <Dragger
+                accept=".jpg,.jpeg,.png,.webp,.jfif"
+                showUploadList={false}
+                beforeUpload={() => false} // Prevent auto-upload
+                onChange={handleHeaderImageUpload}
+                className=" rounded-md h-64 flex flex-col items-center justify-center"
+              >
+                <div className="text-center p-6">
+                  <PlusOutlined className="text-2xl text-gray-400 mb-2" />
+                  <p className="ant-upload-text text-gray-700 font-medium">
+                    Add new header image
+                  </p>
+                  <p className="ant-upload-hint text-xs text-gray-500 mb-2">
+                    Recommended size: 1920x1080px (16:9)
+                  </p>
+                </div>
+              </Dragger>
             </div>
           </div>
           
@@ -662,7 +760,7 @@ const ManageContent = () => {
             <Button 
               icon={<SaveOutlined />} 
               type="primary"
-              onClick={() => message.info("Save functionality will be implemented soon")}
+              onClick={handleHeaderImageSave}
             >
               Save Changes
             </Button>
@@ -740,7 +838,7 @@ const ManageContent = () => {
                   <Dragger
                     name="home-bg"
                     multiple={false}
-                    accept=".jpg,.jpeg,.png,.webp"
+                    accept=".jpg,.jpeg,.png,.webp,.jfif"
                     beforeUpload={() => false} // Disable upload
                     onChange={(info) => handleBgImageChange('homeBg', info)}
                     showUploadList={false}
@@ -801,7 +899,7 @@ const ManageContent = () => {
                   <Dragger
                     name="auth-bg"
                     multiple={false}
-                    accept=".jpg,.jpeg,.png,.webp"
+                    accept=".jpg,.jpeg,.png,.webp,.jfif"
                     beforeUpload={() => false} // Disable upload
                     onChange={(info) => handleBgImageChange('authBg', info)}
                     showUploadList={false}
@@ -862,7 +960,7 @@ const ManageContent = () => {
                   <Dragger
                     name="about-bg"
                     multiple={false}
-                    accept=".jpg,.jpeg,.png,.webp"
+                    accept=".jpg,.jpeg,.png,.webp,.jfif"
                     beforeUpload={() => false} // Disable upload
                     onChange={(info) => handleBgImageChange('aboutBg', info)}
                     showUploadList={false}

@@ -2,6 +2,7 @@ import React from 'react';
 import { Button, ConfigProvider } from 'antd';
 import { useNavigate } from 'react-router-dom';
 import Loading from '../components/Loading';
+import { useContextImage } from '../components/WebsiteImageProvider';
 
 /**
  * AuthLayout - Common layout for all authentication pages
@@ -14,6 +15,8 @@ import Loading from '../components/Loading';
  */
 function AuthLayout({ children, title, heading, loading, loadingMessage }) {
   const navigate = useNavigate();
+  const { getBackgroundImage } = useContextImage();
+  const bgUrl = getBackgroundImage('authBg');
 
   return (
     <ConfigProvider
@@ -38,7 +41,7 @@ function AuthLayout({ children, title, heading, loading, loadingMessage }) {
       <div 
         className="min-h-screen flex items-center justify-center bg-cover bg-center px-4 py-12" 
         style={{ 
-          backgroundImage: 'url(/images/WG_OUTSIDE_AUT.jpg)', 
+          backgroundImage: `url(${bgUrl})`, 
           backgroundColor: 'rgba(0, 0, 0, 0.65)', 
           backgroundBlendMode: 'overlay' 
         }}

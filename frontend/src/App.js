@@ -2,7 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom';
 import { HelmetProvider } from 'react-helmet-async'; // HelmetProvider for dynamically setting page head including titles
 import { ConfigProvider, theme } from 'antd';
-import { BackgroundImageProvider } from './components/BackgroundImageProvider.jsx';
+import { WebsiteImageProvider } from './components/WebsiteImageProvider.jsx';
 
 // Centralised notification service
 import './utils/notificationService';
@@ -79,7 +79,7 @@ const App = () => {
       <ConfigProvider theme={theme}>
         <div className="App flex flex-col min-h-screen">
           <Router>
-            <BackgroundImageProvider>
+            <WebsiteImageProvider>
               <Navbar/>
               <div className="flex-grow">
                 <Routes>
@@ -132,7 +132,7 @@ const App = () => {
                 </Routes>
               </div>
               <Footer />
-            </BackgroundImageProvider>
+            </WebsiteImageProvider>
           </Router>
         </div>
       </ConfigProvider>

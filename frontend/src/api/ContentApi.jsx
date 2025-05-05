@@ -111,7 +111,7 @@ export const updateHeaderImages = async (headerImages) => {
 
     const response = await axios.put(
       `${API_URL}/content/update-header-images`,
-      { headerImages }, // Expects full array of headers
+      { images: headerImages },
       {
         headers: {
           "Content-Type": "application/json",
