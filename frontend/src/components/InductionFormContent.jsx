@@ -5,12 +5,18 @@ import QuestionForm from "../components/questions/QuestionForm";
 import TiptapEditor from "./TiptapEditor";
 import { Select, Input, Button, Popconfirm } from "antd";
 import { DeleteOutlined } from "@ant-design/icons";
+import { useLocation } from "react-router-dom";
 
-const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileChange, onDeleteInduction, isCreatingInduction }) => {
+const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileChange, onDeleteInduction }) => {
     const [Departments, setDepartments] = useState([]);
     const [showQuestionModal, setShowQuestionModal] = useState(false);
     const [validationErrors, setValidationErrors] = useState({});
     const [editingQuestion, setEditingQuestion] = useState({});
+    const location = useLocation();
+
+    // Determine if we're in edit mode based on the URL path
+    const isEditMode = location.pathname.includes("/edit") || 
+                      (location.pathname.includes("/inductions") && !location.pathname.includes("/create"));
 
     useEffect(() => {
         const getDepartments = async () => {
@@ -100,6 +106,10 @@ const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileCh
         setShowQuestionModal(true);
     };
 
+    // Determine if we should show the delete button
+    // Only show if we're in edit mode AND onDeleteInduction is provided
+    const shouldShowDeleteButton = isEditMode && typeof onDeleteInduction === 'function';
+
     return (
         <>
             {/*Modal for creating the questions */}
@@ -119,7 +129,7 @@ const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileCh
                         <h2 className="text-xl font-semibold">Induction Details</h2>
                         <p className="text-sm text-gray-500">Basic information about this induction</p>
                     </div>
-                    {!isCreatingInduction && (
+                    {shouldShowDeleteButton && (
                         <Popconfirm
                             title="Delete Induction"
                             description="This action will permanently remove this induction and all associated data. THIS CANNOT BE UNDONE."

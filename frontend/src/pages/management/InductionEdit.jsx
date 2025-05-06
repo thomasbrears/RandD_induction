@@ -405,7 +405,6 @@ const InductionEdit = () => {
                 setInduction={setInduction}
                 handleSubmit={handleSubmitButton}
                 isCreatingInduction={false}
-                onDeleteInduction={onDeleteInduction}
               />
 
               {/* Main content for managing induction details */}
@@ -416,6 +415,7 @@ const InductionEdit = () => {
                   setInduction={setInduction}
                   getImageUrl={getImageUrl}
                   saveFileChange={handleFileBufferUpdate}
+                  onDeleteInduction={onDeleteInduction}
                 />
 
                 {/* Save Button */}
