@@ -53,7 +53,13 @@ const ResultsHub = () => {
       setLoadingUsers(true);
       try {
         const data = await getAllUsers(currentUser);
-        setUsers(data);
+        // Sort users alphabetically by name
+        const sortedUsers = data.sort((a, b) => {
+          const nameA = a.displayName || `${a.firstName || ''} ${a.lastName || ''}`.trim() || a.email || '';
+          const nameB = b.displayName || `${b.firstName || ''} ${b.lastName || ''}`.trim() || b.email || '';
+          return nameA.localeCompare(nameB);
+        });
+        setUsers(sortedUsers);
       } catch (error) {
         console.error("Error fetching users:", error);
         notifyError("Failed to load users", "Please try again later");
@@ -80,11 +86,20 @@ const ResultsHub = () => {
       try {
         const userInductionsData = await getUserInductions(currentUser, selectedUser);
         const completedInductions = userInductionsData.filter(ind => ind.status === 'complete');
-        setSelectedUserInductions(completedInductions);
+        
+        // Sort completed inductions by completedAt date (newest first)
+        const sortedInductions = completedInductions.sort((a, b) => {
+          // If completedAt is not available, use dueDate as fallback
+          const dateA = a.completedAt ? new Date(a.completedAt) : a.dueDate ? new Date(a.dueDate) : new Date(0);
+          const dateB = b.completedAt ? new Date(b.completedAt) : b.dueDate ? new Date(b.dueDate) : new Date(0);
+          return dateB - dateA; // Descending order (newest first)
+        });
+        
+        setSelectedUserInductions(sortedInductions);
         
         // Set the first induction as selected by default if available
-        if (completedInductions.length > 0) {
-          setSelectedUserInductionId(completedInductions[0].id);
+        if (sortedInductions.length > 0) {
+          setSelectedUserInductionId(sortedInductions[0].id);
         } else {
           setSelectedUserInductionId(null);
         }
