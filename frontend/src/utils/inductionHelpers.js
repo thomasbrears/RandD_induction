@@ -313,10 +313,10 @@ export const formatAnswersForSubmission = (questions, answers) => {
         
       case QuestionTypes.FILE_UPLOAD:
         // For file uploads, store the file name
-        if (answer) {
-          answerObj.fileName = answer.name;
-          answerObj.fileType = answer.type;
-          answerObj.fileSize = answer.size;
+        if (answer && answer.file) {
+          answerObj.fileName = answer.uploadedName || answer.name;
+          answerObj.fileType = answer.file.type;
+          answerObj.fileSize = answer.file.size;
         }
         // Flag for review as we can't automatically verify
         answerObj.flaggedForReview = true;

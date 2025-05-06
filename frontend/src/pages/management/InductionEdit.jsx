@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
 import InductionFormHeader from "../../components/InductionFormHeader";
 import { useLocation, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import useAuth from "../../hooks/useAuth";
 import { DefaultNewInduction } from "../../models/Inductions";
 import { updateInduction, getInduction, deleteInduction } from "../../api/InductionApi";
@@ -13,7 +12,7 @@ import Loading from "../../components/Loading";
 import "react-quill/dist/quill.snow.css";
 import InductionFormContent from "../../components/InductionFormContent";
 import { Modal, Button } from "antd";
-import { messageWarning, notifySuccess } from '../../utils/notificationService';
+import { messageWarning, notifySuccess, notifyError } from '../../utils/notificationService';
 import { getSignedUrl, uploadFile, deleteFile } from "../../api/FileApi";
 
 const InductionEdit = () => {
@@ -45,14 +44,14 @@ const InductionEdit = () => {
           }));
           setOriginalQuestions(snapshot);
         } catch (err) {
-          toast.error(err.response?.data?.message || "An error occurred");
+          notifyError(err.response?.data?.message || "An error occurred");
         } finally {
           setLoading(false);
         }
       };
       fetchInduction();
     } else if (!authLoading) {
-      toast.error("No induction was selected. Please select an induction to edit.");
+      messageWarning("No induction was selected. Please select an induction to edit.");
       setTimeout(() => navigate("/management/inductions/view"), 1000);
     }
   }, [id, user, authLoading, navigate]);
@@ -96,6 +95,8 @@ const InductionEdit = () => {
     const oldMap = new Map(originalQuestions.map(q => [q.id, q]));
     const currentIds = new Set(induction.questions.map(q => q.id));
 
+    const getFileName = (question, file) => `induction_images/${induction.id}/${question.id}_${file.name}`;
+
     for (const newQ of induction.questions) {
       const oldQ = oldMap.get(newQ.id);
       const newFileName = newQ.imageFile;
@@ -107,47 +108,33 @@ const InductionEdit = () => {
         continue;
       }
 
-      // === CASE: UPLOAD NEW (no old file, new file exists) ===
-      if (!oldFileName && newFileName) {
-        const file = fileBuffer.get(newQ.id);
-        if (file) {
-          const finalFileName = `${newQ.id}_${file.name}`;
-          uploads.push({ file, finalFileName, question: newQ });
-        }
+      // === UPLOAD NEW or CHANGED ===
+      const file = fileBuffer.get(newQ.id);
+      if ((oldFileName !== newFileName || !oldFileName) && file && newFileName) {
+        if (oldFileName) deletes.push(deleteFile(user, oldFileName));
+
+        const finalFileName = getFileName(newQ, file);
+        uploads.push({ file, finalFileName, question: newQ });
         continue;
       }
 
-      // === CASE: FILENAME CHANGED ===
-      if (oldFileName && newFileName && oldFileName !== newFileName) {
-        deletes.push(deleteFile(user, oldFileName));
-        const file = fileBuffer.get(newQ.id);
-        if (file) {
-          const finalFileName = `${newQ.id}_${file.name}`;
-          uploads.push({ file, finalFileName, question: newQ });
-        }
-        continue;
+      // === NEW QUESTION with FILE ===
+      if (!oldQ && newFileName && file) {
+        const finalFileName = getFileName(newQ, file);
+        uploads.push({ file, finalFileName, question: newQ });
       }
 
-      // === CASE: New question with file ===
-      if (!oldQ && newFileName) {
-        const file = fileBuffer.get(newQ.id);
-        if (file) {
-          const finalFileName = `${newQ.id}_${file.name}`;
-          uploads.push({ file, finalFileName, question: newQ });
-        }
-      }
-
-      // CASE: No changes — skip
+      // No changes — skip
     }
 
-    // === CASE: OLD QUESTION DELETED ENTIRELY ===
+    // === DELETED QUESTIONS ===
     for (const [oldId, oldQ] of oldMap) {
       if (!currentIds.has(oldId) && oldQ.imageFile) {
         deletes.push(deleteFile(user, oldQ.imageFile));
       }
     }
 
-    // === Run deletes ===
+    // === Run deletions ===
     try {
       await Promise.all(deletes);
     } catch (err) {
@@ -207,6 +194,7 @@ const InductionEdit = () => {
     if (actionType === "submit") {
       handleSubmit();
       setConfirmModalVisible(false);
+      setActionType(null);
       return;
     }
   };
@@ -224,9 +212,18 @@ const InductionEdit = () => {
 
     if (user) {
       const result = await updateInduction(user, updatedInduction);
+      
+      
       setLoading(false);
       if (result) {
         notifySuccess("Induction updated successfully!");
+        // Refresh state
+        setInduction(updatedInduction);
+        setOriginalQuestions(updatedInduction.questions.map(q => ({
+          id: q.id,
+          imageFile: q.imageFile || null,
+        })));
+        setFileBuffer(new Map());
       } else {
         messageWarning("Error while updating induction.");
       }

@@ -58,6 +58,56 @@ export const uploadFile = async (req, res) => {
   }
 };
 
+export const uploadPublicFile = async (req, res) => {
+  try {
+    const { file } = req;
+    const { filePath } = req.body;
+
+    if (!file || !filePath) {
+      return res.status(400).send("File and filePath are required.");
+    }
+
+    // Ensure file name is safe
+    const segments = filePath.split('/');
+    const rawFileName = segments.pop(); // Get the filename from the path
+    const safeFileName = rawFileName.replace(/\s+/g, '_').replace(/[^a-zA-Z0-9._-]/g, '');
+    const safeFilePath = [...segments, safeFileName].join('/');
+
+    const blob = bucket.file(safeFilePath);
+    const blobStream = blob.createWriteStream({
+      metadata: {
+        contentType: file.mimetype,
+      },
+      resumable: false,
+    });
+
+    blobStream.on('error', (err) => {
+      console.error('Error uploading file:', err);
+      return res.status(500).send('Something went wrong.');
+    });
+
+    blobStream.on('finish', async () => {
+      try {
+        // Return the public URL
+        const publicUrl = `https://storage.googleapis.com/${bucket.name}/${safeFilePath}`;
+        res.status(200).json({
+          message: 'File uploaded successfully!',
+          url: publicUrl,
+          filePath: safeFilePath,
+        });
+      } catch (error) {
+        console.error('Error making file public:', error);
+        res.status(500).send('Error finalizing file upload.');
+      }
+    });
+
+    blobStream.end(file.buffer);
+  } catch (error) {
+    console.error('File upload failed:', error);
+    res.status(500).send('Internal server error.');
+  }
+};
+
 export const getSignedUrl = async (req, res) => {
   try {
     const fileName = req.headers['filename'];
@@ -97,6 +147,37 @@ export const deleteFile = async (req, res) => {
     await file.delete();
     res.status(200).send("File deleted successfully.");
   } catch (error) {
+    console.error("Error deleting file:", error);
     res.status(500).send("Failed to delete file.");
+  }
+};
+
+export const downloadFile = async (req, res) => {
+  try {
+    const gcsFileName = req.headers.filename;
+
+    if (!gcsFileName) {
+      return res.status(400).send("No filename provided in headers.");
+    }
+
+    const file = bucket.file(gcsFileName);
+
+    const [exists] = await file.exists();
+    if (!exists) {
+      return res.status(404).send("File not found.");
+    }
+
+    res.setHeader("Content-Disposition", `attachment; filename="${gcsFileName.split('/').pop()}"`);
+    res.setHeader("Content-Type", "application/octet-stream");
+
+    file.createReadStream()
+      .on("error", (err) => {
+        console.error("GCS read error:", err);
+        res.status(500).send("Error reading file.");
+      })
+      .pipe(res);
+  } catch (error) {
+    console.error("Download error:", error);
+    res.status(500).send("Internal server error.");
   }
 };

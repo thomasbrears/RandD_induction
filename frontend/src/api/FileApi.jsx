@@ -45,6 +45,29 @@ export const uploadFile = async (user, file, customFileName = null) => {
   }
 };
 
+export const uploadPublicFile = async (user, file, filePath) => {
+  try {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("filePath", filePath);
+
+    const token = user?.token;
+    const headers = {
+      ...(token && { authtoken: token }),
+      "Content-Type": "multipart/form-data",
+    };
+
+    const response = await axios.post(`${API_URL}/files/upload-public-file`, formData, {
+      headers,
+    });
+
+    return response.data; // { url, filePath }
+  } catch (error) {
+    console.error("Error uploading file:", error);
+    throw error;
+  }
+};
+
 export const deleteFile = async (user, fileName) =>{
   try{
     const token = user?.token;
@@ -58,6 +81,25 @@ export const deleteFile = async (user, fileName) =>{
 
   } catch (error) {
     console.error("Error deleting file:", error);
+    throw error;
+  }
+};
+
+export const downloadFile = async (user, fileName) => {
+  try {
+    const token = user?.token;
+    const headers = token ? { authtoken: token, filename: fileName } : { filename: fileName };
+
+    const response = await axios.get(`${API_URL}/files/download`, {
+      headers,
+      responseType: 'blob', 
+    });
+
+    // Convert to File 
+    const blob = response.data;
+    return new File([blob], fileName.split('/').pop(), { type: blob.type });
+  } catch (error) {
+    console.error("Error downloading file:", error);
     throw error;
   }
 };

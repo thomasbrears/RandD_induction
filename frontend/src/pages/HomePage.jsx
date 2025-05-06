@@ -6,6 +6,7 @@ import { getUserInductions } from '../api/UserInductionApi';
 import { notification, Button } from 'antd'; 
 import { WarningOutlined } from '@ant-design/icons';
 import DynamicContent from '../components/DynamicContent.jsx';
+import { useContextImage } from '../components/WebsiteImageProvider.jsx';
 
 const HomePage = () => {
     const { user } = useAuth();
@@ -15,6 +16,9 @@ const HomePage = () => {
     const [error, setError] = useState(null);
     const isAuthenticated = !!user;
     const userRole = user?.role; 
+    const { getBackgroundImage } = useContextImage();
+    const homeBgUrl = getBackgroundImage('homeBg');
+    const aboutBgUrl = getBackgroundImage('aboutBg');
 
     // Function to calculate inductions left to complete
     const calculateInductionsToComplete = (inductions) => {
@@ -117,7 +121,7 @@ const HomePage = () => {
             </Helmet>
 
             {/* Background Image Section */}
-            <div className="bg-cover bg-center h-[500px] flex justify-center items-center text-center text-white px-4 mb-12" style={{ backgroundImage: `url(/images/WG_OUTSIDE_AUT.webp)` }}>
+            <div className="bg-cover bg-center h-[500px] flex justify-center items-center text-center text-white px-4 mb-12" style={{ backgroundImage: `url(${homeBgUrl})` }}>
                 <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold">Welcome to the AUT Events<br />Induction Portal!</h1>
             </div>
 
@@ -200,7 +204,7 @@ const HomePage = () => {
             </div>
 
             {/* About Section - Dynamic */}
-            <div className="relative bg-cover bg-top text-white py-16 mb-16" style={{ backgroundImage: `url(/images/AUTEventsStaff.jpg)` }}>
+            <div className="relative bg-cover bg-top text-white py-16 mb-16" style={{ backgroundImage: `url(${aboutBgUrl})` }}>
                 <div className="absolute inset-0 bg-black opacity-70"></div> {/* Dark overlay on image */}
                 <h2 className="text-2xl text-center font-semibold mb-4 relative z-10">About Us</h2>
                 <div className="max-w-3xl mx-auto text-center relative z-10 leading-relaxed space-y-4">

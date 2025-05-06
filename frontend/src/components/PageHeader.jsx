@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
+import { useContextImage } from './WebsiteImageProvider';
 
-// Array of the background images
-const backgrounds = [
+// Array of the header images
+const defaultHeaders = [
     '/images/new-header-bg-1.jpg',
     '/images/new-header-bg-2.jpg',
     '/images/new-header-bg-3.jpg',
@@ -13,13 +14,16 @@ const backgrounds = [
 ];
 
 const PageHeader = ({ title, subtext }) => {
+  const { allHeaderImageUrls } = useContextImage();
   const [backgroundImage, setBackgroundImage] = useState('');
+
+  const headerImages = allHeaderImageUrls.length > 0 ? allHeaderImageUrls : defaultHeaders;
 
   // Select a random background image on component mount
   useEffect(() => {
-    const randomImage = backgrounds[Math.floor(Math.random() * backgrounds.length)];
+    const randomImage = headerImages[Math.floor(Math.random() * headerImages.length)];
     setBackgroundImage(randomImage);
-  }, []);
+  }, [headerImages]);
 
   return (
     <div
