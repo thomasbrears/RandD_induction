@@ -237,7 +237,9 @@ const ResultsHub = () => {
               >
                 {users.map(user => (
                   <Option key={user.uid} value={user.uid}>
-                    {user.displayName || user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email}
+                    {user.displayName || (user.firstName && user.lastName) 
+                      ? `${user.firstName || ''} ${user.lastName || user.displayName || ''}${user.email ? ` (${user.email})` : ''}`
+                      : user.email}
                   </Option>
                 ))}
               </Select>
@@ -263,9 +265,19 @@ const ResultsHub = () => {
                   disabled={!selectedUser || selectedUserInductions.length === 0}
                   value={selectedUserInductionId}
                   onChange={setSelectedUserInductionId}
+                  showSearch
+                  optionFilterProp="label"
+                  filterOption={(input, option) => {
+                    // Using option.label (the text value) for filtering
+                    return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+                  }}
                 >
                   {selectedUserInductions.map(induction => (
-                    <Option key={induction.id} value={induction.id}>
+                    <Option 
+                      key={induction.id} 
+                      value={induction.id}
+                      label={induction.inductionName || "Unnamed Induction"}
+                    >
                       <div className="flex items-center justify-between">
                         <div>{induction.inductionName || "Unnamed Induction"}</div>
                         <div className="flex items-center">
