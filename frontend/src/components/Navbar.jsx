@@ -24,15 +24,9 @@ const Navbar = () => {
     <>
       {!loading && !user && showBar && (
         <div className="bg-blue-800 text-white p-2 text-center relative">
-          <Link to="/auth/signin" className="font-bold">
+          <Link to="/auth/signin">
             Welcome to the AUT Events Induction Portal! Please Sign in to complete your inductions. →
           </Link>
-          <button
-            onClick={() => setShowBar(false)}
-            className="absolute right-2 top-1/2 transform -translate-y-1/2 text-white hover:text-black"
-          >
-            ✕
-          </button>
         </div>
       )}
       <nav className="bg-black text-white">

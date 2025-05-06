@@ -10,6 +10,7 @@ import locationRoutes from "./routes/locationRoutes.js";
 import positionRoutes from "./routes/positionRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import contentRoutes from "./routes/contentRoutes.js";
+import emailSettingsRoutes from "./routes/emailSettingsRoutes.js";
 
 const app = express();
 
@@ -61,6 +62,9 @@ app.use("/api/locations", locationRoutes);
 
 // Position Routes
 app.use("/api/positions", positionRoutes);
+
+// Email Settings Routes
+app.use("/api/email-settings", emailSettingsRoutes);
 
 // User Routes
 app.use("/api/users", userRoutes);

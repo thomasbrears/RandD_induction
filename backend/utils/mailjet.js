@@ -1,7 +1,8 @@
 import mailjet from 'node-mailjet';
 import 'dotenv/config';
+import { db } from "../firebase.js";
 
-// Initialize Mailjet API connection
+// Initialise Mailjet API connection
 const initializeMailjet = () => {
   try {
     if (!process.env.MJ_APIKEY_PUBLIC || !process.env.MJ_APIKEY_PRIVATE) {
@@ -20,7 +21,32 @@ const initializeMailjet = () => {
 
 const MailJetConnection = initializeMailjet();
 
-// Helper function for generating the default email template
+// Get email settings from database
+const getEmailSettings = async () => {
+  try {
+    const snapshot = await db.collection("emailSettings").get();
+    if (snapshot.empty) {
+      // Return default settings if none exist
+      return {
+        defaultFrom: "aut-events-induction-portal@pricehound.tech",
+        defaultReplyTo: "autevents@brears.xyz",
+        defaultCc: ["manager@brears.xyz"]
+      };
+    }
+    
+    return snapshot.docs[0].data();
+  } catch (error) {
+    console.error("Error fetching email settings:", error);
+    // Return default settings on error
+    return {
+      defaultFrom: "aut-events-induction-portal@pricehound.tech",
+      defaultReplyTo: "autevents@brears.xyz",
+      defaultCc: ["manager@brears.xyz"]
+    };
+  }
+};
+
+// Helper function for generating the default email template (unchanged)
 export const generateDefaultEmailTemplate = (bodyContent, { 
   logoUrl = 'https://dev-aut-events-induction.vercel.app/images/AUTEventsInductionPortal.jpg', 
   logoAlt = 'AUT Events Induction Portal',
@@ -103,12 +129,20 @@ export const sendEmail = async (toEmail, subject, bodyContent, replyToEmail = nu
       throw new Error('Recipient email address is required');
     }
     
+    // Get email settings from database
+    const emailSettings = await getEmailSettings();
+    
+    // Use provided emails or fall back to settings from database
+    const fromEmail = options.fromEmail || emailSettings.defaultFrom;
+    const replyTo = replyToEmail || emailSettings.defaultReplyTo;
+    const ccList = ccEmails.length > 0 ? ccEmails : emailSettings.defaultCc;
+    
     // Use the default email template for the content with optional customization
     const htmlContent = generateDefaultEmailTemplate(bodyContent, options);
     
     const messageData = {
       From: {
-        Email: 'aut-events-induction-portal@pricehound.tech',
+        Email: fromEmail,
         Name: 'AUT Events Induction Portal',
       },
       To: [
@@ -122,15 +156,15 @@ export const sendEmail = async (toEmail, subject, bodyContent, replyToEmail = nu
     };
 
     // Add Reply-To if provided
-    if (replyToEmail) {
+    if (replyTo) {
       messageData.ReplyTo = {
-        Email: replyToEmail,
+        Email: replyTo,
       };
     }
 
     // Add CC emails if provided
-    if (ccEmails && ccEmails.length > 0) {
-      messageData.Cc = ccEmails.map(email => ({ Email: email }));
+    if (ccList && ccList.length > 0) {
+      messageData.Cc = ccList.map(email => ({ Email: email }));
     }
     
     const requestPayload = {
