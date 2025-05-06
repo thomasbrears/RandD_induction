@@ -5,7 +5,8 @@ import{
     uploadFile,
     getSignedUrl,
     deleteFile,
-    uploadPublicFile
+    uploadPublicFile,
+    downloadFile
 } from "../controllers/fileController.js";
 
 const router = express.Router();
@@ -38,5 +39,6 @@ router.post("/upload-public-file", (req, res, next) => {
     next();
   });
 }, uploadPublicFile);
+router.get("/download-file", downloadFile);
 
 export default router;

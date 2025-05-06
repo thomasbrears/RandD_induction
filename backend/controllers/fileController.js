@@ -151,3 +151,33 @@ export const deleteFile = async (req, res) => {
     res.status(500).send("Failed to delete file.");
   }
 };
+
+export const downloadFile = async (req, res) => {
+  try {
+    const gcsFileName = req.headers.filename;
+
+    if (!gcsFileName) {
+      return res.status(400).send("No filename provided in headers.");
+    }
+
+    const file = bucket.file(gcsFileName);
+
+    const [exists] = await file.exists();
+    if (!exists) {
+      return res.status(404).send("File not found.");
+    }
+
+    res.setHeader("Content-Disposition", `attachment; filename="${gcsFileName.split('/').pop()}"`);
+    res.setHeader("Content-Type", "application/octet-stream");
+
+    file.createReadStream()
+      .on("error", (err) => {
+        console.error("GCS read error:", err);
+        res.status(500).send("Error reading file.");
+      })
+      .pipe(res);
+  } catch (error) {
+    console.error("Download error:", error);
+    res.status(500).send("Internal server error.");
+  }
+};

@@ -85,3 +85,21 @@ export const deleteFile = async (user, fileName) =>{
   }
 };
 
+export const downloadFile = async (user, fileName) => {
+  try {
+    const token = user?.token;
+    const headers = token ? { authtoken: token, filename: fileName } : { filename: fileName };
+
+    const response = await axios.get(`${API_URL}/files/download`, {
+      headers,
+      responseType: 'blob', 
+    });
+
+    // Convert to File 
+    const blob = response.data;
+    return new File([blob], fileName.split('/').pop(), { type: blob.type });
+  } catch (error) {
+    console.error("Error downloading file:", error);
+    throw error;
+  }
+};
