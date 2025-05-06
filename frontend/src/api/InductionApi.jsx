@@ -5,12 +5,18 @@ const API_URL = process.env.NODE_ENV === 'production'
   ? 'https://dev-aut-events-induction.vercel.app/api' // Development website
   : 'http://localhost:8000/api'; // Local development
 
+// timeout for all requests
+const axiosConfig = {
+  timeout: 15000 // 15 seconds timeout
+};
+
 export const getAllInductions = async (user) => {
   try {
     const token = user?.token;
     const headers = token ? { authtoken: token } : {};
     const response = await axios.get(`${API_URL}/inductions`, {
       headers,
+      ...axiosConfig
     });
     return response.data;
   } catch (error) {
@@ -27,6 +33,7 @@ export const getAssignedInductions = async (user, uid) => {
       const response = await axios.get(`${API_URL}/users/get-assigned-inductions`,{
           headers,
           params: { uid },
+          ...axiosConfig
       });
     return response.data;
   } catch (error) {
@@ -44,11 +51,12 @@ export const createNewInduction = async (user, inductionData) => {
       inductionData,
       {
         headers,
+        ...axiosConfig
       }
     );
     return response.data;
   } catch (error) {
-    console.error("Error fetching assigned inductions:", error);
+    console.error("Error creating induction:", error);
     throw error; 
   }
 };
@@ -88,7 +96,8 @@ export const getInduction = async (user, idParam) => {
       try {
         const assignmentResponse = await axios.get(`${API_URL}/users/get-assigned-induction`, {
           headers,
-          params: { assignmentID: idParam }
+          params: { assignmentID: idParam },
+          ...axiosConfig
         });
         
         if (assignmentResponse.data && assignmentResponse.data.induction) {
@@ -107,7 +116,8 @@ export const getInduction = async (user, idParam) => {
         try {
           const extractedResponse = await axios.get(`${API_URL}/inductions/get-induction`, {
             headers,
-            params: { id: extractedId }
+            params: { id: extractedId },
+            ...axiosConfig
           });
           
           if (extractedResponse.data) {
@@ -121,10 +131,10 @@ export const getInduction = async (user, idParam) => {
     }
     
     // Default approach - try with the ID as provided
-
     const response = await axios.get(`${API_URL}/inductions/get-induction`, {
       headers,
       params: { id: idParam },
+      ...axiosConfig
     });
     
     if (response.data) {
@@ -133,25 +143,67 @@ export const getInduction = async (user, idParam) => {
     
     return null;
   } catch (error) {    
-
     console.error("Error fetching induction:", error);
     throw error; 
   }
 };
 
-export const updateInduction = async (user, updatedInductionData) => {
-  try {
-    const token = user?.token;
-    const headers = token ? { authtoken: token } : {};
-    const response = await axios.put(
-      `${API_URL}/inductions/update-induction`, 
-      updatedInductionData,
-      { headers }
-    );
-    return response.data;
-  } catch (error) {
-    console.error("Error updating induction:", error);
-    throw error; 
+// updateInduction with retry logic and validation
+export const updateInduction = async (user, updatedInductionData, maxRetries = 3) => {
+  let retries = 0;
+  
+  // Validate the data before sending to avoid obvious errors
+  if (!updatedInductionData.id) {
+    throw new Error("Missing induction ID");
+  }
+  
+  // Ensure name and description are strings
+  if (updatedInductionData.name && typeof updatedInductionData.name !== 'string') {
+    updatedInductionData.name = String(updatedInductionData.name);
+  }
+
+  if (updatedInductionData.description && typeof updatedInductionData.description !== 'string') {
+    updatedInductionData.description = String(updatedInductionData.description);
+  }
+  
+  // Make sure name isnt too long 
+  if (updatedInductionData.name && updatedInductionData.name.length > 50) {
+    updatedInductionData.name = updatedInductionData.name.substring(0, 50);
+  }
+  
+  // Clean up questions array if needed
+  if (updatedInductionData.questions && !Array.isArray(updatedInductionData.questions)) {
+    updatedInductionData.questions = [];
+  }
+
+  while (retries < maxRetries) {
+    try {
+      const token = user?.token;
+      const headers = token ? { authtoken: token } : {};
+            
+      const response = await axios.put(
+        `${API_URL}/inductions/update-induction`, 
+        updatedInductionData,
+        { 
+          headers,
+          ...axiosConfig
+        }
+      );
+      
+      return response.data;
+    } catch (error) {
+      retries++;
+      console.error(`Error updating induction (attempt ${retries}/${maxRetries}):`, error);
+      
+      // If we've used all retries, throw the error
+      if (retries >= maxRetries) {
+        throw error;
+      }
+      
+      // Wait before retrying (exponential backoff)
+      const delay = Math.min(1000 * Math.pow(2, retries), 10000);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
   }
 };
 
@@ -162,6 +214,7 @@ export const deleteInduction = async (user, idParam) => {
     const response = await axios.delete(`${API_URL}/inductions/delete-induction`, {
       headers,
       params: { id: idParam },
+      ...axiosConfig
     });
     return response.data;
   } catch (error) {
@@ -169,4 +222,3 @@ export const deleteInduction = async (user, idParam) => {
     throw error;
   }
 };
-

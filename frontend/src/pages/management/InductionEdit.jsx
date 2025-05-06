@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
+import { Helmet } from 'react-helmet-async';
 import InductionFormHeader from "../../components/InductionFormHeader";
 import { useLocation, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
@@ -20,6 +20,7 @@ const InductionEdit = () => {
   const { user, loading: authLoading } = useAuth();
   const [induction, setInduction] = useState(DefaultNewInduction);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
@@ -28,13 +29,16 @@ const InductionEdit = () => {
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [originalQuestions, setOriginalQuestions] = useState([]);
   const [fileBuffer, setFileBuffer] = useState(new Map());
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     if (id && !authLoading) {
       const fetchInduction = async () => {
         try {
           setLoading(true);
-          setLoadingMessage(`Loading the inductions's details...`);
+          setLoadingMessage(`Loading the induction's details...`);
+          setError(null); // Reset error state
+          
           const inductionData = await getInduction(user, id);
           setInduction(inductionData);
 
@@ -45,7 +49,8 @@ const InductionEdit = () => {
           }));
           setOriginalQuestions(snapshot);
         } catch (err) {
-          toast.error(err.response?.data?.message || "An error occurred");
+          setError(err.message || "Failed to load induction");
+          toast.error(err.response?.data?.message || "An error occurred while loading the induction");
         } finally {
           setLoading(false);
         }
@@ -216,20 +221,64 @@ const InductionEdit = () => {
   };
 
   const handleSubmit = async () => {
+    if (submitting) return; // Prevent multiple submission attempts
+    
+    setSubmitting(true);
     setLoading(true);
     setLoadingMessage(`Saving the induction's details...`);
-
-    // Handle all of the file uploads and deletion
-    const updatedInduction = await handleSubmitFileChanges();
-
-    if (user) {
-      const result = await updateInduction(user, updatedInduction);
-      setLoading(false);
-      if (result) {
-        notifySuccess("Induction updated successfully!");
-      } else {
-        messageWarning("Error while updating induction.");
+    setError(null); // Reset error state
+    
+    try {
+      // Set a timeout to automatically stop loading after 30 seconds
+      const timeoutId = setTimeout(() => {
+        if (submitting) {
+          setLoading(false);
+          setSubmitting(false);
+          setError("The request timed out. Please try again.");
+          messageWarning("The request is taking longer than expected. Please try again.");
+        }
+      }, 30000);
+      
+      // Handle all of the file uploads and deletion
+      const updatedInduction = await handleSubmitFileChanges();
+      
+      if (user) {
+        const result = await updateInduction(user, updatedInduction);
+        
+        // Clear the timeout since we got a response
+        clearTimeout(timeoutId);
+        
+        if (result) {
+          notifySuccess("Induction updated successfully!");
+          
+          // Update the original questions snapshot to reflect the current state
+          const snapshot = updatedInduction.questions.map((q) => ({
+            id: q.id,
+            imageFile: q.imageFile || null,
+          }));
+          setOriginalQuestions(snapshot);
+        } else {
+          messageWarning("Error while updating induction.");
+        }
       }
+    } catch (err) {
+      // Handle specific error cases
+      if (err.response && err.response.status === 400) {
+        const errorMessage = err.response.data?.message || "Bad request - please check your data";
+        messageWarning(errorMessage);
+        
+        // Log detailed information to help debug
+        console.error("Request failed with status 400. Details:", {
+          message: err.message,
+          responseData: err.response.data,
+          sentData: induction
+        });
+      } else {
+        messageWarning(err.message || "Error while updating induction");
+      }
+    } finally {
+      setSubmitting(false);
+      setLoading(false);
     }
   };
 
@@ -258,17 +307,26 @@ const InductionEdit = () => {
   };
 
   const onDeleteInduction = async () => {
-    if (user) {
-      //Delete all files from gcs
-      await handleDeleteFileChanges();
+    setLoading(true);
+    setLoadingMessage("Deleting induction...");
+    
+    try {
+      if (user) {
+        //Delete all files from gcs
+        await handleDeleteFileChanges();
 
-      const result = await deleteInduction(user, induction.id);
-      if (result) {
-        notifySuccess("Induction deleted successfully!");
-        navigate(-1);
-      } else {
-        messageWarning("Error while deleting induction.");
+        const result = await deleteInduction(user, induction.id);
+        if (result) {
+          notifySuccess("Induction deleted successfully!");
+          navigate(-1);
+        } else {
+          messageWarning("Error while deleting induction.");
+        }
       }
+    } catch (err) {
+      messageWarning(err.message || "Error while deleting induction");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -281,8 +339,8 @@ const InductionEdit = () => {
 
       {/* Main content area */}
       {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
+      
       <div className="flex bg-gray-50 w-full">
-
         {/* Management Sidebar */}
         <div className="hidden md:flex">
           <ManagementSidebar />
@@ -365,17 +423,18 @@ const InductionEdit = () => {
                   <Button
                     type="primary"
                     onClick={handleSubmitButton}
-                    className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-5 text-base rounded-md"
+                    disabled={submitting} // Disable button when submitting
+                    className={`text-white bg-gray-800 hover:bg-gray-900 px-4 py-5 text-base rounded-md ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
                     title="Save Induction"
                   >
-                    <FaSave className="inline mr-2" /> Save Induction
+                    <FaSave className="inline mr-2" /> {submitting ? 'Saving...' : 'Save Induction'}
                   </Button>
                 </div>
               </div>
             </div>
           </>
         )}
-      </div >
+      </div>
     </>
   );
 };
