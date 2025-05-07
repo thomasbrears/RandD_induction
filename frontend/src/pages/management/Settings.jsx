@@ -6,7 +6,7 @@ import { notifyError } from '../../utils/notificationService';
 import { AiOutlineSetting } from 'react-icons/ai';
 import { FaBuilding, FaUserTie } from 'react-icons/fa';
 import { IoLocation } from "react-icons/io5";
-import { EditOutlined } from '@ant-design/icons';
+import { EditOutlined, MailOutlined } from '@ant-design/icons';
 import useAuth from '../../hooks/useAuth';
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
@@ -14,6 +14,7 @@ import ManageDepartments from '../../components/management/ManageDepartments';
 import ManageLocations from '../../components/management/ManageLocations';
 import ManagePositions from '../../components/management/ManagePositions';
 import ManageContent from '../../components/management/ManageContent';
+import ManageEmailSettings from '../../components/management/ManageEmailSettings';
 
 const { Title, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -60,11 +61,18 @@ const Settings = () => {
       tabKey: '4'
     },
     {
+      key: 'email',
+      title: 'Email Settings',
+      description: 'Configure email addresses used for system notifications.',
+      icon: <MailOutlined className="text-red-500 text-3xl" />,
+      tabKey: '5'
+    },
+    {
       key: 'content',
       title: 'Website Content',
       description: 'Update content displayed across different pages of the portal.',
       icon: <EditOutlined className="text-orange-500 text-3xl" />,
-      tabKey: '5'
+      tabKey: '6'
     }
   ];
 
@@ -213,6 +221,19 @@ const Settings = () => {
               <ManageLocations />
             </TabPane>
 
+            {/* Manage defult Email Settings Tab */}
+            <TabPane
+              tab={
+                <span>
+                  <MailOutlined className="inline-block mr-2" />
+                  Email Settings
+                </span>
+              }
+              key="5"
+            >
+              <ManageEmailSettings />
+            </TabPane>
+
             {/* Manage Content Tab */}
             <TabPane
               tab={
@@ -221,7 +242,7 @@ const Settings = () => {
                   Manage Website Content
                 </span>
               }
-              key="5"
+              key="6"
             >
               <ManageContent />
             </TabPane>

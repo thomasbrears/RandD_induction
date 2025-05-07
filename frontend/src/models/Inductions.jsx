@@ -7,6 +7,7 @@ import Departments from './Departments';
  * @property {Departments} [department]
  * @property {string} [description]
  * @property {Array<Question>} [questions]
+ * @property {number|null} [expiryMonths]
  */
 
 /** @type {Induction} */
@@ -16,4 +17,5 @@ export const DefaultNewInduction = {
     department: Departments.RETAIL,
     description: "",
     questions: [],
+    expiryMonths: null,
 };
