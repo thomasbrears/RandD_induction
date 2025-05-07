@@ -18,7 +18,18 @@ const SingleQuestionView = ({
   QuestionTypes
 }) => {
   if (!question) return null;
-  
+
+  const isLastQuestion = currentIndex === totalQuestions - 1;
+
+  // Handle validation logic
+  const handleNext = () => {
+    if (isLastQuestion && answerFeedback.showFeedback && answerFeedback.isCorrect) {
+      handleGoToSubmissionScreen();  // Move to submission if last question is validated
+    } else {
+      handleNextQuestion();  // Move to the next question if not the last one
+    }
+  };
+
   return (
     <div className="flex flex-col h-full">
       {/* Scrollable content area */}
@@ -36,14 +47,14 @@ const SingleQuestionView = ({
                 {question.question}
               </h2>
             </div>
-            
+
             {question.description && (
               <div 
                 className="text-gray-600 prose max-w-none text-sm sm:text-base break-words overflow-hidden"
                 dangerouslySetInnerHTML={{ __html: question.description }}
               />
             )}
-            
+
             {/* Question content based on type */}
             <div className="mt-4">
               <QuestionRenderer 
@@ -56,7 +67,7 @@ const SingleQuestionView = ({
           </div>
         </div>
       </div>
-      
+
       {/* Fixed bottom navigation for mobile, normal for desktop */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:relative md:border-0 md:p-0 md:mt-6">
         <div className="max-w-4xl mx-auto">
@@ -64,7 +75,7 @@ const SingleQuestionView = ({
           <div className="text-center text-sm text-gray-500 mb-3 md:hidden">
             Question {currentIndex + 1} of {totalQuestions}
           </div>
-          
+
           <div className="flex justify-between gap-4">
             <button 
               type="button"
@@ -78,11 +89,11 @@ const SingleQuestionView = ({
             >
               Previous
             </button>
-            
-            {currentIndex < totalQuestions - 1 ? (
+
+            {isLastQuestion ? (
               <button 
                 type="button"
-                onClick={handleNextQuestion}
+                onClick={handleNext} // Handle next logic for last question
                 disabled={
                   answerFeedback.showFeedback && 
                   !answerFeedback.isCorrect && 
@@ -101,10 +112,21 @@ const SingleQuestionView = ({
             ) : (
               <button 
                 type="button"
-                onClick={handleGoToSubmissionScreen}
-                className="flex-1 px-4 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 text-sm sm:text-base"
+                onClick={handleNextQuestion} // Move to next question
+                disabled={
+                  answerFeedback.showFeedback && 
+                  !answerFeedback.isCorrect && 
+                  question.type !== QuestionTypes.SHORT_ANSWER
+                }
+                className={`flex-1 px-4 py-3 bg-blue-600 text-white rounded-md text-sm sm:text-base ${
+                  answerFeedback.showFeedback && 
+                  !answerFeedback.isCorrect && 
+                  question.type !== QuestionTypes.SHORT_ANSWER
+                    ? 'opacity-50 cursor-not-allowed' 
+                    : 'hover:bg-blue-700'
+                }`}
               >
-                Review & Submit
+                Next
               </button>
             )}
           </div>
