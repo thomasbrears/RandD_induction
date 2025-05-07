@@ -36,7 +36,7 @@ const guidesData = [
     category: 'User profile',
     accessLevel: 'user',
     items: [
-      // Add your user profile guides here
+      // TODO: Add user profile guides here
     ]
   },
   {
