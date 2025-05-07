@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Helmet } from 'react-helmet-async';
 import InductionFormHeader from "../../components/InductionFormHeader";
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -13,8 +13,17 @@ import Loading from "../../components/Loading";
 import "react-quill/dist/quill.snow.css";
 import InductionFormContent from "../../components/InductionFormContent";
 import { Modal, Button } from "antd";
-import { messageWarning, notifySuccess } from '../../utils/notificationService';
+import { messageWarning, notifySuccess, messageSuccess } from '../../utils/notificationService';
 import { getSignedUrl, uploadFile, deleteFile } from "../../api/FileApi";
+import { CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import {
+  saveInductionDraftToLocalStorage,
+  loadInductionDraftFromLocalStorage,
+  hasSavedInductionDraft,
+  clearSavedInductionDraft,
+  setupInductionDraftTracking
+} from "../../utils/InductionAutoSave";
+import InductionDraftRecoveryModal from "../../components/InductionDraftRecoveryModal";
 
 const InductionEdit = () => {
   const { user, loading: authLoading } = useAuth();
@@ -31,6 +40,15 @@ const InductionEdit = () => {
   const [fileBuffer, setFileBuffer] = useState(new Map());
   const [error, setError] = useState(null);
 
+  const [lastSaved, setLastSaved] = useState(null);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [savedDraft, setSavedDraft] = useState(null);
+
+  // Get the current induction data (used by auto-save)
+  const getCurrentInductionData = useCallback(() => {
+    return induction;
+  }, [induction]);
+
   useEffect(() => {
     if (id && !authLoading) {
       const fetchInduction = async () => {
@@ -38,6 +56,18 @@ const InductionEdit = () => {
           setLoading(true);
           setLoadingMessage(`Loading the induction's details...`);
           setError(null); // Reset error state
+          
+          // Check if theres a saved draft
+          if (hasSavedInductionDraft(id, true)) {
+            const draft = loadInductionDraftFromLocalStorage(id, true);
+            if (draft) {
+              setSavedDraft({
+                ...draft,
+                lastUpdated: new Date().toISOString()
+              });
+              setShowRecoveryModal(true);
+            }
+          }
           
           const inductionData = await getInduction(user, id);
           setInduction(inductionData);
@@ -61,6 +91,48 @@ const InductionEdit = () => {
       setTimeout(() => navigate("/management/inductions/view"), 1000);
     }
   }, [id, user, authLoading, navigate]);
+
+  // Auto-save tracking
+  useEffect(() => {
+    if (id) {
+      // Auto-save tracking
+      const cleanupFunction = setupInductionDraftTracking(
+        id,
+        getCurrentInductionData,
+        setLastSaved,
+        true // isEditing = true
+      );
+      
+      // Cleanup function for when component unmounts
+      return cleanupFunction;
+    }
+  }, [id, getCurrentInductionData]);
+
+  // Manual save to localStorage when induction state changes
+  useEffect(() => {
+    if (id && induction.id) {
+      // Only save if not in loading state and we have data
+      if (!loading && !submitting) {
+        saveInductionDraftToLocalStorage(id, induction, setLastSaved, true);
+      }
+    }
+  }, [induction, id, loading, submitting]);
+
+  // Handle recovering saved draft
+  const handleRecoverDraft = () => {
+    if (savedDraft) {
+      setInduction(savedDraft);
+      setShowRecoveryModal(false);
+      messageSuccess("Draft recovered successfully!");
+    }
+  };
+
+  // Handle start without recent changes (discard draft)
+  const handleStartFresh = () => {
+    clearSavedInductionDraft(id, true);
+    setShowRecoveryModal(false);
+    messageSuccess("Discarding draft and using last saved version.");
+  };
 
   //File handling
   const handleFileBufferUpdate = (questionId, file) => {
@@ -249,6 +321,9 @@ const InductionEdit = () => {
         clearTimeout(timeoutId);
         
         if (result) {
+          // Clear the saved draft since we've successfully submitted
+          clearSavedInductionDraft(id, true);
+          
           notifySuccess("Induction updated successfully!");
           
           // Update the original questions snapshot to reflect the current state
@@ -319,6 +394,9 @@ const InductionEdit = () => {
       if (user) {
         //Delete all files from gcs
         await handleDeleteFileChanges();
+        
+        // Clear any saved drafts
+        clearSavedInductionDraft(id, true);
 
         const result = await deleteInduction(user, induction.id);
         if (result) {
@@ -341,6 +419,15 @@ const InductionEdit = () => {
 
       {/* Page Header */}
       <PageHeader title="Edit Induction" subtext={""} />
+
+      {/* Local Draft recovery modal */}
+      <InductionDraftRecoveryModal
+        isVisible={showRecoveryModal}
+        onRecover={handleRecoverDraft}
+        onStartFresh={handleStartFresh}
+        savedDraft={savedDraft}
+        mode="edit"
+      />
 
       {/* Main content area */}
       {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
@@ -410,11 +497,12 @@ const InductionEdit = () => {
                 setInduction={setInduction}
                 handleSubmit={handleSubmitButton}
                 isCreatingInduction={false}
+                lastSaved={lastSaved}
+                showAutoSave={true}
               />
 
               {/* Main content for managing induction details */}
               <div className="p-4 mx-auto w-full max-w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl space-y-6">
-
                 <InductionFormContent
                   induction={induction}
                   setInduction={setInduction}
