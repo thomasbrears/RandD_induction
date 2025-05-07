@@ -1,6 +1,6 @@
 import { db } from "../firebase.js";
 import admin from "firebase-admin";
-import Status from "../models/Status.jsx";
+import Status from "../models/Status.js";
 import { sendEmail } from "../utils/mailjet.js";
 import { format } from "date-fns";
 
