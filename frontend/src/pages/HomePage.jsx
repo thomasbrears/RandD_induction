@@ -199,11 +199,11 @@ const HomePage = () => {
                 )}
             </div>
 
-            {/* About Section - Dynamic */}
+            {/* About Section - Dynamic with improved mobile padding */}
             <div className="relative bg-cover bg-top text-white py-16 mb-16" style={{ backgroundImage: `url(/images/AUTEventsStaff.jpg)` }}>
                 <div className="absolute inset-0 bg-black opacity-70"></div> {/* Dark overlay on image */}
                 <h2 className="text-2xl text-center font-semibold mb-4 relative z-10">About Us</h2>
-                <div className="max-w-3xl mx-auto text-center relative z-10 leading-relaxed space-y-4">
+                <div className="max-w-3xl mx-auto text-center relative z-10 leading-relaxed space-y-4 px-6 md:px-4">
                     <DynamicContent 
                         section="about" 
                         fallbackText="We cater anywhere for anyone. Is it your place or ours?"
@@ -219,10 +219,10 @@ const HomePage = () => {
                 </div>
             </div>
 
-            {/* Feedback Section - Dynamic */}
+            {/* Feedback Section - Dynamic with improved mobile padding */}
             <div className="bg-white text-black py-16 mb-5">
                 <h2 className="text-2xl text-center font-semibold mb-4">Contact us - We'd love to hear from you!</h2>
-                <div className="max-w-4xl mx-auto text-center">
+                <div className="max-w-4xl mx-auto text-center px-6 md:px-4">
                     <DynamicContent 
                         section="contact" 
                         fallbackText="If you have any questions, feedback or complaints, please don't hesitate to get in touch with us using the button below or by direct email to your manager."
