@@ -19,31 +19,35 @@ export const getAllInductions = async (req, res) => {
 
 // Create a new induction
 export const createInduction = async (req, res) => {
-  const { name, department, description, questions } = req.body;
+  const { name, department, description, questions, isDraft } = req.body;
 
-  // Basic validations
-  if (!name || typeof name !== "string" || name.trim() === "") {
-    return res.status(400).json({ message: "Name is required." });
-  }
+  // Only apply validation for non-draft inductions
+  if (!isDraft) {
+    // Basic validations
+    if (!name || typeof name !== "string" || name.trim() === "") {
+      return res.status(400).json({ message: "Name is required." });
+    }
 
-  if (name.length > 50) {
-    return res.status(400).json({ message: "Name must be 50 characters or less." });
-  }
+    if (name.length > 50) {
+      return res.status(400).json({ message: "Name must be 50 characters or less." });
+    }
 
-  if (!department || typeof department !== 'string' || department.trim() === '') {
-    return res.status(400).json({ message: "Department must be a non-empty string" });
-  }
+    if (!department || typeof department !== 'string' || department.trim() === '') {
+      return res.status(400).json({ message: "Department must be a non-empty string" });
+    }
 
-  if (description !== undefined && typeof description !== "string") {
-    return res.status(400).json({ message: "Description must be a string." });
+    if (description !== undefined && typeof description !== "string") {
+      return res.status(400).json({ message: "Description must be a string." });
+    }
   }
 
   try {
     const newInduction = {
-      name: name.trim(),
-      department,
+      name: name?.trim() || (isDraft ? "(Draft Induction)" : ""),
+      department: department || "",
       description: description?.trim() || "",
       questions: questions || [],
+      isDraft: isDraft === true,
       createdAt: new Date(),
     };
 
@@ -71,12 +75,19 @@ export const getInductionById = async (req, res) => {
       return res.status(404).json({ message: `Induction with ID ${id} not found` });
     }
 
+    // Get the full document data
+    const docData = inductionDoc.data();
+    
+    // Create the response object with all fields
     const inductionData = {
       id: id,
-      name: inductionDoc.data().name || "",
-      department: inductionDoc.data().department || Departments.RETAIL,
-      description: inductionDoc.data().description || "",
-      questions: inductionDoc.data().questions || [],
+      name: docData.name || "",
+      department: docData.department || Departments.RETAIL,
+      description: docData.description || "",
+      questions: docData.questions || [],
+      isDraft: docData.isDraft === true, // Explicitly convert to boolean
+      createdAt: docData.createdAt || null,
+      updatedAt: docData.updatedAt || null
     };
 
     res.json(inductionData);

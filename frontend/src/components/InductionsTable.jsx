@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import useAuth from "../hooks/useAuth";
 import {
   createColumnHelper,
@@ -26,7 +26,9 @@ import { Link, useNavigate } from "react-router-dom";
 import { FaUserEdit, FaUserPlus, FaChartBar } from "react-icons/fa";
 import { getAllInductions } from "../api/InductionApi";
 import "react-quill/dist/quill.snow.css";
+import { Badge, Tooltip, Select } from 'antd';
 
+const { Option } = Select;
 const columnHelper = createColumnHelper();
 
 const InductionsTable = () => {
@@ -37,6 +39,9 @@ const InductionsTable = () => {
   const [globalFilter, setGlobalFilter] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingMessage, setLoadingMessage] = useState('');
+  const [moduleTypeFilter, setModuleTypeFilter] = useState(['published', 'draft']); // Default show both
+  const [pageIndex, setPageIndex] = useState(0);
+  const [pageSize, setPageSize] = useState(10);
 
   const handleEditInduction = async (id) => {
     navigate("/management/inductions/edit", { state: { id } });
@@ -50,10 +55,20 @@ const InductionsTable = () => {
     navigate("/management/users/inductions", { state: { id } });
   };
 
-  const columns = [
+  const columns = useMemo(() => [
     columnHelper.accessor("name", {
       cell: (info) => (
-        <div className="break-words text-base text-gray-500">{info.getValue()}</div>
+        <div className="break-words text-base text-gray-500 flex items-center">
+          <span>{info.getValue()}</span>
+          {info.row.original.isDraft && (
+            <Tooltip title="This induction is a draft and cannot be assigned to users until published">
+              <Badge 
+                count="DRAFT" 
+                style={{ backgroundColor: '#faad14', marginLeft: '8px' }} 
+              />
+            </Tooltip>
+          )}
+        </div>
       ),
       header: () => (
         <span className="flex items-center">
@@ -95,16 +110,25 @@ const InductionsTable = () => {
           >
             <FaUserEdit className="inline mr-2" /> Edit
           </button>
-          <button
-            onClick={() => handleViewInductionResults(row.original.id)}
-            className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-1 rounded"
-          >
-            <FaChartBar className="inline mr-2" /> View Results
-          </button>
+          {!row.original.isDraft && (
+            <button
+              onClick={() => handleViewInductionResults(row.original.id)}
+              className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-1 rounded"
+            >
+              <FaChartBar className="inline mr-2" /> View Results
+            </button>
+          )}
+          {row.original.isDraft && (
+            <Tooltip title="Draft inductions cannot be assigned to users">
+              <span className="text-white bg-gray-400 px-3 py-1 rounded cursor-not-allowed opacity-70">
+                <FaChartBar className="inline mr-2" /> View Results
+              </span>
+            </Tooltip>
+          )}
         </div>
       ),
     },
-  ];
+  ], []);
 
   useEffect(() => {
     const fetchInductions = async () => {
@@ -126,27 +150,58 @@ const InductionsTable = () => {
     fetchInductions();
   }, [user, authLoading]);
 
+  // Filter inductions based on moduleTypeFilter state
+  const filteredInductions = useMemo(() => {
+    return inductions.filter(induction => {
+      if (moduleTypeFilter.includes('draft') && induction.isDraft) {
+        return true;
+      }
+      if (moduleTypeFilter.includes('published') && !induction.isDraft) {
+        return true;
+      }
+      return false;
+    });
+  }, [inductions, moduleTypeFilter]);
+
   const table = useReactTable({
-    data: inductions,
+    data: filteredInductions,
     columns,
     state: {
       sorting,
       globalFilter,
-    },
-    initialState: {
       pagination: {
-        pageSize: 10,
+        pageIndex,
+        pageSize,
       },
     },
-    getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
-
+    onPaginationChange: (updater) => {
+      // Handle pagination changes safely
+      const newPagination = updater(
+        { pageIndex, pageSize }
+      );
+      setPageIndex(newPagination.pageIndex);
+      setPageSize(newPagination.pageSize);
+    },
     onSortingChange: setSorting,
-    getSortedRowModel: getSortedRowModel(),
-
     onGlobalFilterChange: setGlobalFilter,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    manualPagination: false,
   });
+
+  // Handle page index input change
+  const handlePageIndexChange = (e) => {
+    const newPage = e.target.value ? Number(e.target.value) - 1 : 0;
+    setPageIndex(newPage);
+  };
+
+  // Handle page size change
+  const handlePageSizeChange = (e) => {
+    setPageSize(Number(e.target.value));
+    setPageIndex(0); // Reset to first page when changing page size
+  };
 
   return (
     <div className="tableContainer">
@@ -167,6 +222,22 @@ const InductionsTable = () => {
                 className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
                 size={20}
               />
+            </div>
+
+            {/* Module Type Filter Dropdown */}
+            <div className="flex items-center">
+              <span className="mr-2 text-gray-700">Module Type:</span>
+              <Select
+                mode="multiple"
+                style={{ minWidth: '180px' }}
+                placeholder="Select module types"
+                value={moduleTypeFilter}
+                onChange={setModuleTypeFilter}
+                defaultValue={['published', 'draft']}
+              >
+                <Option value="published">Published Modules</Option>
+                <Option value="draft">Draft Modules</Option>
+              </Select>
             </div>
 
             {/*Desktop buttons*/}
@@ -242,12 +313,21 @@ const InductionsTable = () => {
           {/* Mobile List of Table */}
           <div className="lg:hidden space-y-4">
             {table.getRowModel().rows.map((row) => (
-              <div key={row.id} className="bg-white shadow-md rounded-lg p-4">
+              <div 
+                key={row.id} 
+                className="bg-white shadow-md rounded-lg p-4"
+              >
                 {/* Induction Title */}
-                <h3 className="text-lg font-semibold break-words whitespace-normal">
+                <h3 className="text-lg font-semibold break-words whitespace-normal flex items-center">
                   <Link to={`/inductions/${row.original.id}`} className="text-black hover:underline">
                     {row.original.name}
                   </Link>
+                  {row.original.isDraft && (
+                    <Badge 
+                      count="DRAFT" 
+                      style={{ backgroundColor: '#faad14', marginLeft: '8px' }} 
+                    />
+                  )}
                 </h3>
 
                 <div className="text-sm text-gray-600 mt-2 break-words whitespace-normal">
@@ -272,12 +352,14 @@ const InductionsTable = () => {
                   >
                     <FaUserEdit className="inline ml-2" /> Edit
                   </button>
-                  <button
-                    onClick={() => handleViewInductionResults(row.original.id)}
-                    className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-1 rounded mt-2 mr-2"
-                  >
-                    <FaChartBar className="inline mr-2" /> View Results
-                  </button>
+                  {!row.original.isDraft && (
+                    <button
+                      onClick={() => handleViewInductionResults(row.original.id)}
+                      className="text-white bg-gray-700 hover:bg-gray-900 px-3 py-1 rounded mt-2 mr-2"
+                    >
+                      <FaChartBar className="inline mr-2" /> View Results
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
@@ -290,14 +372,12 @@ const InductionsTable = () => {
               <span className="mr-2">Items per page</span>
               <select
                 className="border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 p-2"
-                value={table.getState().pagination.pageSize}
-                onChange={(e) => {
-                  table.setPageSize(Number(e.target.value));
-                }}
+                value={pageSize}
+                onChange={handlePageSizeChange}
               >
-                {[10, 20, 30, 40].map((pageSize) => (
-                  <option key={pageSize} value={pageSize}>
-                    {pageSize}
+                {[10, 20, 30, 40].map((pageSizeOption) => (
+                  <option key={pageSizeOption} value={pageSizeOption}>
+                    {pageSizeOption}
                   </option>
                 ))}
               </select>
@@ -306,7 +386,7 @@ const InductionsTable = () => {
             <div className="flex items-center space-x-2">
               <button
                 className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
-                onClick={() => table.setPageIndex(0)}
+                onClick={() => setPageIndex(0)}
                 disabled={!table.getCanPreviousPage()}
               >
                 <ChevronsLeft size={20} />
@@ -314,7 +394,7 @@ const InductionsTable = () => {
 
               <button
                 className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
-                onClick={() => table.previousPage()}
+                onClick={() => setPageIndex(prev => Math.max(0, prev - 1))}
                 disabled={!table.getCanPreviousPage()}
               >
                 <ChevronLeft size={20} />
@@ -325,11 +405,8 @@ const InductionsTable = () => {
                   min={1}
                   max={table.getPageCount()}
                   type="number"
-                  value={table.getState().pagination.pageIndex + 1}
-                  onChange={(e) => {
-                    const page = e.target.value ? Number(e.target.value) - 1 : 0;
-                    table.setPageIndex(page);
-                  }}
+                  value={pageIndex + 1}
+                  onChange={handlePageIndexChange}
                   className="w-16 p-2 rounded-md border border-gray-300 text-center"
                 />
                 <span className="ml-1">of {table.getPageCount()}</span>
@@ -337,7 +414,7 @@ const InductionsTable = () => {
 
               <button
                 className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
-                onClick={() => table.nextPage()}
+                onClick={() => setPageIndex(prev => Math.min(table.getPageCount() - 1, prev + 1))}
                 disabled={!table.getCanNextPage()}
               >
                 <ChevronRight size={20} />
@@ -345,7 +422,7 @@ const InductionsTable = () => {
 
               <button
                 className="p-2 rounded-md bg-gray-100 text-gray-600 hover:bg-gray-200 disabled:opacity-50"
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                onClick={() => setPageIndex(table.getPageCount() - 1)}
                 disabled={!table.getCanNextPage()}
               >
                 <ChevronsRight size={20} />

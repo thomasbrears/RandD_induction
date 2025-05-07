@@ -10,7 +10,7 @@ const axiosConfig = {
   timeout: 15000 // 15 seconds timeout
 };
 
-export const getAllInductions = async (user) => {
+export const getAllInductions = async (user, includeDrafts = false) => {
   try {
     const token = user?.token;
     const headers = token ? { authtoken: token } : {};
@@ -25,6 +25,24 @@ export const getAllInductions = async (user) => {
   }
 };
 
+// Get only draft inductions
+export const getDraftInductions = async (user) => {
+  try {
+    const token = user?.token;
+    const headers = token ? { authtoken: token } : {};
+    const response = await axios.get(`${API_URL}/inductions`, {
+      headers,
+      ...axiosConfig
+    });
+    
+    // Filter to include only drafts
+    return response.data.filter(induction => induction.isDraft === true);
+  } catch (error) {
+    console.error("Error fetching draft inductions:", error);
+    throw error; 
+  }
+};
+
 //User query?
 export const getAssignedInductions = async (user, uid) => {
   try {
@@ -35,7 +53,9 @@ export const getAssignedInductions = async (user, uid) => {
           params: { uid },
           ...axiosConfig
       });
-    return response.data;
+    
+    // Filter out drafts from assignments - drafts should never be assigned
+    return response.data.filter(induction => !induction.isDraft);
   } catch (error) {
     console.error("Error fetching assigned inductions:", error);
     throw error; 
@@ -46,9 +66,16 @@ export const createNewInduction = async (user, inductionData) => {
   try {
     const token = user?.token;
     const headers = token ? { authtoken: token } : {};
+    
+    // isDraft is explicitly set to false for regular induction creation
+    const finalData = {
+      ...inductionData,
+      isDraft: false
+    };
+    
     const response = await axios.post(
       `${API_URL}/inductions/create-induction`,
-      inductionData,
+      finalData,
       {
         headers,
         ...axiosConfig
@@ -57,6 +84,68 @@ export const createNewInduction = async (user, inductionData) => {
     return response.data;
   } catch (error) {
     console.error("Error creating induction:", error);
+    throw error; 
+  }
+};
+
+// Create a draft induction
+// This function is used to create a new draft induction
+export const createDraftInduction = async (user, inductionData) => {
+  try {
+    const token = user?.token;
+    const headers = token ? { authtoken: token } : {};
+    
+    // Ensure the draft flag is set
+    const draftData = {
+      ...inductionData,
+      isDraft: true
+    };
+    
+    const response = await axios.post(
+      `${API_URL}/inductions/create-induction`,
+      draftData,
+      {
+        headers,
+        ...axiosConfig
+      }
+    );
+    return response.data;
+  } catch (error) {
+    console.error("Error creating draft induction:", error);
+    throw error; 
+  }
+};
+
+// Save a draft induction
+// This function will either create a new draft or update an existing one
+export const saveDraftInduction = async (user, inductionData) => {
+  try {
+    const token = user?.token;
+    const headers = token ? { authtoken: token } : {};
+    
+    // Ensure we're saving as a draft
+    const draftData = {
+      ...inductionData,
+      isDraft: true
+    };
+    
+    if (draftData.id) {
+      // Update existing draft
+      const response = await axios.put(
+        `${API_URL}/inductions/update-induction`,
+        draftData,
+        {
+          headers,
+          ...axiosConfig
+        }
+      );
+      return response.data;
+    } else {
+      // Create new draft
+      return createDraftInduction(user, draftData);
+    }
+  } catch (error) {
+    console.error("Error saving draft induction:", error);
     throw error; 
   }
 };
@@ -204,6 +293,26 @@ export const updateInduction = async (user, updatedInductionData, maxRetries = 3
       const delay = Math.min(1000 * Math.pow(2, retries), 10000);
       await new Promise(resolve => setTimeout(resolve, delay));
     }
+  }
+};
+
+// Publish a draft induction
+// This function is used to convert a draft induction into a published one
+export const publishDraft = async (user, inductionData) => {
+  try {
+    const token = user?.token;
+    const headers = token ? { authtoken: token } : {};
+    
+    // Set isDraft to false and update
+    const publishData = {
+      ...inductionData,
+      isDraft: false
+    };
+    
+    return updateInduction(user, publishData);
+  } catch (error) {
+    console.error("Error publishing draft:", error);
+    throw error;
   }
 };
 
