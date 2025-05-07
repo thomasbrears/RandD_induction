@@ -28,22 +28,26 @@ const EditUser = () => {
   const { user, loading: authLoading } = useAuth();
   const uid = location.state?.uid;
 
-  // Fetch user data
+  // Function to fetch user data
+  const fetchUserData = async () => {
+    if (!uid || authLoading) return;
+    
+    try {
+      setLoading(true);
+      setLoadingMessage(`Loading the user's details...`);
+      const userData = await getUser(user, uid);
+      setViewedUser(userData);
+    } catch (err) {
+      notifyError("Failed to load user details", err.response?.data?.message || "An error occurred");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Initial fetch of user data
   useEffect(() => {
     if (uid && !authLoading) {
-      const fetchUser = async () => {
-        try {
-          setLoading(true);
-          setLoadingMessage(`Loading the user's details...`);
-          const userData = await getUser(user, uid);
-          setViewedUser(userData);
-        } catch (err) {
-          notifyError("Failed to load user details", err.response?.data?.message || "An error occurred");
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchUser();
+      fetchUserData();
     } else if (!authLoading) {
       notifyError("No user selected", "Please select a user to edit.");
       setTimeout(() => navigate("/management/users/view"), 1000);
@@ -104,6 +108,12 @@ const EditUser = () => {
           notifyError("Update failed", err.response?.data?.message || "An error occurred");
         });
     }
+  };
+
+  const handleEditAgain = () => {
+    // Re-fetch the user data to get the latest info
+    fetchUserData();
+    setUserUpdated(false);
   };
 
   const handleManageInductions = () => {
@@ -191,7 +201,7 @@ const EditUser = () => {
                   </Button>
                   <Button
                     icon={<EditFilled />}
-                    onClick={() => setUserUpdated(false)}
+                    onClick={handleEditAgain}
                     size="large"
                     block
                   >
