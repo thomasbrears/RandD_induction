@@ -40,7 +40,7 @@ function ResetPasswordPage() {
             setLoadingMessage(`Sending password reset email to ${email}...`);
             await sendPasswordResetEmail(auth, email);
             
-            notification.sucess({
+            notification.success({
                 message: 'Check Your Email',
                 description: 'If an account exists with that email, you should receive a password reset link shortly.',
             });
