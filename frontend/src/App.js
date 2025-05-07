@@ -134,8 +134,8 @@ const App = () => {
                   </Routes>
                 </div>
                 <Footer />
-              </FloatingHelpProvider>
-            </WebsiteImageProvider>
+              </WebsiteImageProvider>
+            </FloatingHelpProvider>
           </Router>
         </div>
       </ConfigProvider>
