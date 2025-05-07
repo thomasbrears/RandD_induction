@@ -580,11 +580,6 @@ const InductionEdit = () => {
 
                 {/* Save Button */}
                 <div className="flex justify-center gap-4 mt-6">
-                  {/* Debug info */}
-                  <div className="absolute top-0 right-0 bg-red-100 p-2 text-xs">
-                    Button section - isDraft: {String(induction.isDraft)}
-                  </div>
-                  
                   {/* Save as Draft Button - Only show for existing draft inductions */}
                   {induction.isDraft && (
                     <Tooltip title="Save as draft to the database - This makes the module available for others to view and edit. However cannot be assigned to users until published.">
