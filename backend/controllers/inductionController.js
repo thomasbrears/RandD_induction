@@ -13,37 +13,41 @@ export const getAllInductions = async (req, res) => {
     res.json(inductions);
   } catch (error) {
     console.error("Error fetching inductions:", error);
-    res.status(500).send(error);
+    res.status(500).send({ message: "Error fetching inductions", error: error.message });
   }
 };
 
 // Create a new induction
 export const createInduction = async (req, res) => {
-  const { name, department, description, questions, expiryMonths } = req.body;
+  const { name, department, description, questions, isDraft, expiryMonths } = req.body;
 
-  // Basic validations
-  if (!name || typeof name !== "string" || name.trim() === "") {
-    return res.status(400).json({ message: "Name is required." });
-  }
+  // Only apply validation for non-draft inductions
+  if (!isDraft) {
+    // Basic validations
+    if (!name || typeof name !== "string" || name.trim() === "") {
+      return res.status(400).json({ message: "Name is required." });
+    }
 
-  if (name.length > 50) {
-    return res.status(400).json({ message: "Name must be 50 characters or less." });
-  }
+    if (name.length > 50) {
+      return res.status(400).json({ message: "Name must be 50 characters or less." });
+    }
 
-  /*if (!department || !Object.values(Departments).includes(department)) {
-    return res.status(400).json({ message: "Invalid or missing department" });
-  }*///Departments are changable now so this doesnt work
+    if (!department || typeof department !== 'string' || department.trim() === '') {
+      return res.status(400).json({ message: "Department must be a non-empty string" });
+    }
 
-  if (description !== undefined && typeof description !== "string") {
-    return res.status(400).json({ message: "Description must be a string." });
+    if (description !== undefined && typeof description !== "string") {
+      return res.status(400).json({ message: "Description must be a string." });
+    }
   }
 
   try {
     const newInduction = {
-      name: name.trim(),
-      department,
+      name: name?.trim() || (isDraft ? "(Draft Induction)" : ""),
+      department: department || "",
       description: description?.trim() || "",
       questions: questions || [],
+      isDraft: isDraft === true,
       expiryMonths: expiryMonths || null,
       createdAt: new Date(),
     };
@@ -52,7 +56,7 @@ export const createInduction = async (req, res) => {
     res.status(201).json({ id: addedInduction.id, ...newInduction });
   } catch (error) {
     console.error("Error creating induction:", error);
-    res.status(500).send(error);
+    res.status(500).send({ message: "Error creating induction", error: error.message });
   }
 };
 
@@ -61,24 +65,37 @@ export const createInduction = async (req, res) => {
 export const getInductionById = async (req, res) => {
   try {
     const id = req.query.id;
+    if (!id) {
+      return res.status(400).json({ message: "Induction ID is required" });
+    }
+    
     const inductionRef = db.collection("inductions").doc(id);
     const inductionDoc = await inductionRef.get();
 
+    if (!inductionDoc.exists) {
+      return res.status(404).json({ message: `Induction with ID ${id} not found` });
+    }
+
+    // Get the full document data
+    const docData = inductionDoc.data();
+    
+    // Create the response object with all fields
     const inductionData = {
       id: id,
-      name: inductionDoc.exists ? inductionDoc.data().name : " ",
-      department: inductionDoc.exists
-        ? inductionDoc.data().department
-        : Departments.RETAIL,
-      description: inductionDoc.exists ? inductionDoc.data().description : " ",
-      questions: inductionDoc.exists ? inductionDoc.data().questions : [],
+      name: docData.name || "",
+      department: docData.department || Departments.RETAIL,
+      description: docData.description || "",
+      questions: docData.questions || [],
+      isDraft: docData.isDraft === true, // Explicitly convert to boolean
       expiryMonths: inductionDoc.exists ? inductionDoc.data().expiryMonths : null,
+      createdAt: docData.createdAt || null,
+      updatedAt: docData.updatedAt || null
     };
 
     res.json(inductionData);
   } catch (error) {
     console.error("Error fetching induction:", error);
-    res.status(500).send(error);
+    res.status(500).send({ message: "Error fetching induction", error: error.message });
   }
 };
 
@@ -89,45 +106,98 @@ export const updateInductionById = async (req, res) => {
     return res.status(400).json({ message: "Valid induction ID is required" });
   }
 
-  if (name && (typeof name !== "string" || name.trim() === "")) {
-    return res.status(400).json({ message: "Name must be a non-empty string if provided" });
-  }
+    // Validate the ID
+    if (!id || typeof id !== "string") {
+      console.error("Invalid ID:", id);
+      return res.status(400).json({ message: "Valid induction ID is required" });
+    }
 
-  if (name && name.length > 50) {
-    return res.status(400).json({ message: "Name must be 50 characters or less" });
-  }
+    // Validate name
+    if (name !== undefined) {
+      if (typeof name !== "string") {
+        console.error("Invalid name type:", typeof name);
+        return res.status(400).json({ message: "Name must be a string" });
+      }
+      
+      if (name.trim() === "") {
+        console.error("Empty name");
+        return res.status(400).json({ message: "Name cannot be empty" });
+      }
+      
+      if (name.length > 50) {
+        console.error("Name too long:", name.length);
+        return res.status(400).json({ message: "Name must be 50 characters or less" });
+      }
+    }
 
-  /*if (department && !Object.values(Departments).includes(department)) {
-    return res.status(400).json({ message: "Invalid department" });
-  }*///Departments are changable now so this doesnt work
+    // Validate department is a string and not empty
+    if (department !== undefined) {
+      if (typeof department !== 'string' || department.trim() === '') {
+        console.error("Invalid department:", department);
+        return res.status(400).json({ message: "Department must be a non-empty string" });
+      }
+    }
 
-  if (description !== undefined && typeof description !== "string") {
-    return res.status(400).json({ message: "Description must be a string." });
-  }
+    // Validate description
+    if (description !== undefined && typeof description !== "string") {
+      console.error("Invalid description type:", typeof description);
+      return res.status(400).json({ message: "Description must be a string" });
+    }
 
-  try {
+    // Validate questions array
+    if (questions !== undefined) {
+      if (!Array.isArray(questions)) {
+        console.error("Invalid questions type:", typeof questions);
+        return res.status(400).json({ message: "Questions must be an array" });
+      }
+    }
+    
+    // Check if induction exists
     const inductionRef = db.collection("inductions").doc(id);
     const inductionDoc = await inductionRef.get();
 
     if (!inductionDoc.exists) {
+      console.error("Induction not found:", id);
       return res.status(404).json({ message: "Induction not found" });
     }
 
-    const updateData = {
-      ...(name && { name: name.trim() }),
-      ...(department && { department }),
-      ...(description !== undefined && { description: description.trim() }),
-      ...(questions !== undefined && { questions }),
-      ...(expiryMonths !== undefined && { expiryMonths }),
-      updatedAt: new Date(),
-    };
+    // Prepare update data with type checking
+    const updateData = {};
+    
+    if (name !== undefined) {
+      updateData.name = name.trim();
+    }
+    
+    if (department !== undefined) {
+      updateData.department = department;
+    }
+    
+    if (description !== undefined) {
+      updateData.description = description.trim();
+    }
+    
+    if (questions !== undefined) {
+      updateData.questions = questions;
+    }
+    
+    updateData.updatedAt = new Date();
 
+    // Perform the update
     await inductionRef.update(updateData);
-    res.json({ message: "Induction updated successfully", id, ...updateData });
-  
+    
+    // Return success response
+    res.json({ 
+      message: "Induction updated successfully", 
+      id, 
+      ...updateData 
+    });
   } catch (error) {
     console.error("Error updating induction:", error);
-    res.status(500).send(error);
+    res.status(500).json({ 
+      message: "Failed to update induction", 
+      error: error.message,
+      stack: error.stack
+    });
   }
 };
 

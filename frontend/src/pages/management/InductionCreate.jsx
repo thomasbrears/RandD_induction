@@ -1,29 +1,43 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { Helmet } from 'react-helmet-async';
-import { messageWarning, notifySuccess } from '../../utils/notificationService';
+import { messageWarning, notifySuccess, messageSuccess } from '../../utils/notificationService';
 import PageHeader from "../../components/PageHeader";
 import ManagementSidebar from "../../components/ManagementSidebar";
 import { DefaultNewInduction } from "../../models/Inductions";
 import useAuth from "../../hooks/useAuth";
-import { FaSave } from 'react-icons/fa';
-import { Modal, Result, Button } from 'antd';
+import { FaSave, FaCloudUploadAlt } from 'react-icons/fa';
+import { CheckCircleOutlined, InfoCircleOutlined, CloudOutlined } from '@ant-design/icons';
+import { Modal, Result, Button, Badge, Tooltip } from 'antd';
 import 'react-quill/dist/quill.snow.css'; // import styles
 import InductionFormHeader from "../../components/InductionFormHeader";
 import InductionFormContent from "../../components/InductionFormContent";
 import { getAllDepartments } from "../../api/DepartmentApi";
 import Loading from "../../components/Loading";
-import { updateInduction, createNewInduction } from "../../api/InductionApi";
+import { createNewInduction, updateInduction, createDraftInduction, saveDraftInduction } from "../../api/InductionApi";
 import { useNavigate } from "react-router-dom";
 import TiptapEditor from "../../components/TiptapEditor";
 import { uploadFile } from "../../api/FileApi";
+import { v4 as uuidv4 } from 'uuid';
+import {
+  saveInductionDraftToLocalStorage,
+  loadInductionDraftFromLocalStorage,
+  hasSavedInductionDraft,
+  clearSavedInductionDraft,
+  setupInductionDraftTracking
+} from "../../utils/InductionAutoSave";
+import InductionDraftRecoveryModal from "../../components/InductionDraftRecoveryModal";
 
 const InductionCreate = () => {
   const { user } = useAuth();// Get the user object from the useAuth hook
+
+  // Generate a temporary ID for the new induction (for local storage only)
+  const [tempId] = useState(() => `new_induction_${uuidv4()}`);
 
   // States for managing the induction data and ui states
   const [induction, setInduction] = useState({
     ...DefaultNewInduction,
     department: "",
+    isDraft: false // Initialize isDraft to false
   });
 
   const [showModal, setShowModal] = useState(true);
@@ -36,6 +50,15 @@ const InductionCreate = () => {
   const [fileBuffer, setFileBuffer] = useState(new Map());
   const [loading, setLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
+  
+  const [lastSaved, setLastSaved] = useState(null);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [savedDraft, setSavedDraft] = useState(null);
+
+  // Get the current induction data (used by auto-save)
+  const getCurrentInductionData = useCallback(() => {
+    return induction;
+  }, [induction]);
 
   useEffect(() => {
     const getDepartments = async () => {
@@ -43,7 +66,58 @@ const InductionCreate = () => {
       setDepartments(data);
     };
     getDepartments();
-  }, []);
+    
+    // Check for saved draft immediately
+    if (hasSavedInductionDraft(tempId, false)) {
+      const draft = loadInductionDraftFromLocalStorage(tempId, false);
+      if (draft) {
+        setSavedDraft({
+          ...draft,
+          lastUpdated: new Date().toISOString()
+        });
+        setShowRecoveryModal(true);
+      }
+    }
+  }, [tempId]);
+
+  // Set up auto-save tracking
+  useEffect(() => {
+    // Set up auto-save tracking
+    const cleanupFunction = setupInductionDraftTracking(
+      tempId,
+      getCurrentInductionData,
+      setLastSaved,
+      false // isEditing = false
+    );
+    
+    // Cleanup function for when component unmounts
+    return cleanupFunction;
+  }, [tempId, getCurrentInductionData]);
+
+  // Manual save to localStorage when induction state changes
+  useEffect(() => {
+    // Only save if not in loading state and we have data
+    if (!loading && !showResult) {
+      saveInductionDraftToLocalStorage(tempId, induction, setLastSaved, false);
+    }
+  }, [induction, tempId, loading, showResult]);
+
+  // Handle recovering saved draft
+  const handleRecoverDraft = () => {
+    if (savedDraft) {
+      setInduction(savedDraft);
+      setShowRecoveryModal(false);
+      setShowModal(false); // Skip the initial setup modal
+      messageSuccess("Draft recovered successfully!");
+    }
+  };
+
+  // Handle starting fresh (discard draft)
+  const handleStartFresh = () => {
+    clearSavedInductionDraft(tempId, false);
+    setShowRecoveryModal(false);
+    messageSuccess("Starting with a clean slate!");
+  };
 
   //File Handling
   const handleFileBufferUpdate = (questionId, file) => {
@@ -99,8 +173,56 @@ const InductionCreate = () => {
     return updatedInduction;
   };
 
+  // function to save as draft to the database
+  const handleSaveDraft = async () => {
+    if (loading) return; // Prevent action while loading
+    
+    try {
+      setLoading(true);
+      setLoadingMessage("Saving draft to database...");
+      
+      // First handle any file uploads
+      const updatedInduction = await handleUploadNewQuestionFiles();
+      
+      // Mark as draft and save to database
+      const result = await createDraftInduction(user, {
+        ...updatedInduction,
+        isDraft: true
+      });
+      
+      if (result) {
+        // Update the induction state with the returned data (including ID)
+        setInduction({
+          ...updatedInduction,
+          id: result.id,
+          isDraft: true
+        });
+        
+        // Clear local draft since we've saved to DB
+        clearSavedInductionDraft(tempId, false);
+        
+        messageSuccess("Draft saved to database successfully!");
+        
+        // No auto navigation - allow the user to continue editing
+      } else {
+        messageWarning("Error while saving draft module.");
+      }
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      messageWarning(error.message || "Error saving draft");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleCancelAndReturnButton = () => {
-    navigate(-1);
+    // Offer to save draft before navigating away
+    if (induction.name || induction.department || induction.description || (induction.questions && induction.questions.length > 0)) {
+      setActionType("cancel");
+      setConfirmModalVisible(true);
+    } else {
+      navigate(-1);
+    }
   };
 
   const handleSubmitButton = () => {
@@ -121,6 +243,13 @@ const InductionCreate = () => {
       handleSubmit();
       setConfirmModalVisible(false);
       return;
+    } else if (actionType === "cancel") {
+      // User confirmed they want to leave without saving
+      navigate(-1);
+      setConfirmModalVisible(false);
+    } else if (actionType === "saveDraft") {
+      handleSaveDraft();
+      setConfirmModalVisible(false);
     }
   };
 
@@ -130,21 +259,26 @@ const InductionCreate = () => {
 
   const handleSubmit = async () => {
     setLoading(true);
-    setLoadingMessage(`Creating new Induction...`);
+    setLoadingMessage(`Creating new module...`);
 
     if (!user) return;
 
-    const result = await createNewInduction(user, induction);
+    // First create the induction to get an ID
+    const result = await createNewInduction(user, {
+      ...induction,
+      isDraft: false // Set isDraft to false when fully submitting
+    });
 
     if (!result || !result.id) {
       setLoading(false);
-      messageWarning("Error while creating induction.");
+      messageWarning("Error while creating module.");
       return;
     }
 
-    // Upload files
+    // Upload files with the new induction ID
     const updatedInduction = await handleUploadNewQuestionFiles(result.id);
 
+    // Update the induction with the uploaded file references
     const fullUpdatedInduction = {
       ...updatedInduction,
       id: result.id,
@@ -153,9 +287,12 @@ const InductionCreate = () => {
 
     setLoading(false);
     if (updateResult) {
-      notifySuccess("Induction created successfully!");
+      // Clear the saved draft since we've successfully submitted
+      clearSavedInductionDraft(tempId, false);
+      
+      notifySuccess("Module created successfully!");
     } else {
-      messageWarning("Induction created but failed to update image references.");
+      messageWarning("Module created but failed to update image references.");
     }
   
     setShowResult(true);
@@ -170,10 +307,10 @@ const InductionCreate = () => {
     };
 
     if (!induction.name || induction.name.trim() === "") {
-      missingFields.push("Induction needs a name.");
+      missingFields.push("Module needs a name.");
     }
     if (!induction.description || isContentEmpty(induction.description)) {
-      missingFields.push("Induction needs a description.");
+      missingFields.push("Module needs a description.");
     }
     if (induction.department === "Select a department" || !induction.department) {
       missingFields.push("Please select a department.");
@@ -201,28 +338,37 @@ const InductionCreate = () => {
   return (
     <>
       {/* Helmet for setting page metadata */}
-      <Helmet><title>Create Induction | AUT Events Induction Portal</title></Helmet>
+      <Helmet><title>Create Module | AUT Events Induction Portal</title></Helmet>
 
       {/* Page Header */}
-      <PageHeader title="Create Induction" subtext="Create new induction module" />
+      <PageHeader title="Create Module" subtext="Create new Module module" />
+
+      {/* Draft recovery modal */}
+      <InductionDraftRecoveryModal
+        isVisible={showRecoveryModal}
+        onRecover={handleRecoverDraft}
+        onStartFresh={handleStartFresh}
+        savedDraft={savedDraft}
+        mode="create"
+      />
 
       {/* Confirmation Result Screen */}
       {showResult ? (
         <Result
           status="success"
-          title="Induction Created Successfully!"
-          subTitle="Your induction module has been created and can now be assigned to users."
+          title="Module Created Successfully!"
+          subTitle="Your module has been created and can now be assigned to users."
           extra={[
             <Button type="primary" key="home" onClick={() => window.location.href = "/management/inductions/view"}>
               View all Inductions
             </Button>,
-            <Button type="primary" key="home" onClick={() => window.location.href = "/management/inductions/create"}>
+            <Button type="primary" key="create" onClick={() => window.location.href = "/management/inductions/create"}>
               Create Another Induction
             </Button>,
-            <Button key="home" onClick={() => window.location.href = "/management/users/view"}>
+            <Button key="users" onClick={() => window.location.href = "/management/users/view"}>
               View & Manage Users
             </Button>,
-            <Button key="home" onClick={() => window.location.href = "/management/dashboard"}>
+            <Button key="dashboard" onClick={() => window.location.href = "/management/dashboard"}>
               Go to Management Dashboard
             </Button>
           ]}
@@ -265,7 +411,7 @@ const InductionCreate = () => {
 
                 {currentStep === 1 && (
                   <div>
-                    <p className="mb-2 text-gray-500">What should we refer to this induction as?</p>
+                    <p className="mb-2 text-gray-500">What should we refer to this module as?</p>
                     <input
                       type="text"
                       id="name"
@@ -280,7 +426,7 @@ const InductionCreate = () => {
 
                 {currentStep === 2 && (
                   <div>
-                    <p className="mb-2 text-gray-500">Which department does this induction best fit to?</p>
+                    <p className="mb-2 text-gray-500">Which department does this module best fit to?</p>
                     <select
                       id="department"
                       name="department"
@@ -300,8 +446,8 @@ const InductionCreate = () => {
 
                 {currentStep === 3 && (
                   <div>
-                    <p className="mb-2 text-gray-500">How should we describe what this induction covers? (Please be detailed)</p>
-                    <p className="mb-2 text-gray-500">e.g. This induction covers the general health and safety across AUT and covers the following topics...</p>
+                    <p className="mb-2 text-gray-500">How should we describe what this module covers? (Please be detailed)</p>
+                    <p className="mb-2 text-gray-500">e.g. This module covers the general health and safety across AUT and covers the following topics...</p>
                     <TiptapEditor localDescription={induction.description} handleChange={(value) => setInduction({ ...induction, description: value })} />
                   </div>
                 )}
@@ -343,6 +489,74 @@ const InductionCreate = () => {
             </Modal>
           )}
 
+          {/* Confirmation Dialog */}
+          <Modal
+            title="Confirm Action"
+            open={confirmModalVisible}
+            onCancel={handleCancel}
+            footer={
+              <div className="flex flex-wrap justify-end gap-2 sm:flex-nowrap">
+                {actionType === "submit" && (
+                  <Button key="submitConfirm" type="primary" className="w-auto min-w-0 text-sm" onClick={confirmSubmitActionHandler}>
+                    Submit
+                  </Button>
+                )}
+                {actionType === "saveDraft" && (
+                  <Button 
+                    key="saveDraftConfirm" 
+                    type="primary" 
+                    className="w-auto min-w-0 text-sm bg-yellow-400 border-yellow-500" 
+                    onClick={confirmSubmitActionHandler}
+                  >
+                    Save as Draft
+                  </Button>
+                )}
+                {actionType === "cancel" && (
+                  <Button key="confirmLeave" type="primary" danger className="w-auto min-w-0 text-sm" onClick={confirmSubmitActionHandler}>
+                    Leave Without Saving
+                  </Button>
+                )}
+                {(actionType === "prompt") && (
+                  <Button key="continueEditing" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
+                    Continue Editing
+                  </Button>
+                )}
+                {(!(actionType === "prompt")) && (
+                  <Button key="cancel" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
+                    Cancel
+                  </Button>
+                )}
+              </div>
+            }
+          >
+            <>
+              {actionType === "submit" && <p>Are you sure you want to submit this Module?</p>}
+              {actionType === "saveDraft" && <p>Are you sure you want to save this as a draft Module? It won't be available for assignments until published.</p>}
+              {actionType === "cancel" && (
+                <p>You have unsaved changes. Are you sure you want to leave without saving? Your draft will still be available when you return.</p>
+              )}
+              {actionType === "prompt" && (
+                <>
+                  <p>Some details are missing. Please review the list below and try again.</p>
+
+                  {checkForMissingFields().length > 0 && (
+                    <>
+                      <div className="mt-4"></div>
+                      <div className="p-4 bg-gray-50 border-l-4 border-gray-300 text-gray-700 rounded-md">
+                        <p className="font-medium">Issues that need attention:</p>
+                        <ul className="list-disc list-inside mt-2 space-y-1">
+                          {checkForMissingFields().map((field) => (
+                            <li key={field} className="ml-4">{field}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </>
+                  )}
+                </>
+              )}
+            </>
+          </Modal>
+
           {/* Main content area */}
           {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
           <div className="flex bg-gray-50 w-full">
@@ -352,88 +566,54 @@ const InductionCreate = () => {
             </div>
 
             {!showModal && (
-              <>
-                <Modal
-                  title="Confirm Action"
-                  open={confirmModalVisible}
-                  onCancel={handleCancel}
-                  footer={
-                    <div className="flex flex-wrap justify-end gap-2 sm:flex-nowrap">
-                      {actionType === "submit" && (
-                        <Button key="submitConfirm" type="primary" className="w-auto min-w-0 text-sm" onClick={confirmSubmitActionHandler}>
-                          Submit
-                        </Button>
-                      )}
-                      {(actionType === "prompt") && (
-                        <Button key="continueEditing" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
-                          Continue Editing
-                        </Button>
-                      )}
-                      {(!(actionType === "prompt")) && (
-                        <Button key="cancel" type="default" className="w-auto min-w-0 text-sm" onClick={handleCancel}>
-                          Cancel
-                        </Button>
-                      )}
-                    </div>
-                  }
-                >
-                  <>
-                    {actionType === "submit" && <p>Are you sure you want to submit this induction?</p>}
-                    {actionType === "prompt" && (
-                      <>
-                        <p>Some details are missing. Please review the list below and try again.</p>
+              <div className="flex-1 min-w-0">
+                {/* Induction Form Component */}
+                <InductionFormHeader
+                  induction={induction}
+                  setInduction={setInduction}
+                  handleSubmit={handleSubmitButton}
+                  handleSaveDraft={handleSaveDraft}
+                  isCreatingInduction={true}
+                  lastSaved={lastSaved}
+                  showAutoSave={true}
+                />
 
-                        {checkForMissingFields().length > 0 && (
-                          <>
-                            <div className="mt-4"></div>
-                            <div className="p-4 bg-gray-50 border-l-4 border-gray-300 text-gray-700 rounded-md">
-                              <p className="font-medium">Issues that need attention:</p>
-                              <ul className="list-disc list-inside mt-2 space-y-1">
-                                {checkForMissingFields().map((field) => (
-                                  <li key={field} className="ml-4">{field}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          </>
-                        )}
-                      </>
-                    )}
-                  </>
-                </Modal>
-
-                <div className="flex-1 min-w-0">
-                  {/* Induction Form Component */}
-                  <InductionFormHeader
+                {/* Main content for managing induction details */}
+                <div className="p-4 mx-auto w-full max-w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl space-y-6">
+                  <InductionFormContent
                     induction={induction}
                     setInduction={setInduction}
-                    handleSubmit={handleSubmitButton}
-                    isCreatingInduction={true}
+                    getImageUrl={getImageUrl}
+                    saveFileChange={handleFileBufferUpdate}
                   />
 
-                  {/* Main content for managing induction details */}
-                  <div className="p-4 mx-auto w-full max-w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl space-y-6">
-
-                    <InductionFormContent
-                      induction={induction}
-                      setInduction={setInduction}
-                      getImageUrl={getImageUrl}
-                      saveFileChange={handleFileBufferUpdate}
-                    />
-
-                    {/* Save Button */}
-                    <div className="flex justify-center mt-6">
-                      <Button
-                        type="primary"
-                        onClick={handleSubmitButton}
-                        className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-5 text-base rounded-md"
-                        title="Save Induction"
-                      >
-                        <FaSave className="inline mr-2" /> Create Induction
-                      </Button>
-                    </div>
+                  {/* Save Button Section */}
+                  <div className="flex justify-center gap-4 mt-6">
+                    {/* Draft Button */}
+                    <Button
+                      type="default"
+                      onClick={() => {
+                        setActionType("saveDraft");
+                        setConfirmModalVisible(true);
+                      }}
+                      className="bg-yellow-50 border-yellow-300 text-yellow-700 hover:bg-yellow-100 hover:border-yellow-400 px-4 py-5 text-base rounded-md"
+                      icon={<CloudOutlined />}
+                    >
+                      Save as Draft
+                    </Button>
+                    
+                    {/* Create/Publish Button */}
+                    <Button
+                      type="primary"
+                      onClick={handleSubmitButton}
+                      className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-5 text-base rounded-md"
+                      title="Create Module"
+                    >
+                      <FaSave className="inline mr-2" /> Create Module
+                    </Button>
                   </div>
                 </div>
-              </>
+              </div>
             )}
           </div>
         </>

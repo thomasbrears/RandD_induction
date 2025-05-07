@@ -424,11 +424,23 @@ export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
     const status = validationStates[field];
     
     if (status === 'error') {
-      return <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />;
+      return (
+        <span className="ml-2">
+          <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
+        </span>
+      );
     } else if (status === 'validating') {
-      return <LoadingOutlined style={{ color: '#1890ff' }} />;
+      return (
+        <span className="ml-2">
+          <LoadingOutlined style={{ color: '#1890ff' }} />
+        </span>
+      );
     } else if (status === 'warning') {
-      return <WarningOutlined style={{ color: '#faad14' }} />;
+      return (
+        <span className="ml-2">
+          <WarningOutlined style={{ color: '#faad14' }} />
+        </span>
+      );
     }
     
     return null;

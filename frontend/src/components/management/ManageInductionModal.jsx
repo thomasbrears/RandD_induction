@@ -61,6 +61,14 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
   const [formInitialized, setFormInitialized] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  // Store original values for comparison
+  const [originalValues, setOriginalValues] = useState({
+    availableFrom: null,
+    dueDate: null,
+    status: "",
+    completionDate: null
+  });
 
   // Update state when inductionData changes
   useEffect(() => {
@@ -78,6 +86,15 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
       setDueDate(parsedDueDate);
       setStatus(inductionData.status || "");
       setCompletionDate(parsedCompletionDate);
+      
+      // Store original values for comparison
+      setOriginalValues({
+        availableFrom: parsedAvailableFrom,
+        dueDate: parsedDueDate,
+        status: inductionData.status || "",
+        completionDate: parsedCompletionDate
+      });
+      
       setFormInitialized(true);
     }
   }, [inductionData, visible]);
@@ -116,8 +133,33 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
       error: (err) => `Failed to remove induction: ${err?.message || "Unknown error"}`
     });
   };
+  
+  // Check if changes have been made
+  const hasChanges = () => {
+    // Helper function to compare dates safely
+    const areDatesEqual = (date1, date2) => {
+      if (!date1 && !date2) return true;
+      if (!date1 || !date2) return false;
+      return date1.isSame(date2, 'day');
+    };
+    
+    // Compare current values with original values
+    return (
+      !areDatesEqual(availableFrom, originalValues.availableFrom) ||
+      !areDatesEqual(dueDate, originalValues.dueDate) ||
+      status !== originalValues.status ||
+      !areDatesEqual(completionDate, originalValues.completionDate)
+    );
+  };
 
-  const handleSave = () => {      
+  const handleSave = () => {
+    // Check if any changes have been made
+    if (!hasChanges()) {
+      // No changes made, just close the modal without saving
+      onCancel();
+      return;
+    }
+    
     // Map old field names to new field names if needed
     const updatedInduction = {
       ...inductionData,
@@ -158,10 +200,10 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
 
   const handleCancel = () => {
     // Reset to original data if cancelled
-    setAvailableFrom(parseDate(getDateValue(inductionData, 'availableFrom', 'availableFrom')));
-    setDueDate(parseDate(getDateValue(inductionData, 'dueDate', 'dueDate')));
-    setStatus(inductionData.status || "");
-    setCompletionDate(parseDate(getDateValue(inductionData, 'completionDate', 'completedAt')));
+    setAvailableFrom(originalValues.availableFrom);
+    setDueDate(originalValues.dueDate);
+    setStatus(originalValues.status);
+    setCompletionDate(originalValues.completionDate);
     onCancel();
   };
 
@@ -237,7 +279,7 @@ const ManageInductionModal = ({ visible, onCancel, onSave, onDelete, inductionDa
           key="save"
           type="primary"
           onClick={handleSave}
-          disabled={!validateForm() || isSaving || isDeleting}
+          disabled={!validateForm() || !hasChanges() || isSaving || isDeleting}
           loading={isSaving}
         >
           {isSaving ? "Saving..." : "Save Changes"}

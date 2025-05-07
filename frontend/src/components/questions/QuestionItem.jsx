@@ -3,7 +3,7 @@ import {
     useSortable,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { Button } from "antd";
+import { Button, Tooltip, Popconfirm } from "antd";
 import TrueFalseQuestion from "./TrueFalseQuestion";
 import MultichoiceQuestion from "./MultichoiceQuestion";
 import DropdownQuestion from "./DropdownQuestion";
@@ -11,37 +11,75 @@ import FileUploadQuestion from "./FileUploadQuestion";
 import YesNoQuestion from "./YesNoQuestion";
 import ShortAnswerQuestion from "./ShortAnswerQuestion";
 import InformationQuestion from "./InformationQuestion";
-import { FaBars, FaChevronDown, FaChevronUp, FaEdit } from 'react-icons/fa';
+import { FaChevronDown, FaChevronUp, FaEdit, FaCopy } from 'react-icons/fa';
+import { FaArrowsUpDown } from 'react-icons/fa6';
+import { DeleteOutlined } from '@ant-design/icons';
 import QuestionTypes from "../../models/QuestionTypes";
-import ConfirmationModal from "../ConfirmationModal";
-import { Trash } from "lucide-react";
 
-const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index, getImageUrl }) => {
+const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, onQuestionDuplicate, index, getImageUrl }) => {
     const [hasExpandedBefore, setHasExpandedBefore] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const contentRef = useRef(null);
     const [maxHeight, setMaxHeight] = useState("0px");
     const [isAnimating, setIsAnimating] = useState(false);
-    const [confirmAction, setConfirmAction] = useState(false);
-    const [actionType, setActionType] = useState(null);
+    const [isDragging, setIsDragging] = useState(false);
+    
+    // Refs for the areas we want to exclude from edit click
+    const actionsRef = useRef(null);
+    const dragHandleRef = useRef(null);
 
-    const toggleExpand = () => setIsExpanded((prev) => !prev);
+    const toggleExpand = (e) => {
+        e.stopPropagation();
+        setIsExpanded((prev) => !prev);
+    };
 
-    const { attributes, listeners, setNodeRef, transform, transition } =
+    const { attributes, listeners, setNodeRef, transform, transition, isDragging: dndIsDragging } =
         useSortable({ id: question.id });
+    
+    useEffect(() => {
+        setIsDragging(dndIsDragging);
+        
+        // Collapse expanded view when dragging
+        if (dndIsDragging && isExpanded) {
+            setIsExpanded(false);
+        }
+    }, [dndIsDragging, isExpanded]);
 
     const style = {
         transform: transform ? CSS.Translate.toString(transform) : undefined,
         transition,
+        zIndex: isDragging ? 999 : 'auto',
+        position: isDragging ? 'relative' : 'static',
+        boxShadow: isDragging ? '0 4px 20px rgba(0, 0, 0, 0.2)' : 'none',
     };
 
-    const handleQuestionEdit = () => {
+    const handleQuestionEdit = (e) => {
+        if (e) e.stopPropagation();
         onQuestionEdit(question);
     };
 
-    const handleConfirmDelete = () => {
-        setActionType('delete');
-        setConfirmAction(true);
+    const handleQuestionDuplicate = (e) => {
+        e.stopPropagation();
+        onQuestionDuplicate(question);
+    };
+    
+    const handleDeleteQuestion = (e) => {
+        if (e) e.stopPropagation();
+        onDeleteQuestion(question.id);
+    };
+
+    const handleListItemClick = (e) => {
+        // Check if the click was inside our excluded areas (action buttons or drag handle)
+        if (actionsRef.current && actionsRef.current.contains(e.target)) {
+            return; // Clicked on action buttons - do nothing
+        }
+        
+        if (dragHandleRef.current && dragHandleRef.current.contains(e.target)) {
+            return; // Clicked on drag handle - do nothing
+        }
+        
+        // If we got here, the click was on the main area of the question item - edit the question
+        handleQuestionEdit();
     };
 
     useEffect(() => {
@@ -121,7 +159,7 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index, getIm
         }
     };
 
-    const renderQuestionType = () => {
+    const getQuestionType = () => {
         switch (question.type) {
             case QuestionTypes.TRUE_FALSE:
                 return "True/False";
@@ -142,68 +180,98 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index, getIm
         }
     };
 
-    const cancelActionHandler = () => {
-        setConfirmAction(false);
-    };
-
-    const confirmActionHandler = () => {
-        if (actionType === 'delete') {
-            onDeleteQuestion(question.id);
-        }
-        setConfirmAction(false);
-    };
-
     return (
         <>
-            <ConfirmationModal
-                isOpen={confirmAction}
-                message="Are you sure you want to delete this question?"
-                subtext="This action cannot be undone."
-                onCancel={cancelActionHandler}
-                onConfirm={confirmActionHandler}
-                actionLabel="Yes, Delete Question"
-                cancelLabel="Cancel"
-            />
-
-            <li ref={setNodeRef} style={style} {...attributes} className="p-4 bg-white shadow-md rounded-md flex flex-col border w-full">
+            <li 
+                ref={setNodeRef} 
+                style={style} 
+                {...attributes} 
+                className={`p-4 bg-white shadow-md rounded-md flex flex-col border w-full ${isDragging ? 'bg-blue-50' : ''} cursor-pointer hover:bg-gray-50 transition-colors`}
+                onClick={handleListItemClick}
+            >
                 {/* Header Section */}
                 <div className="flex items-center gap-4 p-3 w-full">
-                    {/* Drag Icon */}
-                    <span {...listeners} className="text-gray-600 cursor-grab flex items-center" title="Drag to change question order">
-                        <FaBars size={18} />
-                    </span>
+                    {/* Drag Handle with Tooltip */}
+                    <Tooltip title="Drag to reorder question" placement="top">
+                        <div 
+                            ref={dragHandleRef}
+                            {...listeners} 
+                            className="flex items-center justify-center h-10 w-10 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-600 cursor-grab transition-colors" 
+                            aria-label="Drag to reorder"
+                        >
+                            <FaArrowsUpDown size={18} />
+                        </div>
+                    </Tooltip>
 
                     {/* Question Index */}
                     <span className="text-gray-500 font-semibold">{index + 1}.</span>
 
-                    {/* Question Type and Text */}
-                    <span className="text-lg font-semibold text-gray-800">{renderQuestionType()}</span>
-
+                    {/* Question Text as Main Focus with Type Tag */}
                     <div className="flex flex-wrap items-center flex-grow min-w-0">
-                        <div className="flex-1 min-w-0">
-                            <div className="text-gray-700 break-words text-base">{question.question}</div>
+                        <div className="flex-1 min-w-0 flex items-center gap-2 flex-wrap">
+                            <div className="text-gray-700 break-words text-lg font-medium">
+                                {question.question}
+                            </div>
+                            {/* Question Type Tag */}
+                            <div className="px-3 py-1 bg-gray-100 text-gray-600 rounded-full text-sm font-medium whitespace-nowrap">
+                                {getQuestionType()}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Question Edit Button */}
-                    <button
-                        type="button"
-                        className="text-white bg-gray-800 hover:bg-gray-900 px-3 py-2 rounded-md flex items-center gap-2"
-                        onClick={handleQuestionEdit}
-                        title="Edit Question"
-                    >
-                        <FaEdit size={16} /> Edit
-                    </button>
+                    {/* Action Buttons */}
+                    <div ref={actionsRef} className="flex items-center gap-2">
+                        {/* Edit Button - Small and first in order */}
+                        <Tooltip title="Edit Question" placement="top">
+                            <button
+                                type="button"
+                                className="text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 p-2 rounded-md"
+                                onClick={handleQuestionEdit}
+                            >
+                                <FaEdit size={16} />
+                            </button>
+                        </Tooltip>
+                        
+                        {/* Duplicate Button */}
+                        <Tooltip title="Duplicate Question" placement="top">
+                            <button
+                                type="button"
+                                className="text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 p-2 rounded-md"
+                                onClick={handleQuestionDuplicate}
+                            >
+                                <FaCopy size={16} />
+                            </button>
+                        </Tooltip>
 
-                    {/* Expand/Collapse Button */}
-                    <button
-                        type="button"
-                        className="text-gray-700 hover:text-gray-900 items-center shrink-0"
-                        onClick={toggleExpand}
-                        title={isExpanded ? "Hide Question Details" : "Show Question Details"}
-                    >
-                        {isExpanded ? <FaChevronUp size={20} /> : <FaChevronDown size={20} />}
-                    </button>
+                        {/* Delete Button */}
+                        <Tooltip title="Delete Question" placement="top">
+                            <Popconfirm
+                                title="Delete Question"
+                                description="Are you sure you want to delete this question? THIS CANNOT BE UNDONE."
+                                onConfirm={handleDeleteQuestion}
+                                okText="Delete"
+                                cancelText="Cancel"
+                                okButtonProps={{ danger: true }}
+                            >
+                                <button
+                                    type="button"
+                                    className="text-red-600 hover:text-red-800 bg-red-50 hover:bg-red-100 p-2 rounded-md"
+                                >
+                                    <DeleteOutlined style={{ fontSize: '16px' }} />
+                                </button>
+                            </Popconfirm>
+                        </Tooltip>
+
+                        {/* Expand/Collapse Button */}
+                        <button
+                            type="button"
+                            className="text-gray-600 hover:text-gray-800 bg-gray-50 hover:bg-gray-100 p-2 rounded-md"
+                            onClick={toggleExpand}
+                            title={isExpanded ? "Hide Question Details" : "Show Question Details"}
+                        >
+                            {isExpanded ? <FaChevronUp size={16} /> : <FaChevronDown size={16} />}
+                        </button>
+                    </div>
                 </div>
 
                 {/* Smooth Expanded Section */}
@@ -217,15 +285,31 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, index, getIm
                 >
                     <div className="p-4 mt-2 border-t border-gray-300">{renderQuestion()}</div>
 
-                    {/* Delete Question button */}
-                    <div className="flex justify-end  pr-4 pb-4">
-                        <Button
-                            onClick={handleConfirmDelete}
-                            className="text-white bg-red-500 hover:bg-red-600 px-3 py-2 rounded-md flex items-center gap-2"
-                            title="Delete Question"
+                    {/* Edit and Delete buttons in expanded view */}
+                    <div className="flex justify-end pr-4 pb-4 gap-2">
+                        <Button 
+                            type="primary"
+                            icon={<FaEdit />}
+                            onClick={handleQuestionEdit}
                         >
-                            <Trash className="w-4 h-4" /> Delete Question
+                            Edit Question
                         </Button>
+                        
+                        <Popconfirm
+                            title="Delete Question"
+                            description="Are you sure you want to delete this question? THIS CANNOT BE UNDONE."
+                            onConfirm={() => onDeleteQuestion(question.id)}
+                            okText="Delete"
+                            cancelText="Cancel"
+                            okButtonProps={{ danger: true }}
+                        >
+                            <Button 
+                                danger 
+                                icon={<DeleteOutlined />}
+                            >
+                                Delete Question
+                            </Button>
+                        </Popconfirm>
                     </div>
                 </div>
             </li>

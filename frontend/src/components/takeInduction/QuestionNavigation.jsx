@@ -10,41 +10,37 @@ const QuestionNavigation = ({
   onNavClick, 
   answeredQuestions,
   isOpen,
-  onClose 
+  onClose,
+  isReviewMode,  // new prop to manage review mode
 }) => {
-  // State to track if we're on mobile
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    // Function to check if screen is mobile size
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
     
-    // Run on mount and when window resizes
     checkMobile();
     window.addEventListener('resize', checkMobile);
     
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Desktop sidebar navigation with scrolling
   const DesktopNavigation = () => (
     <div className="hidden md:flex md:flex-col md:w-72 lg:w-80 bg-gray-50 border-r h-[calc(100vh-16rem)]">
-      {/* Fixed header */}
       <div className="p-4 border-b bg-white flex-shrink-0">
         <h2 className="text-lg font-medium">Questions</h2>
         <div className="text-sm text-gray-500 mt-1">
           {Object.values(answeredQuestions).filter(Boolean).length} of {questions.length} completed
         </div>
       </div>
-      
-      {/* Scrollable question list */}
+
       <div className="flex-1 overflow-y-auto p-4 space-y-2">
         {questions.map((question, index) => (
           <button
             key={question.id}
             onClick={() => onNavClick(index)}
+            disabled={isReviewMode}  // Disable navigation in review mode
             className={`w-full text-left px-3 py-2 rounded-md flex items-center transition-colors ${
               currentIndex === index 
                 ? 'bg-blue-100 text-blue-800 border border-blue-300'
@@ -70,111 +66,20 @@ const QuestionNavigation = ({
       </div>
     </div>
   );
-  
-  // Mobile navigation with side tab (unchanged)
-  const MobileNavigation = () => {
-    if (!isMobile) return null;
-    
-    // Ensure isOpen is a boolean
-    const isMenuOpen = Boolean(isOpen);
-    
-    return (
-      <>
-        {/* Mobile Tab Toggle Button */}
-        <div 
-          className={`fixed left-0 top-1/3 z-50 transition-transform duration-300 ${isMenuOpen ? 'translate-x-64' : 'translate-x-0'}`}
+
+  return isMobile ? (
+    <div className="md:hidden bg-white p-4 shadow-md fixed bottom-0 left-0 right-0">
+      <div className="flex justify-between items-center">
+        <button
+          onClick={onClose}
+          className="px-3 py-2 bg-gray-200 rounded-md"
         >
-          <button 
-            onClick={() => onClose(!isMenuOpen)}
-            className="bg-black text-white flex flex-col items-center py-3 px-2 rounded-r-lg shadow-lg"
-            aria-label={isMenuOpen ? "Close questions menu" : "Open questions menu"}
-          >
-            {/* Vertical text that says "Questions" */}
-            <div className="text-xs font-medium" style={{ writingMode: 'vertical-rl', textOrientation: 'mixed' }}>
-              QUESTIONS
-            </div>
-            
-            {/* Horizontal divider */}
-            <div className="my-3 w-6 h-px bg-gray-400"></div>
-            
-            {/* Question count indicator - horizontal */}
-            <div className="text-center">
-              <span className="text-xs font-medium">{currentIndex + 1}/{questions.length}</span>
-            </div>
-          </button>
-        </div>
-        
-        {/* Mobile Sidebar Panel */}
-        <div 
-          className={`fixed top-0 left-0 h-full bg-gray-100 z-40 transition-transform duration-300 ease-in-out shadow-xl ${
-            isMenuOpen ? 'translate-x-0 w-64' : '-translate-x-full w-64'
-          }`}
-        >
-          <div className="flex flex-col p-4 space-y-2 h-full overflow-y-auto">
-            {/* Sidebar Title with Question Counter */}
-            <div className="border-b border-gray-200 pb-2 mb-2">
-              <h2 className="font-bold text-lg text-blue-600 flex items-center justify-between">
-                <span>Questions</span>
-                <span className="text-sm bg-gray-200 px-2 py-1 rounded">
-                  {Object.values(answeredQuestions).filter(Boolean).length} / {questions.length}
-                </span>
-              </h2>
-            </div>
-            
-            {/* Question list */}
-            {questions.map((question, index) => {
-              const isActive = index === currentIndex;
-              const isAnswered = answeredQuestions[question.id];
-              
-              return (
-                <button
-                  key={question.id}
-                  onClick={() => {
-                    onNavClick(index);
-                    onClose(false);  // Close after selection
-                  }}
-                  className={`flex items-center py-2 px-2 rounded-md w-full text-left ${
-                    isActive 
-                      ? 'bg-blue-100 text-blue-600 border-l-4 border-blue-600' 
-                      : isAnswered
-                        ? 'bg-green-50 text-green-700 border-l-4 border-green-300'
-                        : 'text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  <span className={`flex-shrink-0 w-6 h-6 flex items-center justify-center rounded-full mr-2 text-sm ${
-                    isActive 
-                      ? 'bg-blue-500 text-white'
-                      : isAnswered
-                        ? 'bg-green-100 text-green-700'
-                        : 'bg-gray-200 text-gray-700'
-                  }`}>
-                    {index + 1}
-                  </span>
-                  <span className="truncate text-sm">
-                    {question.question.length > 30 ? question.question.substring(0, 30) + '...' : question.question}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        
-        {/* Overlay to darken the rest of the screen when sidebar is open */}
-        {isMenuOpen && (
-          <div 
-            className="fixed inset-0 bg-black bg-opacity-60 z-30"
-            onClick={() => onClose(false)}
-          />
-        )}
-      </>
-    );
-  };
-  
-  return (
-    <>
-      <DesktopNavigation />
-      <MobileNavigation />
-    </>
+          Close
+        </button>
+      </div>
+    </div>
+  ) : (
+    <DesktopNavigation />
   );
 };
 
@@ -184,7 +89,8 @@ QuestionNavigation.propTypes = {
   onNavClick: PropTypes.func.isRequired,
   answeredQuestions: PropTypes.object.isRequired,
   isOpen: PropTypes.bool.isRequired,
-  onClose: PropTypes.func.isRequired
+  onClose: PropTypes.func.isRequired,
+  isReviewMode: PropTypes.bool.isRequired,  // Prop to check review mode
 };
 
 export default QuestionNavigation;
