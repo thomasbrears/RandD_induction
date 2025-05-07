@@ -228,6 +228,7 @@ const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileCh
                         setQuestions={handleUpdateQuestions}
                         onQuestionEdit={handleQuestionEdit}
                         getImageUrl={getImageUrl}
+                        saveFileChange={saveFileChange}
                     />
                 </div>
 

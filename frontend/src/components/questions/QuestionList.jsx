@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   DndContext,
   closestCenter,
@@ -16,17 +16,49 @@ import {
 import QuestionItem from "./QuestionItem";
 import { FaArrowsUpDown } from "react-icons/fa6";
 import QuestionForm from "./QuestionForm";
+import QuestionFilters from "./QuestionFilters";
 import { v4 as uuidv4 } from 'uuid';
 
 const QuestionList = ({ questions = [], setQuestions, onQuestionEdit, getImageUrl, saveFileChange }) => {
   const [showQuestionModal, setShowQuestionModal] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState(null);
+  const [filteredQuestions, setFilteredQuestions] = useState(questions);
+  
+  // Filter states
+  const [searchText, setSearchText] = useState("");
+  const [typeFilter, setTypeFilter] = useState(null);
+  const [requiredFilter, setRequiredFilter] = useState(null);
 
   const sensors = useSensors(
     useSensor(PointerSensor),
     useSensor(KeyboardSensor),
     useSensor(TouchSensor)
   );
+
+  // Update filtered questions when filters or questions change
+  useEffect(() => {
+    let result = [...questions];
+    
+    // Apply search filter
+    if (searchText) {
+      const searchLower = searchText.toLowerCase();
+      result = result.filter(q => 
+        q.question.toLowerCase().includes(searchLower)
+      );
+    }
+    
+    // Apply type filter
+    if (typeFilter) {
+      result = result.filter(q => q.type === typeFilter);
+    }
+    
+    // Apply required filter
+    if (requiredFilter !== null) {
+      result = result.filter(q => q.requiresValidation === requiredFilter);
+    }
+    
+    setFilteredQuestions(result);
+  }, [questions, searchText, typeFilter, requiredFilter]);
 
   const handleDragEnd = (event) => {
     const { active, over } = event;
@@ -86,6 +118,13 @@ const QuestionList = ({ questions = [], setQuestions, onQuestionEdit, getImageUr
       return newQuestions;
     });
   };
+  
+  // Clear all filters
+  const handleClearFilters = () => {
+    setSearchText("");
+    setTypeFilter(null);
+    setRequiredFilter(null);
+  };
 
   return (
     <div className="space-y-4">
@@ -100,10 +139,25 @@ const QuestionList = ({ questions = [], setQuestions, onQuestionEdit, getImageUr
         onDeleteQuestion={handleQuestionDelete}
       />
       
+      {/* Question Filters Component */}
+      {questions.length > 0 && (
+        <QuestionFilters 
+          onSearch={setSearchText}
+          onFilterType={setTypeFilter}
+          onFilterRequired={setRequiredFilter}
+          searchText={searchText}
+          typeFilter={typeFilter}
+          requiredFilter={requiredFilter}
+          onClearFilters={handleClearFilters}
+          totalQuestions={questions.length}
+          filteredCount={filteredQuestions.length}
+        />
+      )}
+      
       <DndContext collisionDetection={closestCenter} onDragEnd={handleDragEnd} sensors={sensors}>
-        <SortableContext items={questions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
+        <SortableContext items={filteredQuestions.map((q) => q.id)} strategy={verticalListSortingStrategy}>
           <ul className="space-y-4">
-            {questions.map((question, index) => (
+            {filteredQuestions.map((question, index) => (
               <QuestionItem
                 key={question.id}
                 question={question}
@@ -118,10 +172,14 @@ const QuestionList = ({ questions = [], setQuestions, onQuestionEdit, getImageUr
         </SortableContext>
       </DndContext>
       
-      {/* Empty state message */}
-      {questions.length === 0 && (
+      {/* Empty state message - show when no questions or when filters return nothing */}
+      {questions.length === 0 ? (
         <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-300 rounded-md">
           <p className="text-gray-500">No questions added yet. Click the "Add Question" button to get started.</p>
+        </div>
+      ) : filteredQuestions.length === 0 && (
+        <div className="text-center py-8 bg-gray-50 border border-dashed border-gray-300 rounded-md">
+          <p className="text-gray-500">No questions match your current filters. Try adjusting your search or filters.</p>
         </div>
       )}
     </div>
