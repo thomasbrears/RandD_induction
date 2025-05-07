@@ -156,9 +156,16 @@ const sendOverdueNotification = async (userId, inductionData) => {
       <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
     `;
     
-    // Set up CC list including department email if available
-    const replyToEmail = "autevents@brears.xyz";
-    const ccEmails = ["manager@brears.xyz"];
+    // Fetch email settings from the database
+    const emailSettingsSnapshot = await db.collection("emailSettings").get();
+    let replyToEmail = "autevents@brears.xyz"; // Default
+    let ccEmails = ["manager@brears.xyz"]; // Default
+    
+    if (!emailSettingsSnapshot.empty) {
+      const emailSettings = emailSettingsSnapshot.docs[0].data();
+      replyToEmail = emailSettings.defaultReplyTo || replyToEmail;
+      ccEmails = emailSettings.defaultCc || ccEmails;
+    }
     
     // Add department email to CC if available
     if (departmentEmail) {
