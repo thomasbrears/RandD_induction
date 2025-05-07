@@ -1,598 +1,777 @@
 import { useState, useEffect } from "react";
-import Select from "react-select";
+import { 
+  Form, 
+  Input, 
+  Select, 
+  Button, 
+  Card, 
+  Popconfirm,
+  Typography, 
+  Space, 
+  Row, 
+  Col, 
+  Divider, 
+  Alert 
+} from "antd";
+import { 
+  SaveOutlined, 
+  UserOutlined, 
+  UserAddOutlined, 
+  DeleteOutlined, 
+  CloseCircleOutlined, 
+  CheckCircleOutlined, 
+  KeyOutlined,
+  ExclamationCircleOutlined,
+  LoadingOutlined,
+  WarningOutlined
+} from '@ant-design/icons';
 import Permissions from "../models/Permissions";
 import { DefaultNewUser } from "../models/User";
-import Positions from "../models/Positions";
-import Locations from "../models/Locations";
-import { useForm, FormProvider } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
 import useAuth from "../hooks/useAuth";
-import DatePicker from "react-datepicker";
-import "react-datepicker/dist/react-datepicker.css";
-import { getAllInductions } from "../api/InductionApi";
-import { DefaultNewAssignedInduction } from "../models/AssignedInduction";
-import Status from "../models/Status";
-import { deleteUser } from "../api/UserApi";
-import { useNavigate } from "react-router-dom";
-import { toast } from "react-toastify";
+import { deleteUser, deactivateUser, reactivateUser, getAllUsers } from "../api/UserApi";
+import { getAllPositions } from '../api/PositionApi';
+import { getAllLocations } from '../api/LocationApi';
+import { getAllDepartments } from '../api/DepartmentApi';
+import { useLocation, useNavigate } from "react-router-dom";
+import { notifyError, notifySuccess, notifyPromise } from "../utils/notificationService";
+import debounce from 'lodash/debounce';
+
+const { Title } = Typography;
+const { Option } = Select;
 
 export const UserForm = ({ userData = DefaultNewUser, onSubmit }) => {
-  const [user, setUser] = useState(DefaultNewUser);
-  const [availableInductions, setAvailableInductions] = useState([]);
-  const [newAssignedInductions, setNewAssignedInductions] = useState([]);
+  const [form] = Form.useForm();
+  const [user, setUser] = useState({ ...DefaultNewUser, position: '', department: '' });
+  const [isDeactivated, setIsDeactivated] = useState(false);
+  const [positions, setPositions] = useState([]);
+  const [locations, setLocations] = useState([]);
+  const [departments, setDepartments] = useState([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [existingUsers, setExistingUsers] = useState([]);
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false);
+  const [emailStatus, setEmailStatus] = useState(null);
+  const [similarUsers, setSimilarUsers] = useState([]);
   const { user: currentUser } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  const userSchema = z.object({
-    firstName: z.string().min(1, "First name is required"),
-    lastName: z.string().min(1, "Last name is required"),
-    email: z.string().email("Invalid email format"),
-    locations: z.array(z.string()).min(1, "At least one location is required"),
-    newAssignedInductions: z
-      .array(
-        z.object({
-          id: z.string().optional(),
-          name: z.string().min(1, "Induction cannot be empty"),
-          dueDate: z.date(),
-          availableFrom: z.date(),
-        })
-      )
-      .optional()
-      .superRefine((inductions, ctx) => {
-        if (inductions) {
-          const uniqueIds = new Set();
-          inductions.forEach((induction, index) => {
-            if (induction.id && uniqueIds.has(induction.id)) {
-              ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: "Duplicate inductions are not allowed",
-                path: [index, "id"],
-              });
-            } else if (induction.id) {
-              uniqueIds.add(induction.id);
-            }
+  // Check if the current page is the edit page and if the userData has an ID (existing user)
+  const isEditPage = location.pathname.includes('/edit');
+  const isExistingUser = userData?.uid !== undefined;
 
-            if (induction.dueDate < induction.availableFrom) {
-              ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message:
-                  "Due date must be greater than or equal to the available from date.",
-                path: [index, "dueDate"],
-              });
-            }
-
-            const existingInduction = Array.isArray(user.assignedInductions)
-              ? user.assignedInductions.find(
-                  (existing) => existing.id === induction.id
-                )
-              : undefined;
-
-            if (
-              existingInduction &&
-              existingInduction.status !== Status.COMPLETED
-            ) {
-              ctx.addIssue({
-                code: z.ZodIssueCode.custom,
-                message: `Induction "${induction.name}" already exists and is not completed.`,
-                path: [index, "id"],
-              });
-            }
-          });
-        }
-      }),
-  });
-
-  const methods = useForm({
-    resolver: zodResolver(userSchema),
-    defaultValues: userData,
-    mode: "onChange",
+  // Field validation states
+  const [validationStates, setValidationStates] = useState({
+    name: null,
+    email: null,
+    permission: null,
+    department: null,
+    locations: null
   });
 
   useEffect(() => {
-    const fetchInductions = async () => {
-      if (currentUser) {
-        const inductions = await getAllInductions(currentUser);
-        setAvailableInductions(inductions);
+    // Initialise with properly structured data
+    setUser({
+      ...userData,
+    });
+    
+    // Reset form with proper values
+    form.setFieldsValue({
+      ...userData,
+      // Combine first and last name into a single field
+      name: userData.firstName && userData.lastName 
+        ? `${userData.firstName} ${userData.lastName}`
+        : userData.displayName || '',
+    });
+    
+    // Check if the user is deactivated on page load
+    setIsDeactivated(!!userData.disabled);
+  }, [userData, form]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const positionsData = await getAllPositions();
+        setPositions(positionsData);
+      } catch (error) {
+        console.error("Error fetching positions:", error);
+      }
+
+      try {
+        const locationsData = await getAllLocations();
+        setLocations(locationsData);
+      } catch (error) {
+        console.error("Error fetching locations:", error);
+      }
+
+      try {
+        const departmentData = await getAllDepartments();
+        setDepartments(departmentData);
+      } catch (error) {
+        console.error("Error fetching departments:", error);
       }
     };
-    fetchInductions();
-  }, [currentUser]);
+
+    fetchData();
+  }, []);
 
   useEffect(() => {
-    setUser(userData);
-    methods.reset(userData);
-    if (userData.uid) {
-      methods.trigger();
-    }
-  }, [userData, methods]);
-
-  const handleSubmit = async (data) => {
-    setUser(data);
-    const userToSubmit = {
-      ...user,
-      email: data.email,
-      firstName: data.firstName,
-      lastName: data.lastName,
-      position: user.position,
-      permission: user.permission,
-      locations: user.locations,
-      assignedInductions: [
-        ...(user.assignedInductions || []),
-        ...(data.newAssignedInductions || []).map((induction) => ({
-          ...DefaultNewAssignedInduction,
-          ...induction,
-        })),
-      ],
+    const fetchUsers = async () => {
+      // Only fetch users if we have an authenticated user and we're not in edit mode or if we're in edit mode but not editing the current user
+      if (currentUser && !currentUser.loading) {
+        try {
+          const users = await getAllUsers(currentUser);
+          setExistingUsers(users);
+        } catch (error) {
+          console.debug("Could not fetch users for duplicate checking, will use client-side validation only");
+          // continue with client side validation
+        }
+      }
     };
 
-    await onSubmit(userToSubmit);
+    fetchUsers();
+  }, [currentUser]);
 
-    if (!userData.uid) {
-      methods.reset(DefaultNewUser);
-      setUser(DefaultNewUser);
-      setNewAssignedInductions([]);
+  const handleNameChange = (e) => {
+    const inputName = e.target.value;
+    
+    // Auto-capitalise function
+    const autoCapitalizeName = (name) => {
+      if (!name) return '';
+      
+      // Split by spaces and capitalise each part
+      return name.split(' ')
+        .map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+        .join(' ');
+    };
+    
+    // Apply auto-capitalisation
+    const capitalizedName = autoCapitalizeName(inputName);
+    
+    // Update the form field with the capitalised name
+    form.setFieldsValue({ name: capitalizedName });
+    
+    // Validate name field
+    if (capitalizedName.trim().length > 0) {
+      const nameParts = capitalizedName.trim().split(' ');
+      if (nameParts.length >= 1 && nameParts[0].length >= 2) {
+        setValidationStates(prev => ({ ...prev, name: 'success' }));
+      } else {
+        setValidationStates(prev => ({ ...prev, name: 'error' }));
+      }
     } else {
-      setUser(userToSubmit);
-      methods.reset(user);
-      setNewAssignedInductions([]);
+      setValidationStates(prev => ({ ...prev, name: 'error' }));
     }
   };
 
-  const handleAddInduction = () => {
-    const newInduction = {
-      ...DefaultNewAssignedInduction,
-      dueDate: new Date(),
-      availableFrom: new Date(),
-    };
-    const updatedInductions = [...newAssignedInductions, newInduction];
-    setNewAssignedInductions(updatedInductions);
-    methods.setValue("newAssignedInductions", updatedInductions, {
-      shouldValidate: true,
-    });
-  };
-
-  const handleRemoveInduction = (index) => {
-    const updatedInductions = newAssignedInductions.filter(
-      (_, i) => i !== index
-    );
-    setNewAssignedInductions(updatedInductions);
-    methods.setValue("newAssignedInductions", updatedInductions, {
-      shouldValidate: true,
-    });
-  };
-
-  const handleInductionChange = (index, field, value, label) => {
-    const updatedInductions = [...newAssignedInductions];
-    if (!updatedInductions[index]) {
-      updatedInductions[index] = { ...DefaultNewAssignedInduction };
+  // Check for similar emails
+  const checkForSimilarEmails = debounce(async (email) => {
+    if (!email || email.length < 3) {
+      setSimilarUsers([]);
+      return;
     }
-    updatedInductions[index][field] = value;
-    if (field === "id" && label) {
-      updatedInductions[index].name = label;
+    
+    setIsCheckingEmail(true);
+    setEmailStatus('validating');
+    
+    try {
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        setEmailStatus('error');
+        setValidationStates(prev => ({ ...prev, email: 'error' }));
+        setSimilarUsers([]);
+        setIsCheckingEmail(false);
+        return;
+      }
+      
+      // If we're in edit mode and this is the same email as the current user, it's fine
+      if (isExistingUser && userData.email === email) {
+        setEmailStatus(null);
+        setValidationStates(prev => ({ ...prev, email: null }));
+        setSimilarUsers([]);
+        setIsCheckingEmail(false);
+        return;
+      }
+      
+      // Only check for duplicates if we have users to check against
+      if (existingUsers && existingUsers.length > 0) {
+        // Find similar emails
+        const potentialDuplicates = existingUsers.filter(user => {
+          // Skip current user when editing
+          if (isExistingUser && user.uid === userData.uid) return false;
+          
+          // Check for exact match or similar email
+          if (user.email && email) {
+            const normalizeEmail = (inputEmail) => {
+              // Convert to lowercase
+              let normalized = inputEmail.toLowerCase();
+              
+              // Remove all periods before the @ symbol
+              normalized = normalized.replace(/\.(?=[^@]*@)/g, '');
+              
+              // Remove '+' and everything after it before the @ symbol (for email aliases)
+              normalized = normalized.replace(/\+.*?(?=@)/, '');
+              
+              return normalized;
+            };
+            
+            return normalizeEmail(user.email) === normalizeEmail(email);
+          }
+          return false;
+        });
+        
+        setSimilarUsers(potentialDuplicates);
+        
+        if (potentialDuplicates.length > 0) {
+          setEmailStatus('warning');
+          setValidationStates(prev => ({ ...prev, email: 'warning' }));
+        } else {
+          setEmailStatus(null);
+          setValidationStates(prev => ({ ...prev, email: null }));
+        }
+      } else {
+        // If we dont have users to check against, just validate the format
+        setEmailStatus(null);
+        setValidationStates(prev => ({ ...prev, email: null }));
+      }
+    } catch (error) {
+      console.debug("Error in email checking:", error);
+      // Dont block the user if something goes wrong
+      setEmailStatus(null);
+      setValidationStates(prev => ({ ...prev, email: null }));
+    } finally {
+      setIsCheckingEmail(false);
     }
-    setNewAssignedInductions(updatedInductions);
-    methods.setValue("newAssignedInductions", updatedInductions, {
-      shouldValidate: true,
-    });
+  }, 500);
+
+  const handleEmailChange = (e) => {
+    const email = e.target.value;
+    form.setFieldsValue({ email });
+    
+    if (email) {
+      setEmailStatus('validating');
+      setValidationStates(prev => ({ ...prev, email: 'validating' }));
+      checkForSimilarEmails(email);
+    } else {
+      setEmailStatus(null);
+      setValidationStates(prev => ({ ...prev, email: null }));
+      setSimilarUsers([]);
+    }
   };
 
-  const handleLocationsChange = (selectedOptions) => {
-    const selectedValues = selectedOptions
-      ? selectedOptions.map((option) => option.value)
-      : [];
-
-    methods.setValue("locations", selectedValues, { shouldValidate: true });
-
-    setUser((prevUser) => ({
-      ...prevUser,
-      locations: selectedValues,
-    }));
-
-    methods.trigger("locations");
+  // Handle other field validations
+  const handleFieldValidation = (field, value) => {
+    if (field === 'permission') {
+      setValidationStates(prev => ({ ...prev, permission: value ? 'success' : 'error' }));
+    } else if (field === 'department') {
+      setValidationStates(prev => ({ ...prev, department: value ? 'success' : 'error' }));
+    } else if (field === 'locations') {
+      setValidationStates(prev => ({ ...prev, locations: value && value.length > 0 ? 'success' : 'error' }));
+    }
   };
 
+  // Handle form submission
+  const handleSubmit = async (values) => {
+    setIsSubmitting(true);
+    
+    try {
+      // Split the name field into firstName and lastName
+      const nameParts = values.name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
+      // Prepare data for submission
+      const userToSubmit = {
+        uid: userData.uid,
+        email: values.email,
+        firstName,
+        lastName,
+        position: values.position || "",
+        department: values.department || "",
+        permission: values.permission,
+        locations: Array.isArray(values.locations) ? values.locations : [],
+        assignedInductions: user.assignedInductions || []
+      };
+
+      await onSubmit(userToSubmit);
+      
+      // Reset form for new user creation
+      if (!userData.uid) {
+        form.resetFields();
+        setUser(DefaultNewUser);
+        setValidationStates({
+          name: null,
+          email: null,
+          permission: null,
+          department: null,
+          locations: null
+        });
+      } else {
+        setUser(userToSubmit);
+      }
+      
+      notifySuccess(userData.uid ? "User updated successfully" : "User created successfully");
+    } catch (error) {
+      console.error("Submission error:", error);
+      notifyError("Error saving user data", error.message || "An unexpected error occurred");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Get available permissions based on the current user's role
   const availablePermissions =
     currentUser?.role === Permissions.ADMIN
       ? Object.values(Permissions)
       : [Permissions.USER];
 
+  // Handle user deactivate/reactivate action
+  const handleDeactivateOrReactivate = () => {
+    const action = user.disabled ? 'reactivate' : 'deactivate';
+    
+    const actionPromise =
+      action === 'deactivate'
+        ? deactivateUser(currentUser, user.uid)
+        : reactivateUser(currentUser, user.uid);
+  
+    notifyPromise(
+      actionPromise,
+      {
+        pending: action === 'deactivate'
+          ? "Deactivating user..."
+          : "Reactivating user...",
+        success: action === 'deactivate'
+          ? "User deactivated successfully!"
+          : "User reactivated successfully!",
+        error: action === 'deactivate'
+          ? "Failed to deactivate user."
+          : "Failed to reactivate user."
+      }
+    );
+  
+    actionPromise
+      .then(() => {
+        setUser({
+          ...user,
+          disabled: action === 'deactivate',
+        });
+        setIsDeactivated(action === 'deactivate');
+      })
+      .catch((err) => {
+        console.error(err);
+      });
+  };  
+
+  // Handle user delete action
   const handleDelete = () => {
     if (currentUser && user) {
-      deleteUser(currentUser, user.uid)
+      const deletePromise = deleteUser(currentUser, user.uid);
+  
+      notifyPromise(
+        deletePromise, 
+        {
+          pending: "Deleting user...",
+          success: "User deleted successfully!",
+          error: (err) => {
+            const errorMessage = err?.response?.data?.message || "An error occurred";
+            return errorMessage;
+          }
+        }
+      );
+  
+      deletePromise
         .then(() => {
-          toast.success("User deleted sucessfully!", { position: 'top-right', autoClose: 3000, });
-
-          setTimeout(() => {
-            navigate("/admin/view-users");
-          }, 3000);
+          navigate("/management/users/view"); // Redirect after successful deletion
         })
         .catch((err) => {
-          const errorMessage =
-            err.response?.data?.message || "An error occurred";
-          toast.error(errorMessage);
           console.error(err);
         });
     }
   };
 
+  // Handle password reset
+  const handlePasswordReset = async () => {
+    if (!user.email) {
+      notifyError("Cannot reset password", "User email is missing");
+      return;
+    }
+    
+    try {
+      const { getAuth, sendPasswordResetEmail } = await import('firebase/auth');
+      const auth = getAuth();
+      
+      const resetPromise = sendPasswordResetEmail(auth, user.email);
+      
+      notifyPromise(
+        resetPromise,
+        {
+          pending: "Sending password reset email...",
+          success: "Password reset email sent successfully to the user! Please advise them to check their emails",
+          error: (err) => {
+            console.error(err);
+            return "Failed to send password reset email: " + (err.message || "Unknown error");
+          }
+        }
+      );
+    } catch (error) {
+      console.error("Error resetting password:", error);
+      notifyError("Reset password failed", error.message || "An unexpected error occurred");
+    }
+  };
+
+  // Get status indicator component
+  const getStatusIndicator = (field) => {
+    const status = validationStates[field];
+    
+    if (status === 'error') {
+      return (
+        <span className="ml-2">
+          <ExclamationCircleOutlined style={{ color: '#ff4d4f' }} />
+        </span>
+      );
+    } else if (status === 'validating') {
+      return (
+        <span className="ml-2">
+          <LoadingOutlined style={{ color: '#1890ff' }} />
+        </span>
+      );
+    } else if (status === 'warning') {
+      return (
+        <span className="ml-2">
+          <WarningOutlined style={{ color: '#faad14' }} />
+        </span>
+      );
+    }
+    
+    return null;
+  };
+
   return (
-    <>
-      <div className="flex items-start justify-center pt-8">
-        <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-4xl mx-4 md:mx-8">
-        <div className="flex justify-between items-center">
-          <h1>User Details</h1>
-          <button
-            className="text-white bg-gray-800 px-3 py-2 rounded-md"
-            onClick={handleDelete}
-          >
-            Delete User
-          </button>
-        </div>
-          <FormProvider {...methods}>
-            <form
-              onSubmit={methods.handleSubmit(handleSubmit)}
-              className="w-full"
-            >
-              <div className="flex flex-wrap -mx-3 mb-6">
-                <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
-                  <label
-                    className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-                    htmlFor="grid-first-name"
-                  >
-                    First Name:
-                  </label>
-                  <input
-                    className="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
-                    type="text"
-                    {...methods.register("firstName")}
-                    placeholder="First Name"
-                  />
-                  {methods.formState.errors.firstName && (
-                    <p className="text-red-500 text-xs italic">
-                      {methods.formState.errors.firstName.message}
-                    </p>
-                  )}
-                </div>
-                <div className="w-full md:w-1/2 px-3">
-                  <label
-                    className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-                    htmlFor="grid-last-name"
-                  >
-                    Last Name:
-                  </label>
-                  <input
-                    className="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
-                    type="text"
-                    {...methods.register("lastName")}
-                    placeholder="Last Name"
-                  />
-                  {methods.formState.errors.lastName && (
-                    <p className="text-red-500 text-xs italic">
-                      {methods.formState.errors.lastName.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap -mx-3 mb-6">
-                <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
-                  <label
-                    className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-                    htmlFor="grid-email"
-                  >
-                    Email:
-                  </label>
-                  <input
-                    className="appearance-none block w-full bg-gray-200 text-gray-700 border border-gray-200 rounded py-3 px-4 leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
-                    type="email"
-                    {...methods.register("email")}
-                    placeholder="Email"
-                  />
-                  {methods.formState.errors.email && (
-                    <p className="text-red-500 text-xs italic">
-                      {methods.formState.errors.email.message}
-                    </p>
-                  )}
-                </div>
-                <div className="w-full md:w-1/2 px-3">
-                  <label
-                    className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-                    htmlFor="grid-permission"
-                  >
-                    Permission:
-                  </label>
-                  <select
-                    className="block appearance-none w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
-                    value={user.permission}
-                    onChange={(e) =>
-                      setUser({ ...user, permission: e.target.value })
-                    }
-                  >
-                    {Object.values(availablePermissions).map((perm) => (
-                      <option className="text-gray-700" key={perm} value={perm}>
-                        {perm.charAt(0).toUpperCase() + perm.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap -mx-3 mb-6">
-                <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
-                  <label
-                    className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-                    htmlFor="grid-position"
-                  >
-                    Position:
-                  </label>
-                  <select
-                    className="block appearance-none w-full bg-gray-200 border border-gray-200 text-gray-700 py-3 px-4 pr-8 rounded leading-tight focus:outline-none focus:bg-white focus:border-gray-500"
-                    value={user.position}
-                    onChange={(e) =>
-                      setUser({ ...user, position: e.target.value })
-                    }
-                  >
-                    {Object.values(Positions).map((pos) => (
-                      <option className="text-gray-700" key={pos} value={pos}>
-                        {pos.charAt(0).toUpperCase() + pos.slice(1)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="w-full md:w-1/2 px-3 mb-6 md:mb-0">
-                  <label
-                    className="block uppercase tracking-wide text-gray-700 text-xs font-bold mb-2"
-                    htmlFor="grid-location"
-                  >
-                    Location:
-                  </label>
-                  <Select
-                    classNamePrefix="custom-select"
-                    isMulti
-                    options={Object.values(Locations).map((loc) => ({
-                      value: loc,
-                      label: loc.charAt(0).toUpperCase() + loc.slice(1),
-                    }))}
-                    value={user.locations.map((loc) => ({
-                      value: loc,
-                      label: loc.charAt(0).toUpperCase() + loc.slice(1),
-                    }))}
-                    onChange={handleLocationsChange}
-                    styles={{
-                      control: (provided) => ({
-                        ...provided,
-                        backgroundColor: "rgb(229 231 235)",
-                        borderColor: "rgb(229 231 235)",
-                        padding: "0.3rem",
-                        height: "auto",
-                        minHeight: "40px",
-                        boxShadow: "none",
-                        "&:hover": {
-                          borderColor: "rgb(156 163 175)",
-                        },
-                      }),
-                      multiValue: (provided) => ({
-                        ...provided,
-                        backgroundColor: "rgb(209 213 219)",
-                      }),
-                      option: (provided, state) => ({
-                        ...provided,
-                        color: state.isSelected ? "white" : "rgb(55 65 81)",
-                        backgroundColor: state.isSelected
-                          ? "rgb(156 163 175)"
-                          : "white",
-                        "&:hover": {
-                          backgroundColor: "rgb(229 231 235)",
-                        },
-                      }),
-                    }}
-                  />
-                  {methods.formState.errors.locations && (
-                    <p className="text-red-500 text-xs italic">
-                      {methods.formState.errors.locations.message}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="w-full md:w-full px-3 flex justify-between items-center">
-                <h1 className="text-left flex-grow">Assign Inductions</h1>
-                <button
-                  type="button"
-                  onClick={handleAddInduction}
-                  className="text-white bg-gray-800 px-3 py-2 rounded-md"
-                >
-                  Add Induction
-                </button>
-              </div>
-
-              <div className="bg-gray-100 p-4 rounded-md mt-4 mb-4">
-                {newAssignedInductions.map((induction, index) => (
-                  <div key={index} className="mb-4">
-                    <div className="flex items-center space-x-2 mb-2">
-                      <Select
-                        options={availableInductions.map((ind) => ({
-                          value: ind.id,
-                          label: ind.name,
-                        }))}
-                        onChange={(selected) =>
-                          handleInductionChange(
-                            index,
-                            "id",
-                            selected.value,
-                            selected.label
-                          )
-                        }
-                        value={
-                          availableInductions.find(
-                            (ind) => ind.id === induction.id
-                          )
-                            ? {
-                                value: induction.id,
-                                label: availableInductions.find(
-                                  (ind) => ind.id === induction.id
-                                ).name,
-                              }
-                            : null
-                        }
-                        className="flex-1 w-3/4"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveInduction(index)}
-                        className="text-white bg-gray-800 px-3 py-2 rounded-md"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                    <div className="flex flex-col md:flex-row space-x-0 md:space-x-4 mb-2">
-                      <div className="flex items-center w-full mb-2 md:mb-0">
-                        <label
-                          className="block uppercase tracking-wide text-gray-700 text-xs font-bold mr-2"
-                          htmlFor="available-from"
-                        >
-                          Available From:
-                        </label>
-                        <DatePicker
-                          className="flex-grow h-10 border border-gray-300 bg-white rounded-md"
-                          selected={induction.availableFrom || new Date()}
-                          onChange={(date) =>
-                            handleInductionChange(index, "availableFrom", date)
-                          }
-                          placeholderText="Available From"
-                        />
-                      </div>
-
-                      <div className="flex items-center w-full mb-2 md:mb-0">
-                        <label
-                          className="block uppercase tracking-wide text-gray-700 text-xs font-bold mr-2"
-                          htmlFor="due-date"
-                        >
-                          Due Date:
-                        </label>
-                        <DatePicker
-                          className="flex-grow h-10 border border-gray-300 bg-white rounded-md"
-                          selected={induction.dueDate || new Date()}
-                          onChange={(date) =>
-                            handleInductionChange(index, "dueDate", date)
-                          }
-                          placeholderText="Due Date"
-                        />
-                      </div>
-                    </div>
-                    {methods.formState.errors.newAssignedInductions?.[index]
-                      ?.dueDate && (
-                      <p className="text-red-500 text-xs italic mt-2">
-                        {
-                          methods.formState.errors.newAssignedInductions[index]
-                            .dueDate.message
-                        }
-                      </p>
-                    )}
-                    {methods.formState.errors.newAssignedInductions?.[index]
-                      ?.id && (
-                      <p className="text-red-500 text-xs italic mt-2">
-                        {
-                          methods.formState.errors.newAssignedInductions[index]
-                            .id.message
-                        }
-                      </p>
-                    )}
-                    {methods.formState.errors.newAssignedInductions?.[index]
-                      ?.name && (
-                      <p className="text-red-500 text-xs italic mt-2">
-                        {
-                          methods.formState.errors.newAssignedInductions[index]
-                            .name.message
-                        }
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-center">
-                <button
-                  className="text-white bg-gray-800 px-3 py-2 rounded-md"
-                  type="submit"
-                >
-                  {userData.uid ? "Save Changes" : "Create User"}
-                </button>
-              </div>
-            </form>
-          </FormProvider>
-        </div>
-      </div>
-
-      {user.uid && (
-        <div className="flex items-start justify-center pt-8">
-          <div className="bg-white shadow-lg rounded-lg p-8 w-full max-w-4xl mx-4 md:mx-8">
-            {user.assignedInductions &&
-            Array.isArray(user.assignedInductions) &&
-            user.assignedInductions.length > 0 ? (
-              <div className="overflow-x-auto">
-                <table className="min-w-full border-collapse border border-gray-200 w-full">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border border-gray-300 px-4 py-2 text-left">
-                        Induction Name
-                      </th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">
-                        Available From
-                      </th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">
-                        Due Date
-                      </th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">
-                        Completion Date
-                      </th>
-                      <th className="border border-gray-300 px-4 py-2 text-left">
-                        Status
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {user.assignedInductions.map((induction, index) => (
-                      <tr key={index}>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {induction.name}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {induction.availableFrom
-                            ? new Date(
-                                induction.availableFrom
-                              ).toLocaleDateString()
-                            : "N/A"}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {induction.dueDate
-                            ? new Date(induction.dueDate).toLocaleDateString()
-                            : "N/A"}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {induction.completionDate
-                            ? new Date(
-                                induction.completionDate
-                              ).toLocaleDateString()
-                            : "N/A"}
-                        </td>
-                        <td className="border border-gray-300 px-4 py-2">
-                          {induction.status}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            ) : (
-              <p className="text-gray-600">
-                No assigned inductions for this user.
-              </p>
-            )}
-          </div>
-        </div>
+    <Card 
+      className="mx-auto max-w-4xl shadow-lg mt-6" 
+      styles={{ body: { padding: '24px' } }}
+    >
+      {/* Deactivated banner */}
+      {isDeactivated && (
+          <Alert
+            message="User Deactivated"
+            description="This user is currently deactivated and cannot login or complete inductions."
+            type="error"
+            showIcon
+            className="mb-4"
+          />
       )}
-    </>
+      
+      {/* Similar email warning */}
+      {similarUsers.length > 0 && (
+        <Alert
+          message="Potential Duplicate User"
+          description={
+            <div>
+              <p>The email address is similar to existing user(s):</p>
+              <ul>
+                {similarUsers.map(user => (
+                  <li key={user.uid}>
+                    <strong>{user.firstName} {user.lastName}</strong> ({user.email})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          }
+          type="warning"
+          showIcon
+          className="mb-4"
+        />
+      )}
+      
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+        <Title level={4} className="m-0">User Details</Title>
+        
+        {/* Action buttons for existing users */}
+        {isEditPage && isExistingUser && (
+          <Space wrap className="w-full sm:w-auto justify-end">
+            <Popconfirm
+              title={user.disabled ? "Reactivate User" : "Deactivate User"}
+              description={user.disabled 
+                ? "This will restore the user's access to the platform." 
+                : "This will prevent the user from logging in and completing inductions."}
+              onConfirm={handleDeactivateOrReactivate}
+              okText={user.disabled ? "Reactivate" : "Deactivate"}
+              cancelText="Cancel"
+              okButtonProps={{ 
+                danger: !user.disabled,
+                type: user.disabled ? "primary" : "default" 
+              }}
+            >
+              <Button 
+                type={user.disabled ? "primary" : "default"}
+                danger={!user.disabled}
+                icon={user.disabled ? <CheckCircleOutlined /> : <CloseCircleOutlined />}
+                style={user.disabled ? { backgroundColor: '#52c41a', borderColor: '#52c41a' } : {}}
+              >
+                {user.disabled ? "Reactivate User" : "Deactivate User"}
+              </Button>
+            </Popconfirm>
+
+            <Popconfirm
+              title="Delete User"
+              description="This action will permanently remove the user and all their associated data. THIS CANNOT BE UNDONE."
+              onConfirm={handleDelete}
+              okText="Delete"
+              cancelText="Cancel"
+              okButtonProps={{ danger: true }}
+            >
+              <Button 
+                danger 
+                icon={<DeleteOutlined />}
+              >
+                Delete User
+              </Button>
+            </Popconfirm>
+
+            <Button
+              type="default" 
+              icon={<KeyOutlined />}
+              onClick={handlePasswordReset}
+            >
+              Reset Password
+            </Button>
+          </Space>
+        )}
+      </div>
+      
+      <Divider />
+      
+      <Form
+        form={form}
+        layout="vertical"
+        onFinish={handleSubmit}
+        initialValues={{
+          ...userData,
+          name: userData.firstName && userData.lastName 
+            ? `${userData.firstName} ${userData.lastName}`
+            : userData.displayName || '',
+        }}
+        className="mt-4"
+        requiredMark="optional"
+      >
+        {/* Full Name Field */}
+        <Form.Item
+          name="name"
+          label={
+            <span className="flex items-center">
+              Full Name {getStatusIndicator('name')}
+            </span>
+          }
+          rules={[{ required: true, message: "Please enter the user's name" }]}
+          validateStatus={validationStates.name}
+          help={validationStates.name === 'error' ? "Please enter the user's full name" : null}
+        >
+          <Input 
+            prefix={<UserOutlined className="text-gray-400" />} 
+            placeholder="Full Name" 
+            className="rounded-md"
+            onChange={handleNameChange}
+          />
+        </Form.Item>
+        
+        <Row gutter={16}>
+          {/* Email Field */}
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="email"
+              label={
+                <span className="flex items-center">
+                  Email {getStatusIndicator('email')}
+                </span>
+              }
+              rules={[
+                { required: true, message: "Email is required" },
+                { type: 'email', message: "Please enter a valid email" }
+              ]}
+              validateStatus={emailStatus}
+              help={emailStatus === 'error' ? "Please enter a valid email address" : null}
+            >
+              <Input 
+                placeholder="Email"
+                className="rounded-md"
+                onChange={handleEmailChange}
+                suffix={isCheckingEmail ? <LoadingOutlined /> : null}
+              />
+            </Form.Item>
+          </Col>
+          
+          {/* Permission Field */}
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="permission"
+              label={
+                <span className="flex items-center">
+                  Permission {getStatusIndicator('permission')}
+                </span>
+              }
+              rules={[{ required: true, message: "Permission is required" }]}
+              validateStatus={validationStates.permission}
+            >
+              <Select 
+                placeholder="Select permission"
+                className="rounded-md"
+                dropdownStyle={{ borderRadius: '8px' }}
+                onChange={(value) => handleFieldValidation('permission', value)}
+              >
+                {Object.values(availablePermissions).map((perm) => (
+                  <Option key={perm} value={perm}>
+                    {perm.charAt(0).toUpperCase() + perm.slice(1)}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+        
+        <Row gutter={16}>
+          {/* Position Field */}
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="position"
+              label="Position"
+            >
+              <Select 
+                placeholder="Select position"
+                className="rounded-md"
+                dropdownStyle={{ borderRadius: '8px' }}
+                showSearch
+                optionFilterProp="children"
+              >
+                <Option value="" disabled>Select Position</Option>
+                {positions.length === 0 ? (
+                  <Option value="" disabled>Loading positions...</Option>
+                ) : (
+                  positions.map((pos) => (
+                    <Option key={pos.id} value={pos.name}>
+                      {pos.name.charAt(0).toUpperCase() + pos.name.slice(1)}
+                    </Option>
+                  ))
+                )}
+              </Select>
+            </Form.Item>
+          </Col>
+          
+          {/* Department Field */}
+          <Col xs={24} md={12}>
+            <Form.Item
+              name="department"
+              label={
+                <span className="flex items-center">
+                  Department {getStatusIndicator('department')}
+                </span>
+              }
+              rules={[{ required: true, message: "Department is required" }]}
+              validateStatus={validationStates.department}
+            >
+              <Select 
+                placeholder="Select department"
+                className="rounded-md"
+                dropdownStyle={{ borderRadius: '8px' }}
+                showSearch
+                optionFilterProp="children"
+                onChange={(value) => handleFieldValidation('department', value)}
+              >
+                <Option value="" disabled>Select Department</Option>
+                {departments.length === 0 ? (
+                  <Option value="" disabled>Loading departments...</Option>
+                ) : (
+                  departments.map((dept) => (
+                    <Option key={dept.id} value={dept.name}>
+                      {dept.name.charAt(0).toUpperCase() + dept.name.slice(1)}
+                    </Option>
+                  ))
+                )}
+              </Select>
+            </Form.Item>
+          </Col>
+        </Row>
+        
+        {/* Locations Field */}
+        <Form.Item
+          name="locations"
+          label={
+            <span className="flex items-center">
+              Locations {getStatusIndicator('locations')}
+            </span>
+          }
+          rules={[{ required: true, message: "At least one location is required" }]}
+          validateStatus={validationStates.locations}
+        >
+          <Select 
+            mode="multiple" 
+            placeholder="Select locations"
+            optionFilterProp="children"
+            className="rounded-md"
+            dropdownStyle={{ borderRadius: '8px' }}
+            showSearch
+            onChange={(value) => handleFieldValidation('locations', value)}
+            dropdownRender={menu => (
+              <div>
+                <div className="p-2 border-b">
+                  <Button 
+                    type="link" 
+                    size="small" 
+                    onClick={() => {
+                      const allLocations = locations.map(loc => loc.name);
+                      form.setFieldsValue({ locations: allLocations });
+                      handleFieldValidation('locations', allLocations);
+                    }}
+                  >
+                    Select All
+                  </Button>
+                  <Button 
+                    type="link" 
+                    size="small" 
+                    onClick={() => {
+                      form.setFieldsValue({ locations: [] });
+                      handleFieldValidation('locations', []);
+                    }}
+                  >
+                    Clear All
+                  </Button>
+                </div>
+                {menu}
+              </div>
+            )}
+          >
+            {locations.map((loc) => (
+              <Option key={loc.id} value={loc.name}>
+                {loc.name.charAt(0).toUpperCase() + loc.name.slice(1)}
+              </Option>
+            ))}
+          </Select>
+        </Form.Item>
+        
+        {/* Submit Button */}
+        <Form.Item className="text-center mt-8">
+          <Button
+            type="primary"
+            htmlType="submit"
+            loading={isSubmitting}
+            icon={userData.uid ? <SaveOutlined /> : <UserAddOutlined />}
+            size="large"
+            className="min-w-[200px] h-12 rounded-md shadow-md"
+            disabled={similarUsers.length > 0}
+          >
+            {userData.uid ? "Save Changes" : "Create User"}
+          </Button>
+          
+          {similarUsers.length > 0 && (
+            <div className="mt-2 text-red-500 text-sm">
+              Please resolve potential duplicate user issues before saving
+            </div>
+          )}
+        </Form.Item>
+      </Form>
+    </Card>
   );
 };
+
+export default UserForm;

@@ -1,65 +1,240 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import useAuth from '../hooks/useAuth';
-import '../style/Home.css';
+import { getUserInductions } from '../api/UserInductionApi';
+import { notification, Button } from 'antd'; 
+import { WarningOutlined } from '@ant-design/icons';
+import DynamicContent from '../components/DynamicContent.jsx';
+import { useContextImage } from '../components/WebsiteImageProvider.jsx';
 
 const HomePage = () => {
     const { user } = useAuth();
+    const [inductionsCount, setInductionsCount] = useState(0); // induction count
+    const [overdueInductionsCount, setOverdueInductionsCount] = useState(0); // Overdue inductions count
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
     const isAuthenticated = !!user;
+    const userRole = user?.role; 
+    const { getBackgroundImage } = useContextImage();
+    const homeBgUrl = getBackgroundImage('homeBg');
+    const aboutBgUrl = getBackgroundImage('aboutBg');
+
+    // Function to calculate inductions left to complete
+    const calculateInductionsToComplete = (inductions) => {
+        return inductions.filter(
+            (induction) => induction.status !== 'complete' // Filter out completed inductions using status
+        ).length;
+    };
+
+    // Function to calculate overdue inductions
+    const calculateOverdueInductions = (inductions) => {
+        return inductions.filter(
+            (induction) => induction.status === 'overdue' // Filter for overdue status
+        ).length;
+    };
+
+    // Function to check if notification should be shown
+    const shouldShowNotification = () => {
+        const lastNotifiedTime = localStorage.getItem('lastOverdueNotification');
+        const currentTime = Date.now();
+        
+        // Show notification if never shown before or last shown more than 30 minutes ago
+        if (!lastNotifiedTime || currentTime - parseInt(lastNotifiedTime) > 30 * 60 * 1000) {
+            localStorage.setItem('lastOverdueNotification', currentTime.toString());
+            return true;
+        }
+        return false;
+    };
+
+    // Fetch inductions assigned to the user
+    const fetchInductions = async () => {
+        if (user) {
+            setLoading(true);
+            try {
+                // Use the new getUserInductions API instead of getAssignedInductions
+                const assignedInductions = await getUserInductions(user, user.uid);
+                
+                const incompleteInductions = calculateInductionsToComplete(assignedInductions);
+                const overdueInductions = calculateOverdueInductions(assignedInductions);
+
+                // Set induction counts
+                setInductionsCount(incompleteInductions);
+                setOverdueInductionsCount(overdueInductions); 
+
+                // Show a notification with a button if there are overdue inductions and notification hasn't been shown recently
+                if (overdueInductions > 0 && shouldShowNotification()) {
+                    const key = `overdue-${Date.now()}`;
+                    const notificationTitle = overdueInductions === 1 ? 'Overdue Induction' : 'Overdue Inductions';
+                    
+                    notification.warning({
+                        message: notificationTitle,
+                        description: (
+                            <div>
+                                <p>
+                                    You have {overdueInductions} overdue 
+                                    {overdueInductions === 1 ? ' induction' : ' inductions'}. 
+                                    Please complete 
+                                    {overdueInductions === 1 ? ' it' : ' them'} as soon as possible.
+                                </p>
+                                <Button 
+                                    type="primary" 
+                                    size="small" 
+                                    style={{ marginTop: '8px' }}
+                                    onClick={() => {
+                                        // Just navigate without closing the notification
+                                        window.location.href = '/inductions/my-inductions';
+                                    }}
+                                >
+                                    View Inductions
+                                </Button>
+                            </div>
+                        ),
+                        icon: <WarningOutlined style={{ color: '#faad14' }} />,
+                        key,
+                        placement: 'bottomRight',
+                        duration: 0, // Don't auto-close
+                        style: { minWidth: '320px', maxWidth: '450px' } // Wider notification
+                    });
+                }
+
+            } catch (error) {
+                setError('Failed to fetch inductions');
+                console.error('Error fetching inductions:', error);
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
+    // Fetch inductions when the component mounts
+    useEffect(() => {
+        if (isAuthenticated) {
+            fetchInductions();
+        }
+    }, [isAuthenticated, user]);
 
     return (
         <>
+            <Helmet>
+                <title>Home | AUT Events Induction Portal</title>
+            </Helmet>
+
             {/* Background Image Section */}
-            <div
-                className="background-image-section"
-                style={{
-                    backgroundImage: `url(${process.env.PUBLIC_URL}/images/WG_OUTSIDE_AUT.webp)`,
-                }}
-            >
-                <div className="welcome-message">
-                    <h1>Welcome to the AUT Events<br />Induction Platform!</h1>
-                </div>
+            <div className="bg-cover bg-center h-[500px] flex justify-center items-center text-center text-white px-4 mb-12" style={{ backgroundImage: `url(${homeBgUrl})` }}>
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-semibold">Welcome to the AUT Events<br />Induction Portal!</h1>
             </div>
 
             {/* Let's Get Started Section */}
-            <div className="get-started-content">
+            <div className="bg-white py-8 mb-8">
                 {!isAuthenticated ? (
                     <>
-                        <h3>Let's get started</h3>
-                        <p>Please sign in to view and complete your inductions.</p>
-                        <Link to="/signin" className="sign-in-button">Sign in</Link>
+                        {/* Not logged in content */}
+                        <h3 className="text-3xl text-center font-semibold mb-4">Kia ora, let's get started</h3>
+                        <p className="text-lg text-center mb-6">Please sign in to view and complete your inductions.</p>
+                        <div className="flex justify-center gap-6">
+                            <Link to="/auth/signin" className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md text-center w-auto mx-auto">Sign in</Link>
+                        </div>
                     </>
                 ) : (
                     <>
-                        <h2>Hi {user.email}, Let's get started</h2>
-                        <p>You have {user.inductionsCount} inductions to complete.</p>
-                        <Link to="http://localhost:3000/formlist" className="view-inductions-button">View my Inductions</Link>
+                        {/* Check for admin or manager role */}
+                        {userRole === 'admin' || userRole === 'manager' ? (
+                            <>
+                                {/* Manager or Admin content */}
+                                <h2 className="text-3xl text-center font-semibold mb-4">Kia ora {user.displayName ? user.displayName.split(" ")[0] : ""}</h2>
+                                <p className="text-xl text-center mb-6">How should we get started today?</p>
+
+                                {/* Show overdue inductions message if applicable */}
+                                {overdueInductionsCount > 0 && (
+                                    <div className="bg-red-50 border-l-4 border-red-500 p-4 mx-auto max-w-lg mb-8 rounded-md shadow-sm">
+                                        <div className="flex items-center">
+                                            <WarningOutlined className="text-red-500 text-xl mr-3 flex-shrink-0" />
+                                            <p className="text-red-700 font-medium">
+                                                <Link to="/inductions/my-inductions" className="text-red-700 hover:text-red-900">
+                                                    You have {overdueInductionsCount} overdue 
+                                                    {overdueInductionsCount === 1 ? ' induction' : ' inductions'}. 
+                                                    Please complete 
+                                                    {overdueInductionsCount === 1 ? ' it ' : ' them '} 
+                                                    as soon as possible.
+                                                </Link>
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+
+                                <div className="flex flex-col sm:flex-row justify-center gap-4 sm:gap-6">
+                                    <Link to="/inductions/my-inductions" className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md text-center">View My Inductions</Link>
+                                    <Link to="/management/dashboard" className="text-white bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-md text-center">Management Dashboard</Link>
+                                </div>
+                            </>
+                        ) : (
+                            <>
+                                {/* Standard user content */}
+                                <h2 className="text-3xl text-center font-semibold mb-4">Kia ora {user.displayName ? user.displayName.split(" ")[0] : ""}</h2>
+                                <p className="text-xl text-center mb-6">
+                                    {loading ? "Loading your inductions..." : 
+                                    (error ? `Error: ${error}` : `You currently have ${inductionsCount > 0 ? inductionsCount : "no"} induction${inductionsCount === 1 ? '' : 's'} to complete...`)}
+                                </p>
+
+                                {/* Show overdue inductions message if applicable */}
+                                {overdueInductionsCount > 0 && (
+                                    <div className="bg-red-50 border-l-4 border-red-500 p-4 mx-auto max-w-2xl mb-8 rounded-md shadow-sm">
+                                        <div className="flex items-center">
+                                            <WarningOutlined className="text-red-500 text-xl mr-3 flex-shrink-0" />
+                                            <p className="text-red-700 font-medium">
+                                                <Link to="/inductions/my-inductions" className="text-red-700 hover:text-red-900 underline">
+                                                    You have {overdueInductionsCount} overdue 
+                                                    {overdueInductionsCount === 1 ? ' induction' : ' inductions'}. 
+                                                    Please complete 
+                                                    {overdueInductionsCount === 1 ? ' it ' : ' them '} 
+                                                    as soon as possible.
+                                                </Link>
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                                <div className="flex justify-center gap-6">
+                                    <Link to="/inductions/my-inductions" className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md text-center w-auto mx-auto">View my Inductions</Link>
+                                </div>
+                            </>
+                        )}
                     </>
                 )}
-                <div style={{ marginBottom: '40px' }} />
             </div>
 
-            {/* About Us Section */}
-            <div className="about-us-section">
-                <h2>About Us</h2>
-                <div className="about-us-container">
-                    <p>
-                        "At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat."
-                    </p>
-                    <p>
-                        "Sed ut perspiciatis unde omnis iste natus error sit voluptatem accusantium doloremque laudantium, totam rem aperiam, eaque ipsa quae ab illo inventore veritatis et quasi architecto beatae vitae dicta sunt explicabo. Nemo enim ipsam voluptatem quia voluptas sit aspernatur aut odit aut fugit, sed quia consequuntur magni dolores eos qui ratione voluptatem sequi nesciunt. Neque porro quisquam est, qui dolorem ipsum quia dolor sit amet, consectetur, adipisci velit, sed quia non numquam eius modi tempora incidunt ut labore et dolore magnam aliquam quaerat voluptatem. Ut enim ad minima veniam, quis nostrum exercitationem ullam corporis suscipit laboriosam, nisi ut aliquid ex ea commodi consequatur? Quis autem vel eum iure reprehenderit qui in ea voluptate velit esse quam nihil molestiae consequatur, vel illum qui dolorem eum fugiat quo voluptas nulla pariatur?"
-                    </p>
+            {/* About Section - Dynamic */}
+            <div className="relative bg-cover bg-top text-white py-16 mb-16" style={{ backgroundImage: `url(${aboutBgUrl})` }}>
+                <div className="absolute inset-0 bg-black opacity-70"></div> {/* Dark overlay on image */}
+                <h2 className="text-2xl text-center font-semibold mb-4 relative z-10">About Us</h2>
+                <div className="max-w-3xl mx-auto text-center relative z-10 leading-relaxed space-y-4 px-6 md:px-4">
+                    <DynamicContent 
+                        section="about" 
+                        fallbackText="We cater anywhere for anyone. Is it your place or ours?"
+                    />
+                    
+                    <Link
+                        to="https://www.autevents.co.nz/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md inline-block mt-4"
+                    >Visit the AUT Events Website
+                    </Link>
                 </div>
-                <div style={{ marginBottom: '40px' }} />
             </div>
 
-            {/* Feedback Section */}
-            <div className="feedback-section">
-                <h2>Feedback - We’d love to hear from you!</h2>
-                <p>"At vero eos et accusamus et iusto odio dignissimos ducimus qui blanditiis praesentium voluptatum deleniti atque corrupti quos dolores et quas molestias excepturi sint occaecati cupiditate non provident, similique sunt in culpa qui officia deserunt mollitia animi, id est laborum et dolorum fuga. Et harum quidem rerum facilis est et expedita distinctio. Nam libero tempore, cum soluta nobis est eligendi optio cumque nihil impedit quo minus id quod maxime placeat facere possimus, omnis voluptas assumenda est, omnis dolor repellendus. Temporibus autem quibusdam et aut officiis debitis aut rerum necessitatibus saepe eveniet ut et voluptates repudiandae sint et molestiae non recusandae. Itaque earum rerum hic tenetur a sapiente delectus, ut aut reiciendis voluptatibus maiores alias consequatur aut perferendis doloribus asperiores repellat."</p>
-                <Link to="/contact" className="contact-button">Contact us</Link>
+            {/* Feedback Section - Dynamic with improved mobile padding */}
+            <div className="bg-white text-black py-16 mb-5">
+                <h2 className="text-2xl text-center font-semibold mb-4">Contact us - We'd love to hear from you!</h2>
+                <div className="max-w-4xl mx-auto text-center px-6 md:px-4">
+                    <DynamicContent 
+                        section="contact" 
+                        fallbackText="If you have any questions, feedback or complaints, please don't hesitate to get in touch with us using the button below or by direct email to your manager."
+                    />
+                    <Link to="/contact" className="text-white bg-gray-800 hover:bg-gray-900 px-6 py-3 rounded-md text-center w-auto mx-auto mt-8 inline-block">Contact us</Link>
+                </div>
             </div>
-            <div style={{ marginBottom: '20px' }} />
+            
         </>
     );
 };

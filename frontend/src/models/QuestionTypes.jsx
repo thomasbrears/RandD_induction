@@ -1,8 +1,11 @@
 const QuestionTypes = Object.freeze({
     MULTICHOICE: "multichoice",
-    TRUE_OR_FALSE: "true or false",
-    CERTIFICATE: "certificate",
-    CHOOSE_ONE: "choose_one"
+    TRUE_FALSE: "true_false",
+    DROPDOWN: "dropdown",
+    FILE_UPLOAD: "file_upload",
+    YES_NO: "yes_no",
+    SHORT_ANSWER: "short_answer",
+    INFORMATION: "information"
 });
 
 export default QuestionTypes;

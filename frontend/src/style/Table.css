@@ -36,8 +36,6 @@
     background-color: #f9fafb; 
 }
 
-
-
 .divide-y-gray-200 > *:not(:last-child) {
     border-bottom: 1px solid #e5e7eb; 
 }
@@ -62,6 +60,13 @@
     }
   }
   
+  @media (min-width: 1024px) {
+    .tableContainer {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
   @media (min-width: 1024px) {
     .tableContainer {
       padding-left: 2rem;

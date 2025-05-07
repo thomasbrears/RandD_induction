@@ -1,0 +1,220 @@
+.background-image-section {
+    height: 500px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-size: cover;
+    background-position: center;
+    text-align: center;
+    color: #fff;
+    padding: 0 20px;
+}
+
+.welcome-message h1 {
+    font-size: 3.5rem;
+}
+
+.get-started-content {
+    background-color: #fff;
+    padding: 1px;
+    margin: 0 auto;
+    text-align: center;
+    height: 250px;
+}
+
+.get-started-content h3 {
+    font-size: 2.5rem;
+    margin-top: 30px;
+}
+
+.get-started-content h2 {
+    font-size: 2.4rem;
+    margin-top: 35px;
+}
+
+.get-started-content p {
+    font-size: 1rem;
+    color: #000;
+    font-family: inherit;
+    padding-bottom: 20px;
+}
+
+.about-us-section {
+    background-color: black;
+    color: #fff;
+    padding: 40px 20px;
+    text-align: center;
+}
+
+.about-us-section h2 {
+    font-size: 1.5rem;
+    margin-top: 50px; 
+}
+
+.about-us-container {
+    display: flex;
+    margin-top: 40px;
+    justify-content: center;
+    align-items: flex-start; 
+    flex-wrap: wrap; 
+    max-width: 1170px; 
+    margin: 20px auto; 
+    padding: 0 20px; 
+    margin-bottom: 50px;
+}
+
+.about-us-container p {
+    width: 45%; 
+    margin: 0 20px; 
+    margin-bottom: 40px;
+    text-align: justify; 
+    font-size: 0.9rem; 
+}
+
+.feedback-section {
+    background-color: #fff; 
+    padding: 40px 20px; 
+    text-align: center; 
+    max-width: 1100px; 
+    margin: 0 auto; 
+}
+
+.feedback-section h2 {
+    font-size: 1.5rem; 
+    margin-top: 30px; 
+    margin-bottom: 20px; 
+}
+
+.feedback-section p {
+    text-align: justify; 
+    font-size: 0.9rem; 
+    color: #000; 
+    line-height: 1.5; 
+    margin: 0; 
+    margin-bottom: 40px; 
+}
+
+/* Button Styles */
+.sign-in-button,
+.view-inductions-button,
+.contact-button
+ {
+    display: inline-block; 
+    margin-top: 20px; 
+    padding: 10px 20px; 
+    background-color: black;
+    color: white;
+    text-decoration: none; 
+    border-radius: 5px; 
+    font-size: 1rem; 
+}
+
+.visit-website-button 
+{
+    background-color: white;
+    color: black;
+    text-decoration: none; 
+    border-radius: 5px; 
+    font-size: 1rem; 
+    display: inline-block; 
+    margin-top: 20px; 
+    padding: 10px 20px; 
+}
+
+.admin-buttons {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+    gap: 10px; /* Adds space between the buttons */
+}
+
+.admin-button {
+    padding: 10px 20px; /* Adjusts padding for uniform size */
+    background-color: black; /* Background color */
+    color: white; /* Text color */
+    text-decoration: none; /* No underline */
+    border-radius: 5px; /* Rounded corners */
+    font-size: 1rem; /* Font size */
+    min-width: 150px; /* Sets a minimum width for the buttons */
+    max-width: 200px; /* Sets a maximum width for the buttons */
+    text-align: center; /* Centers the text */
+}
+
+.dashboard-button {
+    padding: 10px 20px; /* Adjust padding to match the other button */
+    background-color: black; /* Ensure consistency in color */
+    color: white; /* Text color */
+    text-decoration: none; /* No underline */
+    border-radius: 5px; /* Rounded corners */
+    font-size: 1rem; /* Font size */
+    width: 200px; /* Set a specific width to match the User Induction Results button */
+    text-align: center; /* Centers the text */
+}
+
+
+
+.button:hover {
+    opacity: 0.8; 
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    .background-image-section {
+        height: 300px; 
+    }
+
+    .welcome-message h1 {
+        font-size: 2.5rem; 
+    }
+
+    .get-started-content h3 {
+        font-size: 2rem; 
+    }
+
+    .get-started-content h2 {
+        font-size: 1.8rem; 
+    }
+
+    .about-us-container p {
+        width: 100%; 
+        margin: 0 0 20px; 
+        font-size: 0.8rem; 
+    }
+
+    .about-us-section h2 {
+        font-size: 1.2rem; 
+    }
+
+    .feedback-section h2 {
+        font-size: 1.2rem; 
+    }
+
+    .feedback-section p {
+        font-size: 0.8rem; 
+    }
+
+    .sign-in-button, .view-inductions-button, .contact-button {
+        padding: 8px 16px; 
+        font-size: 0.9rem; 
+    }
+}
+
+@media (max-width: 480px) {
+    .background-image-section {
+        height: 200px; 
+    }
+
+    .welcome-message h1 {
+        font-size: 2rem; 
+    }
+
+    .get-started-content h3, 
+    .get-started-content h2 {
+        font-size: 1.5rem; 
+    }
+
+    .about-us-section h2, 
+    .feedback-section h2 {
+        font-size: 1rem; 
+    }
+} 
