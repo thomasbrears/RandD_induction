@@ -257,6 +257,11 @@ const InductionEdit = () => {
             imageFile: q.imageFile || null,
           }));
           setOriginalQuestions(snapshot);
+          
+          // Navigate to inductions list view after successful update
+          setTimeout(() => {
+            navigate("/management/inductions/view");
+          }, 1500); // Delay to allow the success notification to be seen
         } else {
           messageWarning("Error while updating induction.");
         }
@@ -318,7 +323,7 @@ const InductionEdit = () => {
         const result = await deleteInduction(user, induction.id);
         if (result) {
           notifySuccess("Induction deleted successfully!");
-          navigate(-1);
+          navigate("/management/inductions/view");
         } else {
           messageWarning("Error while deleting induction.");
         }

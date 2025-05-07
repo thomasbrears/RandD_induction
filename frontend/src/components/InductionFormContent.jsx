@@ -126,8 +126,8 @@ const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileCh
                 {/* Details Section Header with Title and Delete Button */}
                 <div className="flex items-center justify-between mb-4">
                     <div>
-                        <h2 className="text-xl font-semibold">Induction Details</h2>
-                        <p className="text-sm text-gray-500">Basic information about this induction</p>
+                        <h2 className="text-xl font-semibold">Details</h2>
+                        <p className="text-sm text-gray-500">Basic information about this module</p>
                     </div>
                     {shouldShowDeleteButton && (
                         <Popconfirm
@@ -209,7 +209,7 @@ const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileCh
                 <div className="flex items-center justify-between">
                     <div>
                         <h2 className="text-xl font-semibold">Questions</h2>
-                        <p className="text-sm text-gray-500">Let's add some questions to the induction!</p>
+                        <p className="text-sm text-gray-500">Create, edit and arrange questions for this module</p>
                     </div>
                     <button
                         className="text-white bg-blue-600 hover:bg-blue-900 px-4 py-2 rounded-md"

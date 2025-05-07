@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
-import { Modal, Form, Select, Input, Button, Collapse, Switch, Radio } from "antd";
+import { Modal, Form, Select, Input, Button, Collapse, Switch, Radio, Popconfirm } from "antd";
 import QuestionTypes from "../../models/QuestionTypes";
 import TiptapEditor from "../TiptapEditor";
-import { FaCheck, FaTimes} from "react-icons/fa";
+import { FaCheck, FaTimes } from "react-icons/fa";
+import { DeleteOutlined } from '@ant-design/icons';
 import { DefaultNewQuestion } from "../../models/Question";
 import { UpOutlined, PlusOutlined } from "@ant-design/icons";
 import "../../style/AntdOverride.css";
@@ -11,13 +12,14 @@ import ImageUpload from "../ImageUpload";
 
 const { Option } = Select;
 
-const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, saveFileChange }) => {
+const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, saveFileChange, onDeleteQuestion }) => {
     const [form] = Form.useForm();
     const selectedType = Form.useWatch('type', form);
     const requiresValidation = Form.useWatch('requiresValidation', form);
     const answers = Form.useWatch('answers', form);
     const [tempFile, setTempFile] = useState(null);
     const [fileUrl, setFileUrl] = useState(null);
+    const isEditMode = questionData?.id ? true : false;
 
     const handleFileChange = (file) => {
         if (fileUrl?.startsWith("blob:")) {
@@ -123,6 +125,13 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
         onClose();
     };
 
+    const handleDeleteQuestion = () => {
+        if (onDeleteQuestion && form.getFieldValue('id')) {
+            onDeleteQuestion(form.getFieldValue('id'));
+            onClose();
+        }
+    };
+
     const handleAnswerClick = (index) => {
         let answers = form.getFieldValue("answers") || [];
 
@@ -134,7 +143,6 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                 : [...answers, index];
         }
 
-
         form.setFieldsValue({ answers });
         form.validateFields(["options"]);
     };
@@ -144,7 +152,13 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
     };
 
     return (
-        <Modal open={visible} title="Add Question" onCancel={handleCancel} footer={null}>
+        <Modal 
+            open={visible} 
+            title={isEditMode ? "Edit Question" : "Add Question"} 
+            onCancel={handleCancel} 
+            footer={null}
+            width={600}
+        >
             <Form
                 form={form}
                 initialValues={questionData}
@@ -187,9 +201,11 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                         <Collapse
                             expandIconPosition="end"
                             expandIcon={({ isActive }) => (
-                                <UpOutlined className={`transition-transform ${isActive ? 'rotate-180' : ''}`}
-                                    style={{ transform: isActive ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                                    title={isActive ? "Collapse Details" : "Expand Details"} />
+                                <UpOutlined 
+                                    className={`transition-transform ${isActive ? 'rotate-0' : 'rotate-180'}`}
+                                    style={{ transform: isActive ? 'rotate(0deg)' : 'rotate(180deg)' }}
+                                    title={isActive ? "Collapse Details" : "Expand Details"} 
+                                />
                             )}
                             className="border border-gray-300 rounded-md mt-4 p-0 mb-2"
                             items={[
@@ -220,7 +236,6 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                                     fileUrl={fileUrl}
                                                     saveFileChange={handleFileChange}
                                                 />
-
                                             </div>
                                         </div>
                                     ),
@@ -236,9 +251,11 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                 <Collapse
                                     expandIconPosition="end"
                                     expandIcon={({ isActive }) => (
-                                        <UpOutlined className={`transition-transform ${isActive ? 'rotate-180' : ''}`}
-                                            style={{ transform: isActive ? 'rotate(180deg)' : 'rotate(0deg)' }}
-                                            title={isActive ? "Collapse Details" : "Expand Details"} />
+                                        <UpOutlined 
+                                            className={`transition-transform ${isActive ? 'rotate-0' : 'rotate-180'}`}
+                                            style={{ transform: isActive ? 'rotate(0deg)' : 'rotate(180deg)' }}
+                                            title={isActive ? "Collapse Details" : "Expand Details"} 
+                                        />
                                     )}
                                     className="border border-gray-300 rounded-md mt-4 p-0 mb-2"
                                     items={[
@@ -246,7 +263,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                             key: "2",
                                             label: "Validation Settings",
                                             children: (
-                                                <div >
+                                                <div>
                                                     <div className="flex items-center justify-between mb-2 mt-3">
                                                         <span className="font-semibold">Requires Validation:</span>
                                                         <Form.Item name="requiresValidation" valuePropName="checked" noStyle>
@@ -421,17 +438,38 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                         )}
 
                         <Form.Item className="!mb-0 mt-4">
-                            <div className="flex justify-end">
-                                <Button onClick={handleCancel} className="mr-2">Cancel</Button>
-                                <Button type="primary" htmlType="submit" title={questionData ? "Save Changes" : "Create Question"}>
-                                    {questionData ? "Save Changes" : "Create Question"}
-                                </Button>
+                            <div className="flex justify-between items-center">
+                                {/* Delete Button - Only show when editing */}
+                                {isEditMode && (
+                                    <Popconfirm
+                                        title="Delete Question"
+                                        description="Are you sure you want to delete this question? THIS CANNOT BE UNDONE."
+                                        onConfirm={handleDeleteQuestion}
+                                        okText="Delete"
+                                        cancelText="Cancel"
+                                        okButtonProps={{ danger: true }}
+                                    >
+                                        <Button 
+                                            danger 
+                                            icon={<DeleteOutlined />}
+                                        >
+                                            Delete Question
+                                        </Button>
+                                    </Popconfirm>
+                                )}
+                                
+                                {/* Action Buttons */}
+                                <div className="flex justify-end">
+                                    <Button onClick={handleCancel} className="mr-2">Cancel</Button>
+                                    <Button type="primary" htmlType="submit" title={questionData ? "Save Changes" : "Create Question"}>
+                                        {questionData ? "Save Changes" : "Create Question"}
+                                    </Button>
+                                </div>
                             </div>
                         </Form.Item>
                     </>
                 )}
             </Form>
-
         </Modal>
     );
 };
