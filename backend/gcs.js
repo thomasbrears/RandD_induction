@@ -12,4 +12,4 @@ const storage = new Storage({
 // Reference your storage bucket
 const bucket = storage.bucket("r_and_d_induction_files");
 
-export { bucket };
+export { bucket, storage };

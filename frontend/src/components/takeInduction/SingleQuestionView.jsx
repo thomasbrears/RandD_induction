@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import QuestionRenderer from './QuestionRenderer';
 
@@ -16,8 +16,9 @@ const SingleQuestionView = ({
   totalQuestions,
   handleGoToSubmissionScreen,
   QuestionTypes,
-  isReviewMode, // new prop to check if in review mode
-  onCloseReviewModal, // function to close the review modal
+  isReviewMode,
+  onCloseReviewModal,
+  imageUrl
 }) => {
   if (!question) return null;
 
@@ -80,6 +81,18 @@ const SingleQuestionView = ({
               />
             )}
 
+            {/* Display Image if available */}
+            {imageUrl && (
+              <div className="mt-4 max-w-full overflow-hidden rounded-lg">
+                <img
+                  src={imageUrl}
+                  alt="Question Image"
+                  className="w-full h-auto max-h-[500px] object-contain"
+                />
+              </div>
+            )}
+            
+            {/* Question content based on type */}
             <div className="mt-4">
               <QuestionRenderer 
                 question={question}
@@ -141,6 +154,7 @@ SingleQuestionView.propTypes = {
     question: PropTypes.string,
     description: PropTypes.string,
     options: PropTypes.array,
+    imageFile: PropTypes.string,
     isRequired: PropTypes.bool
   }),
   answer: PropTypes.oneOfType([

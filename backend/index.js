@@ -10,6 +10,7 @@ import locationRoutes from "./routes/locationRoutes.js";
 import positionRoutes from "./routes/positionRoutes.js";
 import fileRoutes from "./routes/fileRoutes.js";
 import contentRoutes from "./routes/contentRoutes.js";
+import cronRoutes from "./routes/cronRoutes.js";
 import emailSettingsRoutes from "./routes/emailSettingsRoutes.js";
 
 const app = express();
@@ -51,7 +52,10 @@ app.use(cors(corsOptions));
 
 app.use(express.json());
 
-// Authentication middleware
+// Cron routes (no auth required, secured by API key)
+app.use("/api/cron", cronRoutes);
+
+// Authentication middleware for all other routes
 app.use(authMiddleware);
 
 // Department Routes

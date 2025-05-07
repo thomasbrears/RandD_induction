@@ -13,7 +13,7 @@ import InductionFormHeader from "../../components/InductionFormHeader";
 import InductionFormContent from "../../components/InductionFormContent";
 import { getAllDepartments } from "../../api/DepartmentApi";
 import Loading from "../../components/Loading";
-import { createNewInduction, createDraftInduction, saveDraftInduction } from "../../api/InductionApi";
+import { createNewInduction, updateInduction, createDraftInduction, saveDraftInduction } from "../../api/InductionApi";
 import { useNavigate } from "react-router-dom";
 import TiptapEditor from "../../components/TiptapEditor";
 import { uploadFile } from "../../api/FileApi";
@@ -137,8 +137,10 @@ const InductionCreate = () => {
     return file ? URL.createObjectURL(file) : null;
   };
 
-  const handleUploadNewQuestionFiles = async () => {
+  const handleUploadNewQuestionFiles = async (inductionId) => {
     let updatedInduction = { ...induction };
+
+    const getFileName = (question, file) => `induction_images/${inductionId}/${question.id}_${file.name}`;
 
     for (const q of induction.questions) {
       const hasFileInBuffer = fileBuffer.has(q.id);
@@ -146,7 +148,7 @@ const InductionCreate = () => {
 
       if (hasFileInBuffer) {
         const file = fileBuffer.get(q.id);
-        const finalFileName = `${q.id}_${file.name}`;
+        const finalFileName = getFileName(q, file);
 
         if (currentFileName !== finalFileName) {
           try {
@@ -259,27 +261,40 @@ const InductionCreate = () => {
     setLoading(true);
     setLoadingMessage(`Creating new module...`);
 
-    // Upload files first
-    const updatedInduction = await handleUploadNewQuestionFiles();
+    if (!user) return;
 
-    if (user) {
-      // Set isDraft to false when fully submitting
-      const finalInduction = {
-        ...updatedInduction,
-        isDraft: false
-      };
-      
-      const result = await createNewInduction(user, finalInduction);
+    // First create the induction to get an ID
+    const result = await createNewInduction(user, {
+      ...induction,
+      isDraft: false // Set isDraft to false when fully submitting
+    });
+
+    if (!result || !result.id) {
       setLoading(false);
-      if (result) {
-        // Clear the saved draft since we've successfully submitted
-        clearSavedInductionDraft(tempId, false);
-        
-        notifySuccess("Module created successfully!");
-      } else {
-        messageWarning("Error while creating module.");
-      }
+      messageWarning("Error while creating module.");
+      return;
     }
+
+    // Upload files with the new induction ID
+    const updatedInduction = await handleUploadNewQuestionFiles(result.id);
+
+    // Update the induction with the uploaded file references
+    const fullUpdatedInduction = {
+      ...updatedInduction,
+      id: result.id,
+    };
+    const updateResult = await updateInduction(user, fullUpdatedInduction);
+
+    setLoading(false);
+    if (updateResult) {
+      // Clear the saved draft since we've successfully submitted
+      clearSavedInductionDraft(tempId, false);
+      
+      notifySuccess("Module created successfully!");
+    } else {
+      messageWarning("Module created but failed to update image references.");
+    }
+  
     setShowResult(true);
   };
 

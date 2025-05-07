@@ -19,7 +19,7 @@ export const getAllInductions = async (req, res) => {
 
 // Create a new induction
 export const createInduction = async (req, res) => {
-  const { name, department, description, questions, isDraft } = req.body;
+  const { name, department, description, questions, isDraft, expiryMonths } = req.body;
 
   // Only apply validation for non-draft inductions
   if (!isDraft) {
@@ -48,6 +48,7 @@ export const createInduction = async (req, res) => {
       description: description?.trim() || "",
       questions: questions || [],
       isDraft: isDraft === true,
+      expiryMonths: expiryMonths || null,
       createdAt: new Date(),
     };
 
@@ -86,6 +87,7 @@ export const getInductionById = async (req, res) => {
       description: docData.description || "",
       questions: docData.questions || [],
       isDraft: docData.isDraft === true, // Explicitly convert to boolean
+      expiryMonths: inductionDoc.exists ? inductionDoc.data().expiryMonths : null,
       createdAt: docData.createdAt || null,
       updatedAt: docData.updatedAt || null
     };
@@ -98,8 +100,11 @@ export const getInductionById = async (req, res) => {
 };
 
 export const updateInductionById = async (req, res) => {
-  try {    
-    const { id, name, department, description, questions } = req.body;
+  const { id, name, department, description, questions, expiryMonths } = req.body;
+
+  if (!id || typeof id !== "string") {
+    return res.status(400).json({ message: "Valid induction ID is required" });
+  }
 
     // Validate the ID
     if (!id || typeof id !== "string") {

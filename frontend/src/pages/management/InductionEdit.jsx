@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Helmet } from 'react-helmet-async';
 import InductionFormHeader from "../../components/InductionFormHeader";
 import { useLocation, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import useAuth from "../../hooks/useAuth";
 import { DefaultNewInduction } from "../../models/Inductions";
 import { updateInduction, getInduction, deleteInduction, saveDraftInduction } from "../../api/InductionApi";
@@ -11,9 +10,8 @@ import ManagementSidebar from "../../components/ManagementSidebar";
 import { FaSave, FaCloudUploadAlt } from 'react-icons/fa';
 import Loading from "../../components/Loading";
 import "react-quill/dist/quill.snow.css";
-import InductionFormContent from "../../components/InductionFormContent";
-import { Modal, Button, Tooltip } from "antd";
-import { messageWarning, notifySuccess, messageSuccess } from '../../utils/notificationService';
+import InductionFormContent from "../../components/InductionFormContent";import { Modal, Button, Tooltip } from "antd";
+import { messageWarning, notifySuccess, messageSuccess, notifyError } from '../../utils/notificationService';
 import { getSignedUrl, uploadFile, deleteFile } from "../../api/FileApi";
 import { CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
 import {
@@ -92,15 +90,14 @@ const InductionEdit = () => {
           }));
           setOriginalQuestions(snapshot);
         } catch (err) {
-          setError(err.message || "Failed to load Module");
-          toast.error(err.response?.data?.message || "An error occurred while loading the Module");
+          notifyError(err.response?.data?.message || "An error occurred");
         } finally {
           setLoading(false);
         }
       };
       fetchInduction();
     } else if (!authLoading) {
-      toast.error("No induction was selected. Please select an induction to edit.");
+      messageWarning("No induction was selected. Please select an induction to edit.");
       setTimeout(() => navigate("/management/inductions/view"), 1000);
     }
   }, [id, user, authLoading, navigate]);
@@ -186,6 +183,8 @@ const InductionEdit = () => {
     const oldMap = new Map(originalQuestions.map(q => [q.id, q]));
     const currentIds = new Set(induction.questions.map(q => q.id));
 
+    const getFileName = (question, file) => `induction_images/${induction.id}/${question.id}_${file.name}`;
+
     for (const newQ of induction.questions) {
       const oldQ = oldMap.get(newQ.id);
       const newFileName = newQ.imageFile;
@@ -197,47 +196,33 @@ const InductionEdit = () => {
         continue;
       }
 
-      // === CASE: UPLOAD NEW (no old file, new file exists) ===
-      if (!oldFileName && newFileName) {
-        const file = fileBuffer.get(newQ.id);
-        if (file) {
-          const finalFileName = `${newQ.id}_${file.name}`;
-          uploads.push({ file, finalFileName, question: newQ });
-        }
+      // === UPLOAD NEW or CHANGED ===
+      const file = fileBuffer.get(newQ.id);
+      if ((oldFileName !== newFileName || !oldFileName) && file && newFileName) {
+        if (oldFileName) deletes.push(deleteFile(user, oldFileName));
+
+        const finalFileName = getFileName(newQ, file);
+        uploads.push({ file, finalFileName, question: newQ });
         continue;
       }
 
-      // === CASE: FILENAME CHANGED ===
-      if (oldFileName && newFileName && oldFileName !== newFileName) {
-        deletes.push(deleteFile(user, oldFileName));
-        const file = fileBuffer.get(newQ.id);
-        if (file) {
-          const finalFileName = `${newQ.id}_${file.name}`;
-          uploads.push({ file, finalFileName, question: newQ });
-        }
-        continue;
+      // === NEW QUESTION with FILE ===
+      if (!oldQ && newFileName && file) {
+        const finalFileName = getFileName(newQ, file);
+        uploads.push({ file, finalFileName, question: newQ });
       }
 
-      // === CASE: New question with file ===
-      if (!oldQ && newFileName) {
-        const file = fileBuffer.get(newQ.id);
-        if (file) {
-          const finalFileName = `${newQ.id}_${file.name}`;
-          uploads.push({ file, finalFileName, question: newQ });
-        }
-      }
-
-      // CASE: No changes — skip
+      // No changes — skip
     }
 
-    // === CASE: OLD QUESTION DELETED ENTIRELY ===
+    // === DELETED QUESTIONS ===
     for (const [oldId, oldQ] of oldMap) {
       if (!currentIds.has(oldId) && oldQ.imageFile) {
         deletes.push(deleteFile(user, oldQ.imageFile));
       }
     }
 
-    // === Run deletes ===
+    // === Run deletions ===
     try {
       await Promise.all(deletes);
     } catch (err) {
@@ -352,6 +337,8 @@ const InductionEdit = () => {
     if (actionType === "submit") {
       handleSubmit();
       setConfirmModalVisible(false);
+      setActionType(null);
+      return;
     }
   };
 
@@ -360,73 +347,77 @@ const InductionEdit = () => {
   };
 
   const handleSubmit = async () => {
-    if (submitting) return; // Prevent multiple submission attempts
-    
-    setSubmitting(true);
-    setLoading(true);
-    setLoadingMessage(`Saving the Module's details...`);
-    setError(null); // Reset error state
-    
-    try {
-      // Set a timeout to automatically stop loading after 30 seconds
-      const timeoutId = setTimeout(() => {
-        if (submitting) {
-          setLoading(false);
-          setSubmitting(false);
-          setError("The request timed out. Please try again.");
-          messageWarning("The request is taking longer than expected. Please try again.");
-        }
-      }, 30000);
-      
-      // Handle all of the file uploads and deletion
-      const updatedInduction = await handleSubmitFileChanges();
-      
-      if (user) {
-        const result = await updateInduction(user, updatedInduction);
-        
-        // Clear the timeout since we got a response
-        clearTimeout(timeoutId);
-        
-        if (result) {
-          // Clear the saved draft since we've successfully submitted
-          clearSavedInductionDraft(id, true);
-          
-          notifySuccess("Module updated successfully!");
-          
-          // Update the original questions snapshot to reflect the current state
-          const snapshot = updatedInduction.questions.map((q) => ({
-            id: q.id,
-            imageFile: q.imageFile || null,
-          }));
-          setOriginalQuestions(snapshot);
-          
-          // Navigate to inductions list view after successful update
-          setTimeout(() => {
-            navigate("/management/inductions/view");
-          }, 1500); // Delay to allow the success notification to be seen
-        } else {
-          messageWarning("Error while updating Module.");
-        }
+  if (submitting) return; // Prevent multiple submission attempts
+  
+  setSubmitting(true);
+  setLoading(true);
+  setLoadingMessage(`Saving the Module's details...`);
+  setError(null); // Reset error state
+  
+  try {
+    // Set a timeout to automatically stop loading after 30 seconds
+    const timeoutId = setTimeout(() => {
+      if (submitting) {
+        setLoading(false);
+        setSubmitting(false);
+        setError("The request timed out. Please try again.");
+        messageWarning("The request is taking longer than expected. Please try again.");
       }
-    } catch (err) {
-      // Handle specific error cases
-      if (err.response && err.response.status === 400) {
-        const errorMessage = err.response.data?.message || "Bad request - please check your data";
-        messageWarning(errorMessage);
+    }, 30000);
+    
+    // Handle all of the file uploads and deletion
+    const updatedInduction = await handleSubmitFileChanges();
+    
+    if (user) {
+      const result = await updateInduction(user, updatedInduction);
+      
+      // Clear the timeout since we got a response
+      clearTimeout(timeoutId);
+      
+      if (result) {
+        // Clear the saved draft since we've successfully submitted
+        clearSavedInductionDraft(id, true);
         
-        console.error("Request failed with status 400. Details:", {
-          message: err.message,
-          responseData: err.response.data,
-          sentData: induction
-        });
+        notifySuccess("Module updated successfully!");
+        
+        // Update the original questions snapshot to reflect the current state
+        const snapshot = updatedInduction.questions.map((q) => ({
+          id: q.id,
+          imageFile: q.imageFile || null,
+        }));
+        setOriginalQuestions(snapshot);
+        
+        // Refresh state
+        setInduction(updatedInduction);
+        setFileBuffer(new Map());
+        
+        // Navigate to inductions list view after successful update
+        setTimeout(() => {
+          navigate("/management/inductions/view");
+        }, 1500); // Delay to allow the success notification to be seen
       } else {
-        messageWarning(err.message || "Error while updating Module");
+        messageWarning("Error while updating Module.");
       }
-    } finally {
-      setSubmitting(false);
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    // Handle specific error cases
+    if (err.response && err.response.status === 400) {
+      const errorMessage = err.response.data?.message || "Bad request - please check your data";
+      messageWarning(errorMessage);
+      
+      console.error("Request failed with status 400. Details:", {
+        message: err.message,
+        responseData: err.response.data,
+        sentData: induction
+      });
+    } else {
+      messageWarning(err.message || "Error while updating Module");
+    }
+  } finally {
+    setSubmitting(false);
+    setLoading(false);
+  }
+};
 
   const checkForMissingFields = () => {
     const missingFields = [];

@@ -154,12 +154,12 @@ const ContactForm = () => {
   return (
     <div className="w-full max-w-2xl mx-auto bg-white p-8 rounded-lg shadow-md">
 
-      <p className="mt-4 text-base text-center text-black mb-6">
+      <div className="mt-4 text-base text-center text-black mb-6">
         <DynamicContent 
           section="contact-page-content" 
           fallbackText="Have questions or feedback? We'd love to hear from you! Fill out the form below and we'll get back to you as soon as possible."
         />
-      </p>
+      </div>
 
       {successMessage && (
         <div className="mb-6 p-4 bg-green-100 border-l-4 border-green-500 text-green-700">
