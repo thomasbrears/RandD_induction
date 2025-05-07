@@ -94,10 +94,10 @@ export const deactivateUser = async (user, uid) => {
   try {
     const token = user?.token;
     const headers = token ? { authtoken: token } : {};
-    const response = await axios.post(`${API_URL}/users/deactivate-user`, null, {
-      headers,
-      params: { uid },
-    });
+    const response = await axios.post(`${API_URL}/users/deactivate-user`, 
+      { uid },
+      { headers }
+    );
     return response.data;
   } catch (error) {
     console.error("Error deactivating user:", error);
@@ -109,10 +109,10 @@ export const reactivateUser = async (user, uid) => {
   try {
     const token = user?.token;
     const headers = token ? { authtoken: token } : {};
-    const response = await axios.post(`${API_URL}/users/reactivate-user`, null, {
-      headers,
-      params: { uid },
-    });
+    const response = await axios.post(`${API_URL}/users/reactivate-user`, 
+      { uid },
+      { headers }
+    );
     return response.data;
   } catch (error) {
     console.error("Error reactivating user:", error);

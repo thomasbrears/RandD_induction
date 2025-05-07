@@ -53,7 +53,13 @@ const ResultsHub = () => {
       setLoadingUsers(true);
       try {
         const data = await getAllUsers(currentUser);
-        setUsers(data);
+        // Sort users alphabetically by name
+        const sortedUsers = data.sort((a, b) => {
+          const nameA = a.displayName || `${a.firstName || ''} ${a.lastName || ''}`.trim() || a.email || '';
+          const nameB = b.displayName || `${b.firstName || ''} ${b.lastName || ''}`.trim() || b.email || '';
+          return nameA.localeCompare(nameB);
+        });
+        setUsers(sortedUsers);
       } catch (error) {
         console.error("Error fetching users:", error);
         notifyError("Failed to load users", "Please try again later");
@@ -80,11 +86,20 @@ const ResultsHub = () => {
       try {
         const userInductionsData = await getUserInductions(currentUser, selectedUser);
         const completedInductions = userInductionsData.filter(ind => ind.status === 'complete');
-        setSelectedUserInductions(completedInductions);
+        
+        // Sort completed inductions by completedAt date (newest first)
+        const sortedInductions = completedInductions.sort((a, b) => {
+          // If completedAt is not available, use dueDate as fallback
+          const dateA = a.completedAt ? new Date(a.completedAt) : a.dueDate ? new Date(a.dueDate) : new Date(0);
+          const dateB = b.completedAt ? new Date(b.completedAt) : b.dueDate ? new Date(b.dueDate) : new Date(0);
+          return dateB - dateA; // Descending order (newest first)
+        });
+        
+        setSelectedUserInductions(sortedInductions);
         
         // Set the first induction as selected by default if available
-        if (completedInductions.length > 0) {
-          setSelectedUserInductionId(completedInductions[0].id);
+        if (sortedInductions.length > 0) {
+          setSelectedUserInductionId(sortedInductions[0].id);
         } else {
           setSelectedUserInductionId(null);
         }
@@ -237,7 +252,9 @@ const ResultsHub = () => {
               >
                 {users.map(user => (
                   <Option key={user.uid} value={user.uid}>
-                    {user.displayName || user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email}
+                    {user.displayName || (user.firstName && user.lastName) 
+                      ? `${user.firstName || ''} ${user.lastName || user.displayName || ''}${user.email ? ` (${user.email})` : ''}`
+                      : user.email}
                   </Option>
                 ))}
               </Select>
@@ -263,9 +280,19 @@ const ResultsHub = () => {
                   disabled={!selectedUser || selectedUserInductions.length === 0}
                   value={selectedUserInductionId}
                   onChange={setSelectedUserInductionId}
+                  showSearch
+                  optionFilterProp="label"
+                  filterOption={(input, option) => {
+                    // Using option.label (the text value) for filtering
+                    return option.label.toLowerCase().indexOf(input.toLowerCase()) >= 0;
+                  }}
                 >
                   {selectedUserInductions.map(induction => (
-                    <Option key={induction.id} value={induction.id}>
+                    <Option 
+                      key={induction.id} 
+                      value={induction.id}
+                      label={induction.inductionName || "Unnamed Induction"}
+                    >
                       <div className="flex items-center justify-between">
                         <div>{induction.inductionName || "Unnamed Induction"}</div>
                         <div className="flex items-center">

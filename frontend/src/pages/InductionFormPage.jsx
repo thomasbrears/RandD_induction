@@ -10,6 +10,7 @@ import SaveRecoveryModal from '../components/takeInduction/SaveRecoveryModal';
 import QuestionTypes from '../models/QuestionTypes';
 import { notifyError, notifySuccess, messageError, messageSuccess } from '../utils/notificationService';
 import { ArrowLeftOutlined } from '@ant-design/icons';
+import { getSignedUrl, uploadFile } from '../api/FileApi';
 
 import InductionIntro from '../components/takeInduction/InductionIntro';
 import ProgressBar from '../components/takeInduction/ProgressBar';
@@ -55,6 +56,7 @@ const InductionFormPage = () => {
   const [viewState, setViewState] = useState(STATES.LOADING);
   const [induction, setInduction] = useState(null);
   const [userInduction, setUserInduction] = useState(null);
+  const [imageUrls, setImageUrls] = useState({});
   
   // Missing state variables that were causing errors
   const [loading, setLoading] = useState(true);
@@ -161,11 +163,29 @@ const InductionFormPage = () => {
             // If the induction details are already embedded in the response
             inductionRef.current = normalizedUserInduction.induction;
             stateRef.current = STATES.SUCCESS;
+
+            //Loading Images 
+            const imageUrlsMap = {};
+            const questions = normalizedUserInduction.induction.questions || [];
+
+            await Promise.all(
+              questions.map(async (q, index) => {
+                if (q.imageFile) {
+                  try {
+                    const result = await getSignedUrl(user, q.imageFile);
+                    imageUrlsMap[index] = result.url;
+                  } catch (err) {
+                    console.warn(`Could not fetch image for question ${index}`, err);
+                  }
+                }
+              })
+            );
             
             if (mounted) {
               window.requestAnimationFrame(() => {
                 setUserInduction(normalizedUserInduction);
                 setInduction(normalizedUserInduction.induction);
+                setImageUrls(imageUrlsMap);
                 setViewState(STATES.SUCCESS);
                 setLoading(false);
               });
@@ -177,11 +197,29 @@ const InductionFormPage = () => {
             if (inductionData) {
               inductionRef.current = inductionData;
               stateRef.current = STATES.SUCCESS;
+
+              //Loading Images 
+              const imageUrlsMap = {};
+              const questions = inductionData.questions || [];
+
+              await Promise.all(
+                questions.map(async (q, index) => {
+                  if (q.imageFile) {
+                    try {
+                      const result = await getSignedUrl(user, q.imageFile);
+                      imageUrlsMap[index] = result.url;
+                    } catch (err) {
+                      console.warn(`Could not fetch image for question ${index}`, err);
+                    }
+                  }
+                })
+              );
               
               if (mounted) {
                 window.requestAnimationFrame(() => {
                   setUserInduction(normalizedUserInduction);
                   setInduction(inductionData);
+                  setImageUrls(imageUrlsMap);
                   setViewState(STATES.SUCCESS);
                   setLoading(false);
                 });
@@ -600,7 +638,8 @@ const InductionFormPage = () => {
     
     try {
       // Format answers for storage
-      const formattedAnswers = formatAnswersForSubmission(induction.questions, answers);
+      const updatedAnswers = await handleUserFileUpload(induction.questions, answers);
+      const formattedAnswers = formatAnswersForSubmission(induction.questions, updatedAnswers);
       
       // Mark induction as complete in the database with answers
       if (userInduction) {
@@ -623,6 +662,34 @@ const InductionFormPage = () => {
       notifyError('Error', 'Failed to save induction completion. Please try again.');
       setIsSubmitting(false);
     }
+  };
+
+  const handleUserFileUpload = async (questions, answers) => {
+    const getFileName = ( file, question) =>
+      `induction_file_uploads/${idParam}_${question.id}_${file.name}`;
+
+    const updatedAnswers = { ...answers };
+  
+    for (const question of questions) {
+      const answer = updatedAnswers[question.id];
+    
+      if (question.type === QuestionTypes.FILE_UPLOAD && answer) {
+        try {
+          const finalFileName = getFileName(answer, question);
+          const response = await uploadFile(user, answer, finalFileName);
+          const newFileName = response.gcsFileName || finalFileName;
+    
+          updatedAnswers[question.id] = {
+            file: answer,
+            uploadedName: newFileName,
+          };
+        } catch (err) {
+          notifyError(`Upload failed for ${answer.name}`, err);
+        }
+      }
+    }
+
+    return updatedAnswers;
   };
 
   // Handle feedback modal close
@@ -727,6 +794,7 @@ const InductionFormPage = () => {
                               totalQuestions={induction.questions.length}
                               handleGoToSubmissionScreen={handleGoToSubmissionScreen}
                               QuestionTypes={QuestionTypes}
+                              imageUrl={imageUrls[currentQuestionIndex]}
                             />
                           )}
                         </form>

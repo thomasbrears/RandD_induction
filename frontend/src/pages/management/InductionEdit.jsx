@@ -1,25 +1,33 @@
-import React, { useState, useEffect } from "react";
-import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set page head for titles, seo etc
+import React, { useState, useEffect, useCallback } from "react";
+import { Helmet } from 'react-helmet-async';
 import InductionFormHeader from "../../components/InductionFormHeader";
 import { useLocation, useNavigate } from 'react-router-dom';
-import { toast } from 'react-toastify';
 import useAuth from "../../hooks/useAuth";
 import { DefaultNewInduction } from "../../models/Inductions";
-import { updateInduction, getInduction, deleteInduction } from "../../api/InductionApi";
+import { updateInduction, getInduction, deleteInduction, saveDraftInduction } from "../../api/InductionApi";
 import PageHeader from "../../components/PageHeader";
 import ManagementSidebar from "../../components/ManagementSidebar";
-import { FaSave } from 'react-icons/fa';
+import { FaSave, FaCloudUploadAlt } from 'react-icons/fa';
 import Loading from "../../components/Loading";
 import "react-quill/dist/quill.snow.css";
-import InductionFormContent from "../../components/InductionFormContent";
-import { Modal, Button } from "antd";
-import { messageWarning, notifySuccess } from '../../utils/notificationService';
+import InductionFormContent from "../../components/InductionFormContent";import { Modal, Button, Tooltip } from "antd";
+import { messageWarning, notifySuccess, messageSuccess, notifyError } from '../../utils/notificationService';
 import { getSignedUrl, uploadFile, deleteFile } from "../../api/FileApi";
+import { CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
+import {
+  saveInductionDraftToLocalStorage,
+  loadInductionDraftFromLocalStorage,
+  hasSavedInductionDraft,
+  clearSavedInductionDraft,
+  setupInductionDraftTracking
+} from "../../utils/InductionAutoSave";
+import InductionDraftRecoveryModal from "../../components/InductionDraftRecoveryModal";
 
 const InductionEdit = () => {
   const { user, loading: authLoading } = useAuth();
   const [induction, setInduction] = useState(DefaultNewInduction);
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const location = useLocation();
   const navigate = useNavigate();
@@ -28,15 +36,52 @@ const InductionEdit = () => {
   const [confirmModalVisible, setConfirmModalVisible] = useState(false);
   const [originalQuestions, setOriginalQuestions] = useState([]);
   const [fileBuffer, setFileBuffer] = useState(new Map());
+  const [error, setError] = useState(null);
+
+  const [lastSaved, setLastSaved] = useState(null);
+  const [showRecoveryModal, setShowRecoveryModal] = useState(false);
+  const [savedDraft, setSavedDraft] = useState(null);
+
+  // Get the current induction data (used by auto-save)
+  const getCurrentInductionData = useCallback(() => {
+    return induction;
+  }, [induction]);
 
   useEffect(() => {
     if (id && !authLoading) {
       const fetchInduction = async () => {
         try {
           setLoading(true);
-          setLoadingMessage(`Loading the inductions's details...`);
+          setLoadingMessage(`Loading the Module's details...`);
+          setError(null); // Reset error state
+          
+          // Check if theres a saved draft
+          if (hasSavedInductionDraft(id, true)) {
+            const draft = loadInductionDraftFromLocalStorage(id, true);
+            if (draft) {
+              setSavedDraft({
+                ...draft,
+                lastUpdated: new Date().toISOString()
+              });
+              setShowRecoveryModal(true);
+            }
+          }
+          
           const inductionData = await getInduction(user, id);
-          setInduction(inductionData);
+          
+          // Ensure the isDraft flag is properly set - convert to explicit boolean
+          console.log("Loaded Module data:", inductionData);
+          console.log("Raw isDraft status:", inductionData.isDraft);
+          
+          // Force the isDraft property to be a boolean
+          const normalizedInductionData = {
+            ...inductionData,
+            isDraft: inductionData.isDraft === true || inductionData.isDraft === "true"
+          };
+          
+          console.log("Normalized isDraft status:", normalizedInductionData.isDraft);
+          
+          setInduction(normalizedInductionData);
 
           // Create snapshot of original questions
           const snapshot = inductionData.questions.map((q) => ({
@@ -45,17 +90,59 @@ const InductionEdit = () => {
           }));
           setOriginalQuestions(snapshot);
         } catch (err) {
-          toast.error(err.response?.data?.message || "An error occurred");
+          notifyError(err.response?.data?.message || "An error occurred");
         } finally {
           setLoading(false);
         }
       };
       fetchInduction();
     } else if (!authLoading) {
-      toast.error("No induction was selected. Please select an induction to edit.");
+      messageWarning("No induction was selected. Please select an induction to edit.");
       setTimeout(() => navigate("/management/inductions/view"), 1000);
     }
   }, [id, user, authLoading, navigate]);
+
+  // Auto-save tracking
+  useEffect(() => {
+    if (id) {
+      // Auto-save tracking
+      const cleanupFunction = setupInductionDraftTracking(
+        id,
+        getCurrentInductionData,
+        setLastSaved,
+        true // isEditing = true
+      );
+      
+      // Cleanup function for when component unmounts
+      return cleanupFunction;
+    }
+  }, [id, getCurrentInductionData]);
+
+  // Manual save to localStorage when induction state changes
+  useEffect(() => {
+    if (id && induction.id) {
+      // Only save if not in loading state and we have data
+      if (!loading && !submitting) {
+        saveInductionDraftToLocalStorage(id, induction, setLastSaved, true);
+      }
+    }
+  }, [induction, id, loading, submitting]);
+
+  // Handle recovering saved draft
+  const handleRecoverDraft = () => {
+    if (savedDraft) {
+      setInduction(savedDraft);
+      setShowRecoveryModal(false);
+      messageSuccess("Draft recovered successfully!");
+    }
+  };
+
+  // Handle start without recent changes (discard draft)
+  const handleStartFresh = () => {
+    clearSavedInductionDraft(id, true);
+    setShowRecoveryModal(false);
+    messageSuccess("Discarding draft and using last saved version.");
+  };
 
   //File handling
   const handleFileBufferUpdate = (questionId, file) => {
@@ -96,6 +183,8 @@ const InductionEdit = () => {
     const oldMap = new Map(originalQuestions.map(q => [q.id, q]));
     const currentIds = new Set(induction.questions.map(q => q.id));
 
+    const getFileName = (question, file) => `induction_images/${induction.id}/${question.id}_${file.name}`;
+
     for (const newQ of induction.questions) {
       const oldQ = oldMap.get(newQ.id);
       const newFileName = newQ.imageFile;
@@ -107,47 +196,33 @@ const InductionEdit = () => {
         continue;
       }
 
-      // === CASE: UPLOAD NEW (no old file, new file exists) ===
-      if (!oldFileName && newFileName) {
-        const file = fileBuffer.get(newQ.id);
-        if (file) {
-          const finalFileName = `${newQ.id}_${file.name}`;
-          uploads.push({ file, finalFileName, question: newQ });
-        }
+      // === UPLOAD NEW or CHANGED ===
+      const file = fileBuffer.get(newQ.id);
+      if ((oldFileName !== newFileName || !oldFileName) && file && newFileName) {
+        if (oldFileName) deletes.push(deleteFile(user, oldFileName));
+
+        const finalFileName = getFileName(newQ, file);
+        uploads.push({ file, finalFileName, question: newQ });
         continue;
       }
 
-      // === CASE: FILENAME CHANGED ===
-      if (oldFileName && newFileName && oldFileName !== newFileName) {
-        deletes.push(deleteFile(user, oldFileName));
-        const file = fileBuffer.get(newQ.id);
-        if (file) {
-          const finalFileName = `${newQ.id}_${file.name}`;
-          uploads.push({ file, finalFileName, question: newQ });
-        }
-        continue;
+      // === NEW QUESTION with FILE ===
+      if (!oldQ && newFileName && file) {
+        const finalFileName = getFileName(newQ, file);
+        uploads.push({ file, finalFileName, question: newQ });
       }
 
-      // === CASE: New question with file ===
-      if (!oldQ && newFileName) {
-        const file = fileBuffer.get(newQ.id);
-        if (file) {
-          const finalFileName = `${newQ.id}_${file.name}`;
-          uploads.push({ file, finalFileName, question: newQ });
-        }
-      }
-
-      // CASE: No changes — skip
+      // No changes — skip
     }
 
-    // === CASE: OLD QUESTION DELETED ENTIRELY ===
+    // === DELETED QUESTIONS ===
     for (const [oldId, oldQ] of oldMap) {
       if (!currentIds.has(oldId) && oldQ.imageFile) {
         deletes.push(deleteFile(user, oldQ.imageFile));
       }
     }
 
-    // === Run deletes ===
+    // === Run deletions ===
     try {
       await Promise.all(deletes);
     } catch (err) {
@@ -170,6 +245,61 @@ const InductionEdit = () => {
     }
 
     return updatedInduction;
+  };
+
+  // New function to save as draft to the database
+  const handleSaveDraft = async () => {
+    if (loading || submitting) return; // Prevent action while loading
+
+    // Only allow saving as draft if the induction is already a draft
+    // Use explicit comparison with boolean true to handle cases where isDraft might be undefined
+    if (induction.isDraft !== true) {
+      console.error("Attempted to save non-draft Module as draft", induction);
+      messageWarning("Only draft Modules can be saved as drafts.");
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      setLoadingMessage("Saving draft to database...");
+      
+      // First handle any file uploads
+      const updatedInduction = await handleSubmitFileChanges();
+      
+      // Log the induction state before saving
+      console.log("Saving draft induction:", {
+        ...updatedInduction,
+        isDraft: true
+      });
+      
+      // Ensure it's marked as a draft and save to database
+      const result = await saveDraftInduction(user, {
+        ...updatedInduction,
+        isDraft: true
+      });
+      
+      if (result) {
+        // Update the induction state with the returned data
+        setInduction({
+          ...updatedInduction,
+          isDraft: true
+        });
+        
+        // Clear local draft since we've saved to DB
+        clearSavedInductionDraft(id, true);
+        
+        messageSuccess("Draft saved to database successfully!");
+        
+        // Don't navigate away - allow the user to continue editing
+      } else {
+        messageWarning("Error while saving draft Module.");
+      }
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      messageWarning(error.message || "Error saving draft");
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDeleteFileChanges = async () => {
@@ -195,18 +325,19 @@ const InductionEdit = () => {
 
     if (missingFields.length === 0) {
       setActionType("submit");
+      setConfirmModalVisible(true);
     } else {
       messageWarning(`Please fill in the following fields: ${missingFields.join(", ")}`);
       setActionType("prompt");
+      setConfirmModalVisible(true);
     }
-
-    setConfirmModalVisible(true);
   };
 
   const confirmSubmitActionHandler = () => {
     if (actionType === "submit") {
       handleSubmit();
       setConfirmModalVisible(false);
+      setActionType(null);
       return;
     }
   };
@@ -216,22 +347,77 @@ const InductionEdit = () => {
   };
 
   const handleSubmit = async () => {
-    setLoading(true);
-    setLoadingMessage(`Saving the induction's details...`);
-
+  if (submitting) return; // Prevent multiple submission attempts
+  
+  setSubmitting(true);
+  setLoading(true);
+  setLoadingMessage(`Saving the Module's details...`);
+  setError(null); // Reset error state
+  
+  try {
+    // Set a timeout to automatically stop loading after 30 seconds
+    const timeoutId = setTimeout(() => {
+      if (submitting) {
+        setLoading(false);
+        setSubmitting(false);
+        setError("The request timed out. Please try again.");
+        messageWarning("The request is taking longer than expected. Please try again.");
+      }
+    }, 30000);
+    
     // Handle all of the file uploads and deletion
     const updatedInduction = await handleSubmitFileChanges();
-
+    
     if (user) {
       const result = await updateInduction(user, updatedInduction);
-      setLoading(false);
+      
+      // Clear the timeout since we got a response
+      clearTimeout(timeoutId);
+      
       if (result) {
-        notifySuccess("Induction updated successfully!");
+        // Clear the saved draft since we've successfully submitted
+        clearSavedInductionDraft(id, true);
+        
+        notifySuccess("Module updated successfully!");
+        
+        // Update the original questions snapshot to reflect the current state
+        const snapshot = updatedInduction.questions.map((q) => ({
+          id: q.id,
+          imageFile: q.imageFile || null,
+        }));
+        setOriginalQuestions(snapshot);
+        
+        // Refresh state
+        setInduction(updatedInduction);
+        setFileBuffer(new Map());
+        
+        // Navigate to inductions list view after successful update
+        setTimeout(() => {
+          navigate("/management/inductions/view");
+        }, 1500); // Delay to allow the success notification to be seen
       } else {
-        messageWarning("Error while updating induction.");
+        messageWarning("Error while updating Module.");
       }
     }
-  };
+  } catch (err) {
+    // Handle specific error cases
+    if (err.response && err.response.status === 400) {
+      const errorMessage = err.response.data?.message || "Bad request - please check your data";
+      messageWarning(errorMessage);
+      
+      console.error("Request failed with status 400. Details:", {
+        message: err.message,
+        responseData: err.response.data,
+        sentData: induction
+      });
+    } else {
+      messageWarning(err.message || "Error while updating Module");
+    }
+  } finally {
+    setSubmitting(false);
+    setLoading(false);
+  }
+};
 
   const checkForMissingFields = () => {
     const missingFields = [];
@@ -242,10 +428,10 @@ const InductionEdit = () => {
     };
 
     if (!induction.name || induction.name.trim() === "") {
-      missingFields.push("Induction needs a name.");
+      missingFields.push("Module needs a name.");
     }
     if (!induction.description || isContentEmpty(induction.description)) {
-      missingFields.push("Induction needs a description.");
+      missingFields.push("Module needs a description.");
     }
     if (induction.department === "Select a department" || !induction.department) {
       missingFields.push("Please select a department.");
@@ -258,31 +444,52 @@ const InductionEdit = () => {
   };
 
   const onDeleteInduction = async () => {
-    if (user) {
-      //Delete all files from gcs
-      await handleDeleteFileChanges();
+    setLoading(true);
+    setLoadingMessage("Deleting Module...");
+    
+    try {
+      if (user) {
+        //Delete all files from gcs
+        await handleDeleteFileChanges();
+        
+        // Clear any saved drafts
+        clearSavedInductionDraft(id, true);
 
-      const result = await deleteInduction(user, induction.id);
-      if (result) {
-        notifySuccess("Induction deleted successfully!");
-        navigate(-1);
-      } else {
-        messageWarning("Error while deleting induction.");
+        const result = await deleteInduction(user, induction.id);
+        if (result) {
+          notifySuccess("Module deleted successfully!");
+          navigate("/management/inductions/view");
+        } else {
+          messageWarning("Error while deleting Module.");
+        }
       }
+    } catch (err) {
+      messageWarning(err.message || "Error while deleting Module");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
     <>
-      <Helmet><title>Edit Induction | AUT Events Induction Portal</title></Helmet>
+      <Helmet><title>Edit Module | AUT Events Induction Portal</title></Helmet>
 
       {/* Page Header */}
-      <PageHeader title="Edit Induction" subtext={""} />
+      <PageHeader title="Edit Module" subtext={""} />
+
+      {/* Local Draft recovery modal */}
+      <InductionDraftRecoveryModal
+        isVisible={showRecoveryModal}
+        onRecover={handleRecoverDraft}
+        onStartFresh={handleStartFresh}
+        savedDraft={savedDraft}
+        mode="edit"
+      />
 
       {/* Main content area */}
       {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
+      
       <div className="flex bg-gray-50 w-full">
-
         {/* Management Sidebar */}
         <div className="hidden md:flex">
           <ManagementSidebar />
@@ -317,7 +524,7 @@ const InductionEdit = () => {
               }
             >
               <>
-                {actionType === "submit" && <p>Are you sure you want to submit this induction?</p>}
+                {actionType === "submit" && <p>Are you sure you want to submit this Module?</p>}
                 {actionType === "prompt" && (
                   <>
                     <p>Some details are missing. Please review the list below and try again.</p>
@@ -346,36 +553,55 @@ const InductionEdit = () => {
                 induction={induction}
                 setInduction={setInduction}
                 handleSubmit={handleSubmitButton}
+                handleSaveDraft={induction.isDraft ? handleSaveDraft : undefined}
                 isCreatingInduction={false}
-                onDeleteInduction={onDeleteInduction}
+                lastSaved={lastSaved}
+                showAutoSave={true}
               />
 
               {/* Main content for managing induction details */}
               <div className="p-4 mx-auto w-full max-w-full sm:max-w-3xl md:max-w-4xl lg:max-w-5xl space-y-6">
-
                 <InductionFormContent
                   induction={induction}
                   setInduction={setInduction}
                   getImageUrl={getImageUrl}
                   saveFileChange={handleFileBufferUpdate}
+                  onDeleteInduction={onDeleteInduction}
                 />
 
                 {/* Save Button */}
-                <div className="flex justify-center mt-6">
+                <div className="flex justify-center gap-4 mt-6">
+                  {/* Save as Draft Button - Only show for existing draft inductions */}
+                  {induction.isDraft && (
+                    <Tooltip title="Save as draft to the database - This makes the module available for others to view and edit. However cannot be assigned to users until published.">
+                      <Button
+                        type="default"
+                        onClick={handleSaveDraft}
+                        disabled={loading || submitting}
+                        className={`bg-yellow-50 border-yellow-300 text-yellow-700 hover:bg-yellow-100 hover:border-yellow-400 px-4 py-5 text-base rounded-md ${(loading || submitting) ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        icon={<FaCloudUploadAlt className="mr-2" />}
+                      > 
+                        {(loading && loadingMessage === "Saving draft to database...") ? "Saving..." : "Save as Draft"}
+                      </Button>
+                    </Tooltip>
+                  )}
+                  
+                  {/* Save/Publish Button */}
                   <Button
                     type="primary"
                     onClick={handleSubmitButton}
-                    className="text-white bg-gray-800 hover:bg-gray-900 px-4 py-5 text-base rounded-md"
-                    title="Save Induction"
+                    disabled={submitting} // Disable button when submitting
+                    className={`text-white bg-gray-800 hover:bg-gray-900 px-4 py-5 text-base rounded-md ${submitting ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    title={induction.isDraft ? "Publish Module" : "Save Changes"}
                   >
-                    <FaSave className="inline mr-2" /> Save Induction
+                    <FaSave className="inline mr-2" /> {induction.isDraft ? "Publish" : "Save"} Module
                   </Button>
                 </div>
               </div>
             </div>
           </>
         )}
-      </div >
+      </div>
     </>
   );
 };
