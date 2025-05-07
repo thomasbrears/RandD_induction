@@ -11,6 +11,12 @@
       "config": { "distDir": "build" }
     }
   ],
+  "crons": [
+    {
+      "path": "/api/cron/update-overdue?apiKey=${CRON_API_KEY}",
+      "schedule": "0 0 * * *"
+    }
+  ],
   "routes": [
     {
       "src": "/api/(.*)",
