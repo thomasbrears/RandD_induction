@@ -4,7 +4,7 @@ import QuestionList from "../components/questions/QuestionList";
 import QuestionForm from "../components/questions/QuestionForm";
 import TiptapEditor from "./TiptapEditor";
 import { Select, Input, Button, Popconfirm } from "antd";
-import { DeleteOutlined } from "@ant-design/icons";
+import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useLocation } from "react-router-dom";
 
 const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileChange, onDeleteInduction }) => {
@@ -212,12 +212,12 @@ const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileCh
                         <p className="text-sm text-gray-500">Create, edit and arrange questions for this module</p>
                     </div>
                     <button
-                        className="text-white bg-blue-600 hover:bg-blue-900 px-4 py-2 rounded-md"
+                        className="text-white bg-blue-600 hover:bg-blue-900 px-4 py-2 rounded-md flex items-center gap-2"
                         type="button"
                         onClick={handleAddQuestion}
                         title="Add Question"
                     >
-                        Add Question
+                        <PlusOutlined /> Add Question
                     </button>
                 </div>
 
@@ -234,12 +234,12 @@ const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileCh
                 {induction.questions.length > 0 && (
                     <div className="mt-6 flex justify-center">
                         <button
-                            className="text-white bg-blue-600 hover:bg-blue-900 px-4 py-2 rounded-md"
+                            className="text-white bg-blue-600 hover:bg-blue-900 px-4 py-2 rounded-md flex items-center gap-2"
                             type="button"
                             onClick={handleAddQuestion}
                             title="Add Question"
                         >
-                            Add Question
+                            <PlusOutlined /> Add Question
                         </button>
                     </div>
                 )}

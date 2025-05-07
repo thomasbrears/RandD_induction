@@ -16,6 +16,7 @@ import {
 import QuestionItem from "./QuestionItem";
 import { FaArrowsUpDown } from "react-icons/fa6";
 import QuestionForm from "./QuestionForm";
+import { v4 as uuidv4 } from 'uuid';
 
 const QuestionList = ({ questions = [], setQuestions, onQuestionEdit, getImageUrl, saveFileChange }) => {
   const [showQuestionModal, setShowQuestionModal] = useState(false);
@@ -68,6 +69,24 @@ const QuestionList = ({ questions = [], setQuestions, onQuestionEdit, getImageUr
     setEditingQuestion(null);
   };
 
+  const handleQuestionDuplicate = (questionToDuplicate) => {
+    // Create a deep copy of the question with a new ID
+    const duplicatedQuestion = {
+      ...JSON.parse(JSON.stringify(questionToDuplicate)),
+      id: uuidv4(), // Generate a new ID for the duplicated question
+      question: `${questionToDuplicate.question} (Copy)`, // Add "(Copy)" to the question text
+      imageFile: null // Don't duplicate the image file, just set it to null
+    };
+
+    // Add the duplicated question right after the original one
+    setQuestions((prevQuestions) => {
+      const originalIndex = prevQuestions.findIndex(q => q.id === questionToDuplicate.id);
+      const newQuestions = [...prevQuestions];
+      newQuestions.splice(originalIndex + 1, 0, duplicatedQuestion);
+      return newQuestions;
+    });
+  };
+
   return (
     <div className="space-y-4">
       {/* Question Form Modal */}
@@ -90,6 +109,7 @@ const QuestionList = ({ questions = [], setQuestions, onQuestionEdit, getImageUr
                 question={question}
                 onDeleteQuestion={handleQuestionDelete}
                 onQuestionEdit={handleQuestionEdit}
+                onQuestionDuplicate={handleQuestionDuplicate}
                 index={index} 
                 getImageUrl={getImageUrl}
               />

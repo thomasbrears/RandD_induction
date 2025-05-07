@@ -581,7 +581,7 @@ const InductionCreate = () => {
                         setActionType("saveDraft");
                         setConfirmModalVisible(true);
                       }}
-                      className="bg-yellow-50 border-yellow-300 text-yellow-700 hover:bg-yellow-100 hover:border-yellow-400"
+                      className="bg-yellow-50 border-yellow-300 text-yellow-700 hover:bg-yellow-100 hover:border-yellow-400 px-4 py-5 text-base rounded-md"
                       icon={<CloudOutlined />}
                     >
                       Save as Draft
