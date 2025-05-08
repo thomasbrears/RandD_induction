@@ -11,10 +11,22 @@ import FileUploadQuestion from "./FileUploadQuestion";
 import YesNoQuestion from "./YesNoQuestion";
 import ShortAnswerQuestion from "./ShortAnswerQuestion";
 import InformationQuestion from "./InformationQuestion";
-import { FaChevronDown, FaChevronUp, FaEdit, FaCopy } from 'react-icons/fa';
+import { FaChevronDown, FaChevronUp, FaEdit, FaCopy, FaYoutube } from 'react-icons/fa';
 import { FaArrowsUpDown } from 'react-icons/fa6';
 import { DeleteOutlined } from '@ant-design/icons';
 import QuestionTypes from "../../models/QuestionTypes";
+
+// Helper function to extract YouTube video ID
+const extractYoutubeId = (url) => {
+    if (!url) return null;
+    
+    // Match patterns like: https://www.youtube.com/watch?v=VIDEO_ID, 
+    // https://youtu.be/VIDEO_ID, or youtube.com/embed/VIDEO_ID
+    const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+    const match = url.match(regex);
+    
+    return match ? match[1] : null;
+};
 
 const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, onQuestionDuplicate, index, getImageUrl }) => {
     const [hasExpandedBefore, setHasExpandedBefore] = useState(false);
@@ -23,10 +35,29 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, onQuestionDu
     const [maxHeight, setMaxHeight] = useState("0px");
     const [isAnimating, setIsAnimating] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [imageUrl, setImageUrl] = useState(null);
     
     // Refs for the areas we want to exclude from edit click
     const actionsRef = useRef(null);
     const dragHandleRef = useRef(null);
+
+    // Load image if available
+    useEffect(() => {
+        if (question.imageFile) {
+            const loadImage = async () => {
+                try {
+                    const url = await getImageUrl(question.id);
+                    setImageUrl(url);
+                } catch (error) {
+                    console.error("Error loading image:", error);
+                    setImageUrl(null);
+                }
+            };
+            loadImage();
+        } else {
+            setImageUrl(null);
+        }
+    }, [question.imageFile, question.id, getImageUrl]);
 
     const toggleExpand = (e) => {
         e.stopPropagation();
@@ -117,46 +148,104 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, onQuestionDu
         }
     }, [isExpanded]);
 
+    // Render YouTube video preview
+    const renderYoutubePreview = () => {
+        if (!question.youtubeUrl) return null;
+        
+        const videoId = extractYoutubeId(question.youtubeUrl);
+        if (!videoId) return null;
+        
+        return (
+            <div className="mt-3 flex items-center space-x-2 bg-gray-50 p-2 rounded-md border border-gray-200">
+                <img 
+                    src={`https://img.youtube.com/vi/${videoId}/mqdefault.jpg`} 
+                    alt="YouTube video thumbnail" 
+                    className="w-20 h-auto rounded"
+                />
+                <div className="flex flex-col">
+                    <div className="flex items-center text-sm text-gray-700">
+                        <FaYoutube className="text-red-600 mr-1" />
+                        YouTube Video
+                    </div>
+                    <a 
+                        href={question.youtubeUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-xs text-blue-600 hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        Open in YouTube
+                    </a>
+                </div>
+            </div>
+        );
+    };
+
     const renderQuestion = () => {
-        switch (question.type) {
-            case QuestionTypes.TRUE_FALSE:
-                return <TrueFalseQuestion
-                    question={question}
-                    getImageUrl={getImageUrl}
-                />;
-            case QuestionTypes.MULTICHOICE:
-                return <MultichoiceQuestion
-                    question={question}
-                    getImageUrl={getImageUrl}
-                />;
-            case QuestionTypes.DROPDOWN:
-                return <DropdownQuestion
-                    question={question}
-                    getImageUrl={getImageUrl}
-                />;
-            case QuestionTypes.FILE_UPLOAD:
-                return <FileUploadQuestion
-                    question={question}
-                    getImageUrl={getImageUrl}
-                />;
-            case QuestionTypes.YES_NO:
-                return <YesNoQuestion
-                    question={question}
-                    getImageUrl={getImageUrl}
-                />;
-            case QuestionTypes.SHORT_ANSWER:
-                return <ShortAnswerQuestion
-                    question={question}
-                    getImageUrl={getImageUrl}
-                />;
-            case QuestionTypes.INFORMATION:
-                return <InformationQuestion
-                    question={question}
-                    getImageUrl={getImageUrl}
-                />;
-            default:
-                return <span>{question.question}</span>;
-        }
+        const component = (() => {
+            switch (question.type) {
+                case QuestionTypes.TRUE_FALSE:
+                    return <TrueFalseQuestion
+                        question={{...question, imageFile: null}} // Pass null to prevent double display
+                        getImageUrl={getImageUrl}
+                    />;
+                case QuestionTypes.MULTICHOICE:
+                    return <MultichoiceQuestion
+                        question={{...question, imageFile: null}} // Pass null to prevent double display
+                        getImageUrl={getImageUrl}
+                    />;
+                case QuestionTypes.DROPDOWN:
+                    return <DropdownQuestion
+                        question={{...question, imageFile: null}} // Pass null to prevent double display
+                        getImageUrl={getImageUrl}
+                    />;
+                case QuestionTypes.FILE_UPLOAD:
+                    return <FileUploadQuestion
+                        question={{...question, imageFile: null}} // Pass null to prevent double display
+                        getImageUrl={getImageUrl}
+                    />;
+                case QuestionTypes.YES_NO:
+                    return <YesNoQuestion
+                        question={{...question, imageFile: null}} // Pass null to prevent double display
+                        getImageUrl={getImageUrl}
+                    />;
+                case QuestionTypes.SHORT_ANSWER:
+                    return <ShortAnswerQuestion
+                        question={{...question, imageFile: null}} // Pass null to prevent double display
+                        getImageUrl={getImageUrl}
+                    />;
+                case QuestionTypes.INFORMATION:
+                    return <InformationQuestion
+                        question={{...question, imageFile: null}} // Pass null to prevent double display
+                        getImageUrl={getImageUrl}
+                    />;
+                default:
+                    return <span>{question.question}</span>;
+            }
+        })();
+    
+        return (
+            <div>
+                {/* Main question component */}
+                <div className="mt-4">
+                    {component}
+                </div>
+
+                {/* Display YouTube video preview */}
+                {question.youtubeUrl && renderYoutubePreview()}
+
+                {/* Display question image (smaller size) */}
+                {imageUrl && (
+                    <div className="mt-4 mb-4">
+                        <img
+                            src={imageUrl}
+                            alt="Question Image"
+                            className="max-h-[200px] object-contain border rounded-md"
+                        />
+                    </div>
+                )}
+            </div>
+        );
     };
 
     const getQuestionType = () => {

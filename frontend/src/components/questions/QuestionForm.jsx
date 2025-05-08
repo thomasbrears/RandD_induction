@@ -119,6 +119,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
             requiresValidation: form.getFieldValue('requiresValidation') || true,
             hint: form.getFieldValue('hint') || "",
             imageFile: form.getFieldValue('imageFile') || null,
+            youtubeUrl: form.getFieldValue('youtubeUrl') || null,
         }
 
         onSave(newQuestion);
@@ -236,6 +237,17 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                                     fileUrl={fileUrl}
                                                     saveFileChange={handleFileChange}
                                                 />
+                                            </div>
+
+                                            {/* YouTube Video URL Section */}
+                                            <div className="mt-6 pt-2 border-t border-gray-300">
+                                                <span className="font-semibold">Add a YouTube Video (Optional):</span>
+                                                <Form.Item name="youtubeUrl" className="mt-2">
+                                                    <Input 
+                                                        placeholder="Enter YouTube video URL (e.g. https://www.youtube.com/watch?v=dQw4w9WgXcQ)"
+                                                        onChange={(e) => form.setFieldsValue({ youtubeUrl: e.target.value })}
+                                                    />
+                                                </Form.Item>
                                             </div>
                                         </div>
                                     ),

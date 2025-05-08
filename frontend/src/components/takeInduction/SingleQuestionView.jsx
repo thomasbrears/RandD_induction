@@ -2,6 +2,17 @@ import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import QuestionRenderer from './QuestionRenderer';
 
+const extractYoutubeId = (url) => {
+  if (!url) return null;
+  
+  // Match patterns like: https://www.youtube.com/watch?v=VIDEO_ID, 
+  // https://youtu.be/VIDEO_ID, or youtube.com/embed/VIDEO_ID
+  const regex = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/i;
+  const match = url.match(regex);
+  
+  return match ? match[1] : null;
+};
+
 /**
  * Component for displaying a single question in slideshow view
  */
@@ -25,13 +36,24 @@ const SingleQuestionView = ({
   const isLastQuestion = currentIndex === totalQuestions - 1;
 
   // Handle validation logic
-  const handleNext = () => {
-    if (isLastQuestion && answerFeedback.showFeedback && answerFeedback.isCorrect) {
-      handleGoToSubmissionScreen();  // Move to submission if last question is validated
+const handleNext = () => {
+  if (isLastQuestion) {
+    // If the last question requires validation and has feedback shown, check if it's correct
+    if (question.requiresValidation && answerFeedback.showFeedback) {
+      // Only proceed to submission screen if the answer is correct
+      if (answerFeedback.isCorrect) {
+        handleGoToSubmissionScreen();
+      }
+      // If incorrect, do nothing (button should be disabled in this case)
     } else {
-      handleNextQuestion();  // Move to the next question if not the last one
+      // If no validation required or feedback not shown yet, go to submission screen
+      handleGoToSubmissionScreen();
     }
-  };
+  } else {
+    // Not the last question, just go to the next one
+    handleNextQuestion();
+  }
+};
 
   return (
     <div className="flex flex-col h-full">
@@ -87,9 +109,29 @@ const SingleQuestionView = ({
                 <img
                   src={imageUrl}
                   alt="Question Image"
-                  className="w-full h-auto max-h-[500px] object-contain"
+                  className="w-full h-auto max-h-[300px] object-contain"
                 />
               </div>
+            )}
+
+            {/* Display YouTube Video if available */}
+            {question.youtubeUrl && (
+                <div className="mt-3 max-w-full overflow-hidden rounded-lg">
+                    <div className="relative pb-[56.25%] h-0">
+                        <iframe
+                            className="absolute top-0 left-0 w-full h-full rounded-md"
+                            src={`https://www.youtube.com/embed/${extractYoutubeId(question.youtubeUrl)}?rel=0`}
+                            title="YouTube video"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowFullScreen
+                        ></iframe>
+                    </div>
+                    <div className="mt-1 text-right">
+                        <a href={question.youtubeUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-blue-600 hover:text-blue-800"
+                        >Open in YouTube
+                        </a>
+                    </div>
+                </div>
             )}
             
             {/* Question content based on type */}
@@ -106,7 +148,7 @@ const SingleQuestionView = ({
       </div>
 
       {/* Navigation Buttons */}
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 md:relative md:border-0 md:p-0 md:mt-6">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4 z-10 md:relative md:z-auto md:border-0 md:p-0 md:mt-6">
         <div className="max-w-4xl mx-auto">
           <div className="flex justify-between gap-4">
             <button 
@@ -124,7 +166,7 @@ const SingleQuestionView = ({
 
             <button 
               type="button"
-              onClick={handleNext} // Handle next logic for last question
+              onClick={handleNext}
               disabled={
                 answerFeedback.showFeedback && 
                 !answerFeedback.isCorrect && 
@@ -175,8 +217,8 @@ SingleQuestionView.propTypes = {
   totalQuestions: PropTypes.number.isRequired,
   handleGoToSubmissionScreen: PropTypes.func.isRequired,
   QuestionTypes: PropTypes.object.isRequired,
-  isReviewMode: PropTypes.bool.isRequired,  // Prop to check review mode
-  onCloseReviewModal: PropTypes.func.isRequired,  // Function to close review modal
+  isReviewMode: PropTypes.bool.isRequired,
+  onCloseReviewModal: PropTypes.func.isRequired,
 };
 
 export default SingleQuestionView;

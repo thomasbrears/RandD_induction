@@ -100,11 +100,12 @@ export const getInductionById = async (req, res) => {
 };
 
 export const updateInductionById = async (req, res) => {
-  const { id, name, department, description, questions, expiryMonths } = req.body;
+  try {
+    const { id, name, department, description, questions, expiryMonths } = req.body;
 
-  if (!id || typeof id !== "string") {
-    return res.status(400).json({ message: "Valid induction ID is required" });
-  }
+    if (!id || typeof id !== "string") {
+      return res.status(400).json({ message: "Valid induction ID is required" });
+    }
 
     // Validate the ID
     if (!id || typeof id !== "string") {

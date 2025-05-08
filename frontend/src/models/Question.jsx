@@ -11,6 +11,7 @@ import QuestionTypes from './QuestionTypes';
  * @property {boolean} [requiresValidation]
  * @property {string} [hint]
  * @property {string | null} [imageFile]
+ * @property {string | null} [youtubeUrl]
  */
 
 /** @type {Question} */
@@ -24,4 +25,5 @@ export const DefaultNewQuestion = {
     requiresValidation: true,
     hint: "",
     imageFile: null,
+    youtubeUrl: null,
 };
