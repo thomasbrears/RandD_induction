@@ -480,7 +480,8 @@ QuestionRenderer.propTypes = {
     hint: PropTypes.string,
     incorrectAnswerMessage: PropTypes.string,
     minChars: PropTypes.number,
-    maxChars: PropTypes.number
+    maxChars: PropTypes.number,
+    youtubeUrl: PropTypes.string,
   }).isRequired,
   answer: PropTypes.oneOfType([
     PropTypes.string,
