@@ -1,6 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { calculateEstimatedTime, formatTimeRange } from '../../utils/inductionHelpers';
+import TruncatedDescription from '../questions/TruncatedDescription';
 
 /**
  * Component for displaying the induction introduction screen
@@ -14,12 +15,11 @@ const InductionIntro = ({ induction, onStart }) => {
       
       <div className="mb-6 space-y-4">
         <div className="p-4 bg-gray-50 rounded-md">
-          <div className="prose !max-w-none w-full break-words overflow-hidden">
-            <div 
-              className="text-gray-700"
-              dangerouslySetInnerHTML={{ __html: induction.description || ' ' }}
-            />
-          </div>
+          <TruncatedDescription 
+            description={induction.description} 
+            maxLength={500}
+            maxHeight={500}
+          />
         </div>
         
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

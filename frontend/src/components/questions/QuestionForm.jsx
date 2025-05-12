@@ -260,7 +260,20 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                                 <Form.Item name="description" className="mt-2">
                                                     <TiptapEditor
                                                         description={form.getFieldValue('description')}
-                                                        handleChange={(value) => form.setFieldsValue({ description: value })}
+                                                        handleChange={(value) => {
+                                                            // Carefully update the form value without triggering a full form reset
+                                                            form.setFieldsValue({ 
+                                                                description: value 
+                                                            });
+                                                            
+                                                            // Prevent immediate validation
+                                                            setTimeout(() => {
+                                                                form.validateFields(['description'])
+                                                                    .catch(() => {
+                                                                        // Silently catch validation errors to prevent UI disruption
+                                                                    });
+                                                            }, 500);
+                                                        }}
                                                     />
                                                 </Form.Item>
                                             </div>
@@ -499,6 +512,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                         <Button 
                                             danger 
                                             icon={<DeleteOutlined />}
+                                            type="button"
                                         >
                                             Delete Question
                                         </Button>
@@ -507,7 +521,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                 
                                 {/* Action Buttons */}
                                 <div className="flex justify-end">
-                                    <Button onClick={handleCancel} className="mr-2">Cancel</Button>
+                                    <Button onClick={handleCancel} className="mr-2" type="button">Cancel</Button>
                                     <Button type="primary" htmlType="submit" title={questionData ? "Save Changes" : "Create Question"}>
                                         {questionData ? "Save Changes" : "Create Question"}
                                     </Button>

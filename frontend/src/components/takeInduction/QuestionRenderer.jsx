@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import QuestionTypes from '../../models/QuestionTypes';
 import { Upload, message, Image } from 'antd';
 import { InboxOutlined, FileOutlined, FilePdfOutlined, FileWordOutlined, FileExcelOutlined, FilePptOutlined } from '@ant-design/icons';
+import TruncatedDescription from '../questions/TruncatedDescription';
 
 const { Dragger } = Upload;
 
@@ -365,7 +366,11 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
       return (
         <div className="mt-2 bg-blue-50 p-4 rounded-md border border-blue-200">
           {question.description ? (
-            <div dangerouslySetInnerHTML={{ __html: question.description }} />
+            <TruncatedDescription 
+              description={question.description}
+              maxLength={350}
+              maxHeight={180}
+            />
           ) : (
             <p className="text-gray-500 italic">Information block</p>
           )}
