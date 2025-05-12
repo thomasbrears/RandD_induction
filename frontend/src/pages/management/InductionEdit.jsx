@@ -55,8 +55,24 @@ const InductionEdit = () => {
           setLoadingMessage(`Loading the Module's details...`);
           setError(null); // Reset error state
           
-          // Check if theres a saved draft
-          if (hasSavedInductionDraft(id, true)) {
+          // First load the actual induction data from the server
+          const inductionData = await getInduction(user, id);
+          
+          // Ensure the isDraft flag is properly set - convert to explicit boolean
+          const normalizedInductionData = {
+            ...inductionData,
+            isDraft: inductionData.isDraft === true || inductionData.isDraft === "true"
+          };
+          
+          // Create snapshot of original questions
+          const snapshot = inductionData.questions.map((q) => ({
+            id: q.id,
+            imageFile: q.imageFile || null,
+          }));
+          setOriginalQuestions(snapshot);
+          
+          // Only now check if theres a saved draft with significant changes from the server version
+          if (hasSavedInductionDraft(id, true, normalizedInductionData)) {
             const draft = loadInductionDraftFromLocalStorage(id, true);
             if (draft) {
               setSavedDraft({
@@ -65,30 +81,14 @@ const InductionEdit = () => {
               });
               setShowRecoveryModal(true);
             }
+          } else {
+            // No significant local changes, clear any outdated drafts
+            clearSavedInductionDraft(id, true);
           }
           
-          const inductionData = await getInduction(user, id);
-          
-          // Ensure the isDraft flag is properly set - convert to explicit boolean
-          console.log("Loaded Module data:", inductionData);
-          console.log("Raw isDraft status:", inductionData.isDraft);
-          
-          // Force the isDraft property to be a boolean
-          const normalizedInductionData = {
-            ...inductionData,
-            isDraft: inductionData.isDraft === true || inductionData.isDraft === "true"
-          };
-          
-          console.log("Normalized isDraft status:", normalizedInductionData.isDraft);
-          
+          // Set the loaded data to state
           setInduction(normalizedInductionData);
-
-          // Create snapshot of original questions
-          const snapshot = inductionData.questions.map((q) => ({
-            id: q.id,
-            imageFile: q.imageFile || null,
-          }));
-          setOriginalQuestions(snapshot);
+          
         } catch (err) {
           notifyError(err.response?.data?.message || "An error occurred");
         } finally {
@@ -141,6 +141,7 @@ const InductionEdit = () => {
   const handleStartFresh = () => {
     clearSavedInductionDraft(id, true);
     setShowRecoveryModal(false);
+    setLastSaved(null);
     messageSuccess("Discarding draft and using last saved version.");
   };
 

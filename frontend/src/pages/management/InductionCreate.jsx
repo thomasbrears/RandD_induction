@@ -61,24 +61,28 @@ const InductionCreate = () => {
   }, [induction]);
 
   useEffect(() => {
-    const getDepartments = async () => {
-      const data = await getAllDepartments();
-      setDepartments(data);
-    };
-    getDepartments();
-    
-    // Check for saved draft immediately
-    if (hasSavedInductionDraft(tempId, false)) {
-      const draft = loadInductionDraftFromLocalStorage(tempId, false);
-      if (draft) {
-        setSavedDraft({
-          ...draft,
-          lastUpdated: new Date().toISOString()
-        });
-        setShowRecoveryModal(true);
-      }
+  const getDepartments = async () => {
+    const data = await getAllDepartments();
+    setDepartments(data);
+  };
+  getDepartments();
+  
+  // Check for a saved draft with substantial content
+  if (hasSavedInductionDraft(tempId, false)) {
+    const draft = loadInductionDraftFromLocalStorage(tempId, false);
+    // Additional verification that the draft has substantial content
+    if (draft && hasSubstantialContent(draft)) {
+      setSavedDraft({
+        ...draft,
+        lastUpdated: new Date().toISOString()
+      });
+      setShowRecoveryModal(true);
+    } else {
+      // Clear insufficient drafts
+      clearSavedInductionDraft(tempId, false);
     }
-  }, [tempId]);
+  }
+}, [tempId]);
 
   // Set up auto-save tracking
   useEffect(() => {
@@ -116,8 +120,20 @@ const InductionCreate = () => {
   const handleStartFresh = () => {
     clearSavedInductionDraft(tempId, false);
     setShowRecoveryModal(false);
+    setLastSaved(null);
     messageSuccess("Starting with a clean slate!");
   };
+
+  const hasSubstantialContent = (inductionData) => {
+  // Check if there's a name
+  const hasName = inductionData.name && inductionData.name.trim() !== "";
+  
+  // Check if there are any questions
+  const hasQuestions = inductionData.questions && inductionData.questions.length > 0;
+  
+  // Only save if there's a name AND at least one question
+  return hasName && hasQuestions;
+};
 
   //File Handling
   const handleFileBufferUpdate = (questionId, file) => {

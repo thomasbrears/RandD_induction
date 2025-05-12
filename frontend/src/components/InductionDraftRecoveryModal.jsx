@@ -67,6 +67,11 @@ const InductionDraftRecoveryModal = ({
     }
   }, [isVisible]);
   
+  // If there's no saved draft or it doesn't have enough data, don't show the modal
+  if (!savedDraft || !isVisible) {
+    return null;
+  }
+  
   const lastSavedTime = savedDraft?.lastUpdated ? formatDate(savedDraft.lastUpdated) : 'recently';
   const action = mode === "edit" ? "editing" : "creating";
   const questionCount = savedDraft?.questions?.length || 0;
@@ -89,7 +94,8 @@ const InductionDraftRecoveryModal = ({
       <div className="py-2">
         <div className="mb-4">
           <p className="text-gray-700">
-            We found unsaved changes from {lastSavedTime} when you were {action} this induction. Would you like to recover these changes?
+            We found unsaved changes from {lastSavedTime} when you were {action} this induction. 
+            Would you like to recover these changes?
           </p>
         </div>
         
