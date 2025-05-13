@@ -1,57 +1,77 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import { getProgressSummary } from '../../utils/inductionHelpers';
-import { CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
 
-/**
- * Component for displaying induction progress bar
- */
-const ProgressBar = ({ 
-  questions, 
-  answeredQuestions, 
-  lastSaved,
-  className = "" 
-}) => {
+
+const ProgressBar = ({ questions, answeredQuestions, lastSaved }) => {
   if (!questions || questions.length === 0) return null;
 
-  // Calculate progress using getProgressSummary which returns percentComplete
-  const { percentComplete } = getProgressSummary(questions, answeredQuestions);
+  // Calculate progress
+  // Filter out 'INFORMATION' sections/questions for progress calculation
+  const totalQuestions = questions.filter(q => q.type !== 'INFORMATION').length;
+  const answeredCount = Object.keys(answeredQuestions || {}).filter(id => {
+    const question = questions.find(q => q.id === id);
+    return question && question.type !== 'INFORMATION';
+  }).length;
+  
+  const percentComplete = totalQuestions > 0 ? Math.floor((answeredCount / totalQuestions) * 100) : 0;
+  
+  // Format last saved time
+  const getLastSavedText = () => {
+    if (!lastSaved) return null;
+    
+    // For recent saves (< 1 minute ago), show "Just now"
+    const diffMs = new Date() - lastSaved;
+    const diffMins = Math.floor(diffMs / 60000);
+    
+    if (diffMins < 1) {
+      return 'Just now';
+    } else if (diffMins < 60) {
+      return `${diffMins} min ago`;
+    } else {
+      return lastSaved.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+  };
+  
+  const lastSavedText = getLastSavedText();
   
   return (
-    <div className={`bg-white border-b border-gray-200 py-2 px-4 ${className}`}>
-      {/* Progress section with count and stats */}
+    <div className="px-4 py-2 bg-white">
+      {/* Progress info and saved status */}
       <div className="flex flex-wrap items-center justify-between mb-1">
         <div className="flex items-center mr-4">
-          {percentComplete > 0 && (
-            <span className="text-sm font-medium text-blue-600">{percentComplete}% complete</span>
-          )}
+          <span className="text-sm font-medium text-gray-700">
+            Progress: <span className="text-blue-600">{percentComplete}%</span>
+          </span>
+          <span className="mx-2 text-gray-300 hidden sm:inline">|</span>
+          <span className="hidden sm:block text-sm text-gray-500">
+            {answeredCount} of {totalQuestions} questions
+          </span>
         </div>
         
-        <div className="flex items-center">          
-          {/* Auto-save status */}
-          {lastSaved && (
-            <div className="flex items-center">
-              <span className="text-xs text-gray-500 flex items-center">
-                <CheckCircleOutlined className="text-green-500 mr-1" style={{ fontSize: '12px' }} />
-                <span>Saved locally at {new Date(lastSaved).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              </span>
-              
-              {/* Info icon with tooltip */}
-              <div className="relative inline-block group ml-1">
-                <InfoCircleOutlined className="text-gray-400 text-xs ml-1 cursor-help" />
-                <div className="absolute bottom-full right-0 mb-1 hidden group-hover:block bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
-                  Progress is saved to this browser on this device only. It will be lost if you clear your browser data or switch devices.
-                </div>
+        {lastSavedText && (
+          <div className="flex items-center text-xs text-gray-500">
+            <svg className="w-3.5 h-3.5 text-green-500 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+            </svg>
+            <span>Saved {lastSavedText}</span>
+            
+            {/* Info tooltip */}
+            <div className="relative group ml-1">
+              <svg className="w-3.5 h-3.5 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+              </svg>
+              <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block bg-gray-800 text-white text-xs rounded p-2 w-48 z-10">
+                Progress is saved automatically to this browser session. You can continue later from this device and browser only. (File uploads are not saved)
               </div>
             </div>
-          )}
-        </div>
+          </div>
+        )}
       </div>
       
       {/* Progress bar */}
-      <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
         <div 
-          className="bg-blue-600 h-3 rounded-full transition-all duration-300 ease-in-out" 
+          className="bg-blue-600 h-2 rounded-full transition-all duration-300 ease-in-out" 
           style={{ width: `${percentComplete}%` }}
           role="progressbar"
           aria-valuenow={percentComplete}
@@ -67,8 +87,7 @@ const ProgressBar = ({
 ProgressBar.propTypes = {
   questions: PropTypes.array.isRequired,
   answeredQuestions: PropTypes.object.isRequired,
-  lastSaved: PropTypes.instanceOf(Date),
-  className: PropTypes.string
+  lastSaved: PropTypes.instanceOf(Date)
 };
 
 export default ProgressBar;
