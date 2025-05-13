@@ -34,11 +34,11 @@ const InductionLayout = ({
   
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Title and progress bar - visible on all screens */}
-      <div className="sticky top-0 z-30 bg-white border-b border-gray-200 shadow-sm">
+      {/* Fixed header with induction name and progress */}
+      <div className="bg-white border-b border-gray-200 shadow-sm">
         <div className="px-4 py-3 flex justify-between items-center">
           <h1 className="text-lg font-bold truncate">{induction?.name}</h1>
-          </div>
+        </div>
         
         {/* Progress bar */}
         <ProgressBar 
@@ -46,16 +46,18 @@ const InductionLayout = ({
           answeredQuestions={answeredQuestions}
           lastSaved={lastSaved}
         />
-        
-        {/* Mobile only - current question indicator */}
-        {isMobile && induction?.questions && !isSubmissionScreen && (
+      </div>
+      
+      {/* Sticky question counter - only visible on mobile */}
+      {isMobile && induction?.questions && !isSubmissionScreen && (
+        <div className="sticky top-0 z-30">
           <MobileHeader 
             currentIndex={currentQuestionIndex}
             totalQuestions={induction.questions.length}
             onOpenDrawer={toggleDrawer}
           />
-        )}
-      </div>
+        </div>
+      )}
       
       {/* Main content area */}
       <div className="flex flex-1 overflow-hidden">
@@ -72,11 +74,11 @@ const InductionLayout = ({
           </div>
         )}
         
-        {/* Mobile drawer*/}
+        {/* Mobile drawer */}
         {isMobile && drawerOpen && (
           <div className="fixed inset-0 z-40 bg-black bg-opacity-50" onClick={toggleDrawer}>
             <div 
-              className="absolute top-0 left-0 h-full w-3/4 max-w-xs bg-white shadow-xl"
+              className="absolute top-0 left-0 h-full w-full bg-white shadow-xl"
               onClick={e => e.stopPropagation()}
             >
               <NavigationDrawer

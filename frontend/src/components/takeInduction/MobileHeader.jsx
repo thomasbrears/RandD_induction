@@ -6,7 +6,7 @@ import PropTypes from 'prop-types';
  */
 const MobileHeader = ({ currentIndex, totalQuestions, onOpenDrawer }) => {
   return (
-    <div className="flex items-center justify-between px-4 py-2 bg-gray-100 border-b md:hidden">
+    <div className="flex items-center justify-between px-4 py-2 bg-white border-b shadow-sm md:hidden">
       <div className="flex items-center">
         <span className="inline-flex items-center justify-center h-8 w-8 rounded-full bg-blue-600 text-white font-medium mr-2">
           {currentIndex + 1}

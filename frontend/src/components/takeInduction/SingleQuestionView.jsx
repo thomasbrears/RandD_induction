@@ -106,7 +106,7 @@ const SingleQuestionView = ({
           )}
           
           {/* Question input */}
-          <div className="mt-6">
+          <div className="mt-6 mb-24">
             <QuestionRenderer 
               question={question}
               answer={answer}
@@ -117,9 +117,9 @@ const SingleQuestionView = ({
         </div>
       </div>
       
-      {/* Navigation buttons*/}
-      <div className="sticky bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 mt-6">
-        <div className="flex justify-between gap-4">
+      {/* Fixed navigation buttons at the bottom of the screen */}
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white border-t border-gray-200 shadow-md z-10">
+        <div className="flex justify-between gap-4 max-w-3xl mx-auto">
           <button 
             type="button"
             onClick={handlePrevQuestion}
