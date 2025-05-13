@@ -1,56 +1,113 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { calculateEstimatedTime, formatTimeRange } from '../../utils/inductionHelpers';
+import FormattedDescription from './FormattedDescription';
+import { Result, Button, Card, Statistic, Row, Col } from 'antd';
 
 /**
  * Component for displaying the induction introduction screen
  */
 const InductionIntro = ({ induction, onStart }) => {
+  // Safety check for null/undefined induction data
+  if (!induction) {
+    return (
+      <Card bordered={false} className="shadow-md">
+        <Result
+          status="warning"
+          title="Induction Not Found"
+          subTitle="We couldn't find the requested induction. It may have been deleted, or you may not have permission to access it."
+          extra={[
+            <Button 
+              type="primary" 
+              size="large"
+              onClick={() => window.location.href = '/inductions/my-inductions'}
+              key="return"
+            >
+              Return to My Inductions
+            </Button>
+          ]}
+        />
+      </Card>
+    );
+  }
+  
   const estimatedTimeRange = formatTimeRange(calculateEstimatedTime(induction?.questions));
   
   return (
-    <div className="bg-white shadow-md rounded-lg p-6">
-      <h1 className="text-2xl font-bold text-gray-800 mb-4 break-words">{induction.name}</h1>
-      
-      <div className="mb-6 space-y-4">
-        <div className="p-4 bg-gray-50 rounded-md">
-          <div className="prose !max-w-none w-full break-words overflow-hidden">
-            <div 
-              className="text-gray-700"
-              dangerouslySetInnerHTML={{ __html: induction.description || ' ' }}
-            />
-          </div>
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="bg-blue-50 p-4 rounded-md">
-            <span className="block text-sm font-medium text-gray-600">Question Count</span>
-            <span className="text-lg font-semibold">{induction.questions?.length || 0} questions</span>
-          </div>
-          
-          <div className="bg-green-50 p-4 rounded-md">
-            <span className="block text-sm font-medium text-gray-600">Estimated Time</span>
-            <span className="text-lg font-semibold">{estimatedTimeRange}</span>
-          </div>
-        </div>
+    <Card bordered={false} className="shadow-md" style={{ borderRadius: '8px' }}>
+      <div className="mb-4">
+        <h2 style={{ wordBreak: 'break-word' }}>{induction.name}</h2>
       </div>
       
-      <button 
+      <div className="mb-6">
+        <Card 
+          bordered={false} 
+          className="bg-gray-50"
+          style={{ borderRadius: '8px' }}
+        >
+          <FormattedDescription 
+            description={induction.description || ' '} 
+            initiallyExpanded={true}
+          />
+        </Card>
+        
+        <Row gutter={16} className="mt-4">
+          <Col xs={24} md={12}>
+            <Card 
+              bordered={false}
+              className="bg-blue-50"
+              style={{ borderRadius: '8px' }}
+            >
+              <Statistic
+                title="Question Count"
+                value={induction.questions?.length || 0}
+                suffix="questions"
+                valueStyle={{ color: '#1890ff' }}
+              />
+            </Card>
+          </Col>
+          
+          <Col xs={24} md={12}>
+            <Card 
+              bordered={false}
+              className="bg-green-50"
+              style={{ borderRadius: '8px' }}
+            >
+              <Statistic
+                title="Estimated Time"
+                value={estimatedTimeRange}
+                valueStyle={{ color: '#52c41a' }}
+              />
+            </Card>
+          </Col>
+        </Row>
+      </div>
+      
+      <Button 
+        type="primary" 
+        size="large"
         onClick={onStart}
-        className="w-full md:w-auto px-6 py-3 bg-gray-800 text-white rounded-md hover:bg-gray-700 transition-colors font-medium"
+        style={{ 
+          backgroundColor: '#1f2937',
+          borderColor: '#1f2937', 
+          width: '100%',
+          height: '48px',
+          fontSize: '16px'
+        }}
+        className="hover:bg-gray-700"
       >
         Start Induction
-      </button>
-    </div>
+      </Button>
+    </Card>
   );
 };
 
 InductionIntro.propTypes = {
   induction: PropTypes.shape({
-    name: PropTypes.string.isRequired,
+    name: PropTypes.string,
     description: PropTypes.string,
     questions: PropTypes.array
-  }).isRequired,
+  }),
   onStart: PropTypes.func.isRequired
 };
 
