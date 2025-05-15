@@ -217,9 +217,9 @@ const InductionCreate = () => {
         // Clear local draft since we've saved to DB
         clearSavedInductionDraft(tempId, false);
         
-        messageSuccess("Draft saved to database successfully!");
+        notifySuccess("Draft saved to database successfully!");
+        navigate("/management/inductions/view");
         
-        // No auto navigation - allow the user to continue editing
       } else {
         messageWarning("Error while saving draft module.");
       }
