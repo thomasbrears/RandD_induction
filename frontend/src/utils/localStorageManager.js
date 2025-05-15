@@ -24,12 +24,14 @@ export const saveProgressToLocalStorage = (inductionId, progressData, setLastSav
     return false; // No need to save if nothing important changed
   }
   
+  const lastUpdated = new Date().toISOString();
+  
   const progress = {
     inductionId,
     answers,
     currentQuestionIndex,
     answeredQuestions,
-    lastUpdated: new Date().toISOString()
+    lastUpdated
   };
   
   try {
@@ -39,7 +41,7 @@ export const saveProgressToLocalStorage = (inductionId, progressData, setLastSav
     
     // Update last saved timestamp if setter is provided
     if (setLastSaved) {
-      setLastSaved(new Date());
+      setLastSaved(new Date(lastUpdated));
     }
     
     return true;
@@ -103,6 +105,11 @@ const hasSignificantChanges = (oldData, newData) => {
     }
   }
   
+  // Check for forced save
+  if (newData._forceSave) {
+    return true;
+  }
+  
   // No significant changes detected
   return false;
 };
@@ -124,20 +131,28 @@ export const loadProgressFromLocalStorage = (inductionId) => {
     
     const progress = JSON.parse(savedProgress);
     
-    // Check if the saved progress is recent (within the last 24 hours)
-    const lastUpdated = new Date(progress.lastUpdated);
+    // Check if the saved progress is recent
+    // Convert lastUpdated string to Date consistently
+    const lastUpdated = progress.lastUpdated ? new Date(progress.lastUpdated) : null;
     const now = new Date();
-    const hoursSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60);
     
-    // Validate the date to make sure it's not in the future
-    if (lastUpdated > now) {
-      lastUpdated.setTime(now.getTime());
-    }
-    
-    if (hoursSinceUpdate > 24) {
-      // Remove stale data
-      localStorage.removeItem(`induction_progress_${inductionId}`);
-      return null;
+    // Validate the date
+    if (!lastUpdated || isNaN(lastUpdated.getTime())) {
+      console.error('Invalid lastUpdated date in saved progress:', progress.lastUpdated);
+      // Use current time as fallback
+      progress.lastUpdated = now.toISOString();
+    } else if (lastUpdated > now) {
+      // If date is in the future, reset to now
+      progress.lastUpdated = now.toISOString();
+    } else {
+      // Check if stale (older than 24 hours)
+      const hoursSinceUpdate = (now - lastUpdated) / (1000 * 60 * 60);
+      
+      if (hoursSinceUpdate > 24) {
+        // Remove stale data
+        localStorage.removeItem(`induction_progress_${inductionId}`);
+        return null;
+      }
     }
     
     // Make sure we're using structurally valid data
@@ -151,7 +166,7 @@ export const loadProgressFromLocalStorage = (inductionId) => {
       answers: validAnswers,
       currentQuestionIndex: validCurrentIndex,
       answeredQuestions: validAnsweredQuestions,
-      lastUpdated
+      lastUpdated: progress.lastUpdated // Keep as ISO string
     };
   } catch (error) {
     console.error('Error loading progress from localStorage:', error);

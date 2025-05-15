@@ -230,7 +230,7 @@ export const validateAnswer = (question, answer) => {
       return {
         isValid: true,
         isCorrect: true,
-        message: 'File uploaded successfully.'
+        message: 'File added and will be uploaded on submit.'
       };
       
     default:

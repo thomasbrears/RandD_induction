@@ -1,23 +1,82 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PropTypes from 'prop-types';
-import { Modal, Button } from 'antd';
-import { InfoCircleOutlined, CheckCircleOutlined } from '@ant-design/icons';
+import { Modal, Progress, Button, Space, Divider } from 'antd';
+import { 
+  CheckCircleOutlined, 
+  ReloadOutlined, 
+  ArrowRightOutlined,
+  UploadOutlined,
+  SaveOutlined
+} from '@ant-design/icons';
 
-/**
- * Modal that prompts users to recover saved progress when returning to an induction
- */
-const SaveRecoveryModal = ({ 
-  isVisible, 
-  onRecover, 
-  onStartFresh, 
-  savedProgress 
-}) => {
+const SaveRecoveryModal = ({ isVisible, onRecover, onStartFresh, savedProgress }) => {
+  // Auto-recovery timer (10 seconds)
+  const [countdown, setCountdown] = useState(10);
+  
+  // Use a ref to track if we've already handled the "no progress" case
+  const handledNoProgress = useRef(false);
+  
+  // Check if theres actual progress to recover
+  const hasProgress = savedProgress && 
+                      savedProgress.answeredQuestions && 
+                      Object.keys(savedProgress.answeredQuestions).length > 0;
+  
+  // Reset countdown and start timer when modal becomes visible
+  useEffect(() => {
+    let timer;
+    
+    if (isVisible && hasProgress) {
+      // Reset countdown to 10 when modal becomes visible
+      setCountdown(10);
+      
+      // Set up the countdown timer
+      timer = setInterval(() => {
+        setCountdown(prevCount => {
+          const newCount = prevCount - 1;
+          if (newCount <= 0) {
+            // When countdown reaches 0, trigger recovery and clear interval
+            clearInterval(timer);
+            onRecover();
+            return 0;
+          }
+          return newCount;
+        });
+      }, 1000);
+    }
+    
+    // Handle the "no progress" case
+    if (isVisible && !hasProgress && !handledNoProgress.current) {
+      handledNoProgress.current = true;
+      onStartFresh();
+    }
+    
+    // Reset the ref when modal is closed
+    if (!isVisible) {
+      handledNoProgress.current = false;
+    }
+    
+    // Cleanup function
+    return () => {
+      if (timer) {
+        clearInterval(timer);
+      }
+    };
+  }, [isVisible, onRecover, hasProgress, onStartFresh]);
+  
   // More user-friendly date display
-  const formatDate = (dateString) => {
-    if (!dateString) return 'Unknown';
+  const formatDate = (dateValue) => {
+    if (!dateValue) return 'recently';
     
     try {
-      const date = new Date(dateString);
+      // Convert to Date object if its a string
+      const date = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
+      
+      // Check if its a valid date
+      if (isNaN(date.getTime())) {
+        console.error('Invalid date:', dateValue);
+        return 'recently';
+      }
+      
       const now = new Date();
       const diffMs = now - date;
       const diffMins = Math.floor(diffMs / 60000);
@@ -25,7 +84,9 @@ const SaveRecoveryModal = ({
       const diffDays = Math.floor(diffHours / 24);
       
       // Format based on how long ago
-      if (diffMins < 60) {
+      if (diffMins < 1) {
+        return 'just now';
+      } else if (diffMins < 60) {
         return `${diffMins} ${diffMins === 1 ? 'minute' : 'minutes'} ago`;
       } else if (diffHours < 24) {
         return `${diffHours} ${diffHours === 1 ? 'hour' : 'hours'} ago`;
@@ -39,32 +100,9 @@ const SaveRecoveryModal = ({
       }
     } catch (e) {
       console.error('Error formatting date:', e);
-      return 'Unknown date';
+      return 'recently';
     }
   };
-  
-  // Auto-recovery timer (10 seconds)
-  const [countdown, setCountdown] = useState(10);
-  
-  useEffect(() => {
-    let timer;
-    if (isVisible && countdown > 0) {
-      timer = setTimeout(() => setCountdown(countdown - 1), 1000);
-    } else if (countdown === 0 && isVisible) {
-      onRecover();
-    }
-    
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [countdown, isVisible, onRecover]);
-  
-  // Reset countdown when modal opens
-  useEffect(() => {
-    if (isVisible) {
-      setCountdown(10);
-    }
-  }, [isVisible]);
   
   // Calculate completion percentage
   const calculateCompletion = () => {
@@ -77,80 +115,111 @@ const SaveRecoveryModal = ({
   };
   
   const completionPercentage = calculateCompletion();
-  const lastSavedTime = savedProgress?.lastUpdated ? formatDate(savedProgress.lastUpdated) : 'recently';
+  
+  // Get the lastUpdated value, handling both string and Date object formats
+  const lastUpdated = savedProgress?.lastUpdated || null;
+  const lastSavedTime = formatDate(lastUpdated);
+  
+  // If theres no progress to recover or modal is not visible, return null
+  if (!isVisible || !hasProgress) {
+    return null;
+  }
   
   return (
     <Modal
+      open={isVisible}
       title={
-        <div className="flex items-center text-amber-600">
-          <InfoCircleOutlined className="mr-2" />
-          <span>Resume Your Progress</span>
+        <div className="flex items-center">
+          <SaveOutlined style={{ color: '#1890ff', marginRight: 8 }} />
+          <span>Resume Your Induction Progress</span>
         </div>
       }
-      open={isVisible}
       footer={null}
       closable={false}
       maskClosable={false}
       centered
+      width={420}
+      bodyStyle={{ padding: '16px' }}
     >
-      <div className="py-2">
-        <div className="mb-4">
-          <p className="text-gray-700">
-            We found your saved progress from {lastSavedTime}. Would you like to continue where you left off?
-          </p>
-        </div>
-        
-        <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
-          {/* Progress information */}
-          <div className="flex items-center mb-2">
-            <CheckCircleOutlined className="text-green-500 mr-2" />
-            <span className="font-medium">Progress saved</span>
-          </div>
-          
-          <div className="flex justify-between mb-1">
-            <span className="text-sm text-gray-600">Completion</span>
-            <span className="text-sm text-gray-600">{completionPercentage}%</span>
-          </div>
-          
-          <div className="w-full bg-gray-200 rounded-full h-2.5 mb-3">
-            <div 
-              className="bg-blue-600 h-2.5 rounded-full" 
-              style={{ width: `${completionPercentage}%` }}
-            ></div>
-          </div>
-          
-          <div className="text-sm text-gray-500">
-            You've completed{' '}
-            <span className="font-medium text-gray-700">
-              {Object.keys(savedProgress?.answeredQuestions || {}).length}
-            </span>{' '}
-            of{' '}
-            <span className="font-medium text-gray-700">
-              {savedProgress?.totalQuestions || 0}
-            </span>{' '}
-            questions
-          </div>
-        </div>
-        
-        <p className="text-sm text-gray-500 mb-6">
-          Auto-resuming in <span className="font-bold text-amber-600">{countdown}</span> seconds...
+      <div className="px-1">
+        {/* Intro text */}
+        <p>
+          We've found your saved induction progress from <strong>{lastSavedTime}</strong>.
+          <br /> 
+          Would you like to continue where you left off, or start a new attempt?
         </p>
         
-        <div className="flex justify-between space-x-4">
+        <Divider style={{ margin: '16px 0' }} />
+        
+        {/* Progress information */}
+        <div className="mb-4">
+          <h5 style={{ marginBottom: '12px' }}>Your Progress</h5>
+          
+          <div className="flex justify-between items-center mb-2">
+            <p>
+              <CheckCircleOutlined style={{ color: '#52c41a', marginRight: 8 }} />
+              Last saved {lastSavedTime}
+            </p>
+            <p><strong>{completionPercentage}% Complete</strong></p>
+          </div>
+          
+          <Progress 
+            percent={completionPercentage} 
+            size="small" 
+            status="active" 
+            strokeColor={{
+              '0%': '#108ee9',
+              '100%': '#52c41a',
+            }}
+            style={{ marginBottom: '12px' }}
+          />
+          
+          <div className="my-3">
+            <p>
+              You've completed <strong>{Object.keys(savedProgress?.answeredQuestions || {}).length}</strong> of{' '}
+              <strong>{savedProgress?.totalQuestions || 0}</strong> questions in this induction.
+            </p>
+          </div>
+        </div>
+        
+        {/* Auto-resume explanation */}
+        <div className="my-4 mt-5 text-center text-gray-500 text-xs">
+          <Space align="center">
+            <p>
+              Your progress will be automatically restored in <strong style={{ color: '#fa8c16' }}>{countdown}</strong> seconds
+            </p>
+          </Space>
+        </div>
+
+        
+        {/* Action buttons */}
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <Button
-            type="default"
-            onClick={onStartFresh}
-            className="w-1/2"
-          >Start Fresh
+            block
+            type="primary"
+            onClick={onRecover}
+            icon={<ArrowRightOutlined />}
+            size="large"
+          >
+            Resume
           </Button>
           
           <Button
-            type="primary"
-            onClick={onRecover}
-            className="w-1/2"
-          >Resume Progress
+            block
+            onClick={onStartFresh}
+            icon={<ReloadOutlined />}
+          >
+            Start From Beginning (Clear Progress)
           </Button>
-        </div>
+          
+          {/* Subtle file upload warning */}
+          <div className="mt-1 text-center">
+            <p style={{ fontSize: '13px', color: 'rgba(0, 0, 0, 0.45)' }}>
+              <UploadOutlined style={{ marginRight: 4 }} />
+              Note: Any file uploads were not saved and will need to be re-uploaded when you resume.
+            </p>
+          </div>
+        </Space>
       </div>
     </Modal>
   );
@@ -163,7 +232,10 @@ SaveRecoveryModal.propTypes = {
   savedProgress: PropTypes.shape({
     answeredQuestions: PropTypes.object,
     totalQuestions: PropTypes.number,
-    lastUpdated: PropTypes.string,
+    lastUpdated: PropTypes.oneOfType([
+      PropTypes.string,
+      PropTypes.instanceOf(Date)
+    ]),
     currentQuestionIndex: PropTypes.number
   })
 };

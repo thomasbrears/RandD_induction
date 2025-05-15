@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Modal, Form, Select, Input, Button, Collapse, Switch, Radio, Popconfirm } from "antd";
 import QuestionTypes from "../../models/QuestionTypes";
 import TiptapEditor from "../TiptapEditor";
-import { FaCheck, FaTimes } from "react-icons/fa";
+import { FaCheck, FaTimes, FaInfoCircle } from "react-icons/fa";
 import { DeleteOutlined } from '@ant-design/icons';
 import { DefaultNewQuestion } from "../../models/Question";
 import { UpOutlined, PlusOutlined } from "@ant-design/icons";
@@ -152,6 +152,36 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
         onClose();
     };
 
+    // Helper function to render question type information
+    const renderQuestionTypeInfo = () => {
+        let infoMessage = '';
+        
+        switch (selectedType) {
+            case QuestionTypes.FILE_UPLOAD:
+                infoMessage = "A file upload field will be presented to the user. They will be able to upload one Image (JPG, PNG, GIF) or document (PDF, Word, Excel, PowerPoint) file, upto 10MB in size.";
+                break;
+            case QuestionTypes.SHORT_ANSWER:
+                infoMessage = "A text area will be provided for user to enter their answer. The response will be limited to 1000 characters.";
+                break;
+            case QuestionTypes.INFORMATION:
+                infoMessage = "This is an informational question type. No input will be required from the user - use this to provide instructions or additional context in the description field.";
+                break;
+            default:
+                return null;
+        }
+
+        return (
+            <div className="border-t border-gray-200 pt-4 mt-4 mb-4">
+                <div className="p-3 rounded-md bg-blue-50 border border-blue-200 flex items-start">
+                    <FaInfoCircle className="text-blue-500 mt-1 mr-2 flex-shrink-0" />
+                    <div className="text-sm text-blue-700">
+                        {infoMessage}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     return (
         <Modal 
             open={visible} 
@@ -189,7 +219,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                         {/* Question Input */}
                         <Form.Item
                             name="question"
-                            label={<span className="font-semibold">Question:</span>}
+                            label={<span className="font-semibold">Question Title:</span>}
                             rules={[
                                 { required: true, message: 'Question is required' },
                             ]}
@@ -197,6 +227,11 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                         >
                             <Input.TextArea placeholder="Enter your question" maxLength={200} autoSize={{ minRows: 1, maxRows: 3 }} showCount={true} />
                         </Form.Item>
+
+                        {/* Question Type Information */}
+                        {(selectedType === QuestionTypes.FILE_UPLOAD || 
+                          selectedType === QuestionTypes.SHORT_ANSWER || 
+                          selectedType === QuestionTypes.INFORMATION) && renderQuestionTypeInfo()}
 
                         {/* Collapsible Additional Fields*/}
                         <Collapse
@@ -225,7 +260,20 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                                 <Form.Item name="description" className="mt-2">
                                                     <TiptapEditor
                                                         description={form.getFieldValue('description')}
-                                                        handleChange={(value) => form.setFieldsValue({ description: value })}
+                                                        handleChange={(value) => {
+                                                            // Carefully update the form value without triggering a full form reset
+                                                            form.setFieldsValue({ 
+                                                                description: value 
+                                                            });
+                                                            
+                                                            // Prevent immediate validation
+                                                            setTimeout(() => {
+                                                                form.validateFields(['description'])
+                                                                    .catch(() => {
+                                                                        // Silently catch validation errors to prevent UI disruption
+                                                                    });
+                                                            }, 500);
+                                                        }}
                                                     />
                                                 </Form.Item>
                                             </div>
@@ -308,7 +356,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                 />
                             )}
 
-                        {/* Dynamic Form List for Options */}
+                        {/* Options Section */}
                         {(selectedType === QuestionTypes.MULTICHOICE || selectedType === QuestionTypes.DROPDOWN) && (
                             <Form.Item
                                 className="!mb-2"
@@ -464,6 +512,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                         <Button 
                                             danger 
                                             icon={<DeleteOutlined />}
+                                            type="button"
                                         >
                                             Delete Question
                                         </Button>
@@ -472,7 +521,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                 
                                 {/* Action Buttons */}
                                 <div className="flex justify-end">
-                                    <Button onClick={handleCancel} className="mr-2">Cancel</Button>
+                                    <Button onClick={handleCancel} className="mr-2" type="button">Cancel</Button>
                                     <Button type="primary" htmlType="submit" title={questionData ? "Save Changes" : "Create Question"}>
                                         {questionData ? "Save Changes" : "Create Question"}
                                     </Button>
