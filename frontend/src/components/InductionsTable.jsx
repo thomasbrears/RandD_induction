@@ -34,10 +34,7 @@ const MobileInductionCard = ({ induction, onEdit, onViewResults }) => (
 
     <div className="text-sm text-gray-600 mt-2 break-words whitespace-normal">
       <div>
-        <p><span className="font-semibold">Department: </span>
-        <a href={`mailto:${induction.department}`} className="text-blue-500 hover:underline">
-          {induction.department}
-        </a></p>
+        <p><span className="font-semibold">Department: </span>{induction.department}</p>
       </div>
       <div>
         <p><span className="font-semibold">Description: </span></p>
