@@ -453,7 +453,7 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
               <p className="ant-upload-drag-icon">
                 <InboxOutlined style={{ color: '#8c8c8c' }} />
               </p>
-              <p className="ant-upload-text">Click or drag file to this area to upload</p>
+              <p className="ant-upload-text">Click here or drag a file to this area to upload</p>
               <p className="ant-upload-hint text-xs text-gray-500">
                 Supported formats: Images (JPG, PNG, GIF), Documents (PDF, Word, Excel, PowerPoint)
               </p>
