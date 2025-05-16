@@ -24,7 +24,7 @@ const InductionFormHeader = ({
   const isDraft = induction.isDraft;
 
   return (
-    <div className="bg-white shadow-md sticky top-0 z-10">
+    <div className="bg-white shadow-md sticky top-0 z-20">
       <div className="flex flex-col sm:flex-row items-center justify-between p-4 mx-auto max-w-6xl ">
         {/* Display the Induction Name with Draft Badge */}
         <div className="flex-1 min-w-0 w-full max-w-full">

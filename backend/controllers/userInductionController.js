@@ -2433,6 +2433,15 @@ export const exportStaffInductionResultsToExcel = async (req, res) => {
     const formatAnswerWithOptions = (answer) => {
       if (!answer) return "No answer provided";
 
+      // File upload questions
+      if (answer.type === 'file_upload' || answer.questionType === 'file_upload' || 
+      answer.type === 'file' || answer.questionType === 'file') {
+    
+        // Use generic message for all file upload questions
+        return "For file responses, please refer to the website interface to view or download any uploaded files";
+      }
+
+      // short answer questions
       if (answer.type === 'short_answer' || answer.questionType === 'short_answer' || 
         answer.type === 'text' || answer.questionType === 'text') {
       
@@ -3259,6 +3268,15 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
         return "No answer provided";
       }
 
+      // File upload 
+      if (answer.type === 'file_upload' || answer.questionType === 'file_upload' || 
+      answer.type === 'file' || answer.questionType === 'file') {
+    
+        // Use generic message for all file upload questions
+        return "For file responses, please refer to the website interface to view or download any uploaded files";
+      }
+
+      // short answer text
       if (answer.type === 'short_answer' || answer.questionType === 'short_answer' || 
         answer.type === 'text' || answer.questionType === 'text') {
       

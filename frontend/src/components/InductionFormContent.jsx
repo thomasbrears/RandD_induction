@@ -6,7 +6,6 @@ import TiptapEditor from "./TiptapEditor";
 import { Select, Input, Button, Popconfirm } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { useLocation } from "react-router-dom";
-import InductionExpiryOptions from "../models/InductionExpiryOptions";
 
 const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileChange, onDeleteInduction }) => {
     const [Departments, setDepartments] = useState([]);
@@ -64,7 +63,7 @@ const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileCh
     useEffect(() => {
         setValidationErrors({});
         validateForm();
-    }, [induction.name, induction.description, induction.department, induction.expiryMonths]);
+    }, [induction.name, induction.description, induction.department]);
 
     //Question methods
     const handleCloseModal = () => {
@@ -194,31 +193,6 @@ const InductionFormContent = ({ induction, setInduction, getImageUrl, saveFileCh
                     {validationErrors.description && <p className="text-red-500 text-sm">{validationErrors.description}</p>}
 
                     <TiptapEditor description={induction.description} handleChange={handleDescriptionUpdate} />
-                </div>
-
-                {/* Expiry Period Section */}
-                <div className="space-y-2">
-                <label htmlFor="expiry" className="text-base font-semibold flex items-center">
-                    Expiry Period:
-                </label>
-                {validationErrors.expiryMonths && <p className="text-red-500 text-sm">{validationErrors.expiryMonths}</p>}
-                <Select
-                    id="expiry"
-                    name="expiry"
-                    value={induction.expiryMonths}
-                    onChange={(value) =>
-                    setInduction({ ...induction, expiryMonths: value })
-                    }
-                    className="w-full rounded-lg text-sm"
-                    placeholder="Select expiry period"
-                    style={{ border: "1px solid #d1d5db" }}
-                >
-                    {InductionExpiryOptions.map((option) => (
-                    <Select.Option key={option.label} value={option.value}>
-                        {option.label}
-                    </Select.Option>
-                    ))}
-                </Select>
                 </div>
             </div>
 

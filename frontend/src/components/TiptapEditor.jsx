@@ -113,7 +113,7 @@ export default function ScrollableTiptapEditor({ description, handleChange, maxH
         <>
             <div className="prose !max-w-none border border-gray-300 w-full rounded">
                 {/* Toolbar - Fixed at top */}
-                <div className="border-b p-2 bg-slate-50 flex flex-wrap gap-1 items-center sticky top-0 z-10">
+                <div className="border-b p-2 bg-slate-50 flex flex-wrap gap-1 items-center sticky top-0 z-5">
                     {/* Text Formatting Group */}
                     <div className="flex space-x-1 border-r pr-2 mr-2">
                         <button
