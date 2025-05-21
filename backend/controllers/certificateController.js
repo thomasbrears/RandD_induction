@@ -5,6 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import os from 'os';
 import { format } from 'date-fns';
+import axios from 'axios';
 
 /**
  * Generates and returns a certificate for a completed induction
@@ -13,6 +14,7 @@ import { format } from 'date-fns';
 export const generateCertificate = async (req, res) => {
   try {
     const { userInductionId } = req.params;
+    let logoBuffer = null;
     
     if (!userInductionId) {
       return res.status(400).json({ 
@@ -79,6 +81,16 @@ export const generateCertificate = async (req, res) => {
       format(userInduction.completedAt.toDate(), 'MMMM d, yyyy') : 
       format(new Date(), 'MMMM d, yyyy');
     
+    // Try to load the AUT Events logo
+    try {
+      const logoUrl = 'https://dev-aut-events-induction.vercel.app/images/AUTEvents_ReverseLogo2019-01.jpg';
+      const logoResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
+      logoBuffer = Buffer.from(logoResponse.data, 'binary');
+    } catch (logoError) {
+      console.error("Failed to load logo:", logoError);
+      // Continue without logo if it fails to load
+    }
+    
     // Create temp directory for certificate
     const tempDir = os.tmpdir();
     const pdfPath = path.join(tempDir, `${certificateId}.pdf`);
@@ -87,41 +99,103 @@ export const generateCertificate = async (req, res) => {
     const doc = new PDFDocument({
       size: 'A4', 
       layout: 'landscape',
-      margins: { top: 50, bottom: 50, left: 50, right: 50 }
+      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      info: {
+        Title: `Certificate of Completion - ${inductionName}`,
+        Author: 'AUT Events Induction Portal',
+        Subject: 'Induction Completion Certificate',
+        Keywords: 'certificate, completion, induction, AUTEVENTS',
+        Creator: 'AUT Events Induction Portal',
+        Producer: 'PDFKit'
+      }
     });
     
     // Pipe to file
     const stream = fs.createWriteStream(pdfPath);
     doc.pipe(stream);
     
-    // Add header strip
-    doc.rect(0, 0, doc.page.width, 70).fill('#000000');
+    // Background with elegant gradient
+    doc.rect(0, 0, doc.page.width, doc.page.height)
+       .fill('white');
     
-    // Add content
-    doc.font('Helvetica-Bold').fontSize(32).fillColor('#000000');
-    doc.text('Certificate of Completion', 0, 100, { align: 'center' });
+    // Add decorative border
+    const borderWidth = 15;
+    const borderColor = '#000000';
+    doc.lineWidth(borderWidth);
+    doc.rect(borderWidth/2, borderWidth/2, doc.page.width - borderWidth, doc.page.height - borderWidth)
+       .stroke(borderColor);
     
-    doc.font('Helvetica').fontSize(18).fillColor('#000000');
-    doc.text('This is to certify that', 0, 150, { align: 'center' });
+    // Header strip with logo
+    doc.rect(0, 0, doc.page.width, 90)
+       .fill('#000000');
     
-    doc.font('Helvetica-Bold').fontSize(24).fillColor('#000000');
-    doc.text(userDetails.displayName, 0, 190, { align: 'center' });
+    // Add logo if available
+    if (logoBuffer) {
+      doc.image(logoBuffer, 50, 15, { width: 150 });
+    }
     
-    doc.font('Helvetica').fontSize(18).fillColor('#000000');
-    doc.text('has successfully completed the', 0, 230, { align: 'center' });
+    // Add certificate title
+    doc.font('Helvetica-Bold')
+       .fontSize(46)
+       .fillColor('#000000')
+       .text('Certificate of Completion', 0, 120, { align: 'center' });
     
-    doc.font('Helvetica-Bold').fontSize(24).fillColor('#000000');
-    doc.text(inductionName, 0, 270, { align: 'center' });
+    // Add decorative line
+    const centerX = doc.page.width / 2;
+    doc.strokeColor('#52c41a')
+       .lineWidth(3)
+       .moveTo(centerX - 150, 180)
+       .lineTo(centerX + 150, 180)
+       .stroke();
     
-    doc.font('Helvetica').fontSize(16).fillColor('#000000');
-    doc.text(`Completion Date: ${completionDate}`, 0, 330, { align: 'center' });
+    // Add certification text
+    doc.font('Helvetica')
+       .fontSize(20)
+       .fillColor('#333333')
+       .text('This is to certify that', 0, 210, { align: 'center' });
     
-    doc.font('Helvetica').fontSize(12).fillColor('#666666');
-    doc.text(`Certificate ID: ${certificateId}`, 0, 380, { align: 'center' });
-    doc.text('Verified by AUT Events Induction Portal', 0, 400, { align: 'center' });
+    // Add recipient name
+    doc.font('Helvetica-Bold')
+       .fontSize(30)
+       .fillColor('#000000')
+       .text(userDetails.displayName, 0, 250, { align: 'center' });
+    
+    // Add achievement text
+    doc.font('Helvetica')
+       .fontSize(20)
+       .fillColor('#333333')
+       .text('has successfully completed the', 0, 310, { align: 'center' });
+    
+    // Add course name
+    doc.font('Helvetica-Bold')
+       .fontSize(28)
+       .fillColor('#000000')
+       .text(inductionName, 0, 350, { align: 'center' });
+    
+    // Add completion date with more elegant styling
+    doc.font('Helvetica')
+       .fontSize(18)
+       .fillColor('#333333')
+       .text(`Completed on ${completionDate}`, 0, 410, { align: 'center' });
+    
+    // Add verification information
+    doc.font('Helvetica')
+       .fontSize(14)
+       .fillColor('#666666')
+       .text(`Certificate ID: ${certificateId}`, 0, 470, { align: 'center' });
+    
+    // Add verification note
+    doc.font('Helvetica')
+       .fontSize(12)
+       .fillColor('#777777')
+       .text('This certificate can be verified through the AUT Events Induction Portal', 0, 500, { align: 'center' });
     
     // Add footer strip
-    doc.rect(0, doc.page.height - 20, doc.page.width, 20).fill('#000000');
+    doc.rect(0, doc.page.height - 50, doc.page.width, 50).fill('#000000');
+    doc.font('Helvetica')
+       .fontSize(14)
+       .fillColor('#ffffff')
+       .text('AUT Events Induction Portal', doc.page.width - 250, doc.page.height - 30);
     
     // Finalize the PDF
     doc.end();
