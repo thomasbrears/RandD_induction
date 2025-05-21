@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Modal, Button, message, Spin } from 'antd';
-import { DownloadOutlined, TrophyOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { Button, message, Spin } from 'antd';
+import { DownloadOutlined, TrophyOutlined } from '@ant-design/icons';
 import fetchWithAuth from '../api/fetchWithAuth';
 
 /**
@@ -8,23 +8,10 @@ import fetchWithAuth from '../api/fetchWithAuth';
  * The backend handles all certificate creation for security
  */
 const CompletionCertificate = ({ induction, user }) => {
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   
-  // Handle showing the modal
-  const showModal = () => {
-    setIsModalVisible(true);
-  };
-  
-  // Handle closing the modal
-  const handleCancel = () => {
-    setIsModalVisible(false);
-  };
-  
-  // Generate and download the certificate from backend
+  // Generate and download the certificate directly
   const downloadCertificate = async () => {
-    // We need to use the userInductionId which is the ID of the completed assignment
     const userInductionId = induction?.id;
     if (!userInductionId) {
       message.error("Cannot generate certificate: Missing assignment ID");
@@ -32,7 +19,6 @@ const CompletionCertificate = ({ induction, user }) => {
     }
     
     setLoading(true);
-    setError(null);
     
     try {
       // Log the URL and ID for debugging
@@ -89,12 +75,8 @@ const CompletionCertificate = ({ induction, user }) => {
       
       // Show success message
       message.success('Certificate downloaded successfully!');
-      
-      // Close the modal once downloaded
-      setIsModalVisible(false);
     } catch (err) {
       console.error('Certificate download error:', err);
-      setError(err.message || 'Failed to download certificate');
       message.error('Could not generate certificate: ' + (err.message || 'Server error'));
     } finally {
       setLoading(false);
@@ -102,74 +84,17 @@ const CompletionCertificate = ({ induction, user }) => {
   };
   
   return (
-    <>
-      <Button
-        type="primary"
-        icon={<TrophyOutlined />}
-        onClick={showModal}
-        className="certificate-btn"
-        style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-      >
-        View Certificate
-      </Button>
-      
-      <Modal
-        title={
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <SafetyCertificateOutlined style={{ fontSize: '20px', marginRight: '10px' }} />
-            Completion Certificate
-          </div>
-        }
-        open={isModalVisible}
-        onCancel={handleCancel}
-        footer={[
-          <Button key="close" onClick={handleCancel}>
-            Close
-          </Button>,
-          <Button
-            key="download"
-            type="primary"
-            icon={<DownloadOutlined />}
-            onClick={downloadCertificate}
-            loading={loading}
-            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-          >
-            Download Certificate
-          </Button>,
-        ]}
-      >
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '30px' }}>
-            <Spin size="large" tip="Generating your certificate..." />
-            <p style={{ marginTop: '20px' }}>Please wait while we validate and generate your certificate...</p>
-          </div>
-        ) : error ? (
-          <div style={{
-            padding: '20px',
-            textAlign: 'center',
-            color: '#ff4d4f',
-            border: '1px solid #ffccc7',
-            borderRadius: '4px',
-            backgroundColor: '#fff2f0',
-          }}>
-            <p style={{ fontSize: '16px', fontWeight: 'bold' }}>Certificate Error</p>
-            <p>{error}</p>
-          </div>
-        ) : (
-          <div style={{ textAlign: 'center', padding: '20px' }}>
-            <SafetyCertificateOutlined style={{ fontSize: '60px', color: '#52c41a', marginBottom: '20px' }} />
-            <h2>Your Certificate is Ready!</h2>
-            <p>
-              Congratulations on completing <strong>{induction?.inductionName || 'your induction'}</strong>!
-            </p>
-            <p>Click the Download button below to get your official completion certificate.</p>
-            <p style={{ marginTop: '20px', fontSize: '14px', color: '#888' }}>
-              All certificates are securely generated and verified by our system.
-            </p>
-          </div>
-        )}
-      </Modal>
-    </>
+    <Button
+      type="primary"
+      icon={loading ? <Spin size="small" /> : <DownloadOutlined />}
+      onClick={downloadCertificate}
+      loading={loading}
+      disabled={loading}
+      className="certificate-btn"
+      style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
+    >
+      {loading ? 'Generating...' : 'Download Certificate'}
+    </Button>
   );
 };
 

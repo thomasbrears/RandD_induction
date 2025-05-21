@@ -13,7 +13,6 @@ let isLoggingOut = false; // Prevent multiple redirects
  * @param {string} endpoint - The API endpoint to call (starting with /)
  * @param {Object} options - Fetch options
  * @param {boolean} retry - Whether to retry with a fresh token if authentication fails
- * @param {string} responseType - The type of response to return ('json', 'blob', 'text')
  * @returns {Promise<any>} - The API response
  */
 const fetchWithAuth = async (endpoint, options = {}, retry = true) => {
@@ -22,14 +21,22 @@ const fetchWithAuth = async (endpoint, options = {}, retry = true) => {
     if (!user) throw new Error("User not authenticated");
 
     let token = await user.getIdToken();
-
+    
+    // Set up our request headers with authentication
+    const headers = {
+      ...options.headers,
+      authtoken: token,
+    };
+    
+    // Only set Content-Type to application/json if we're not handling binary data
+    if (options.responseType !== 'blob') {
+      headers['Content-Type'] = 'application/json';
+    }
+    
+    // Create the fetch request with proper headers
     const response = await fetch(`${API_URL}${endpoint}`, {
       ...options,
-      headers: {
-        ...options.headers,
-        authtoken: token,
-        "Content-Type": "application/json",
-      },
+      headers,
     });
 
     // Handle Unauthorized Response
@@ -55,13 +62,15 @@ const fetchWithAuth = async (endpoint, options = {}, retry = true) => {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
     
-    // Check if we need to return a specific response type
+    // Handle different response types
     if (options.responseType === 'blob') {
-      return response; // Return the response directly for blob handling
+      // For binary data, return a response that the caller can process
+      return response;
     } else if (options.responseType === 'text') {
       return response.text();
     } else {
-      return response.json(); // Default to JSON
+      // Default to JSON
+      return response.json();
     }
   } catch (error) {
     console.error("Error in fetchWithAuth:", error);
