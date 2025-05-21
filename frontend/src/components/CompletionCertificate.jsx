@@ -1,162 +1,101 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Modal, Button, Spin } from 'antd';
-import { PrinterOutlined, DownloadOutlined, TrophyOutlined } from '@ant-design/icons';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import React, { useState } from 'react';
+import { Modal, Button, message, Spin } from 'antd';
+import { DownloadOutlined, TrophyOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
+import { fetchWithAuth } from '../api/fetchWithAuth';
 
-const CompletionCertificate = ({ induction, user, completionDate, fallbackName }) => {
-  const [isModalVisible, setIsModalVisible] = useState(true); // Start with modal open
-  const [generating, setGenerating] = useState(false);
-  const certificateRef = useRef(null);
- 
-  // Get the display name with proper fallback
-  const getDisplayName = () => {
-    // If a fallback name is provided, use it as the first fallback
-    if (fallbackName && fallbackName.trim()) {
-      return fallbackName.trim();
-    }
-    
-    if (!induction) return "Induction Program";
-   
-    // Check if name exists and isn't just whitespace
-    if (induction.name && induction.name.trim()) {
-      return induction.name.trim();
-    }
-   
-    return "Induction Program";
-  };
- 
-  const displayName = getDisplayName();
- 
+/**
+ * Completion Certificate component that requests certificate generation from the backend
+ * The backend handles all certificate creation for security
+ */
+const CompletionCertificate = ({ induction, user }) => {
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  
+  // Handle showing the modal
   const showModal = () => {
     setIsModalVisible(true);
   };
+  
+  // Handle closing the modal
   const handleCancel = () => {
     setIsModalVisible(false);
   };
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
-  };
-  const downloadAsPDF = async () => {
-    if (!certificateRef.current) return;
-   
-    setGenerating(true);
-   
+  
+  // Generate and download the certificate from backend
+  const downloadCertificate = async () => {
+    // We need to use the userInductionId which is the ID of the completed assignment
+    const userInductionId = induction?.id;
+    if (!userInductionId) {
+      message.error("Cannot generate certificate: Missing assignment ID");
+      return;
+    }
+    
+    setLoading(true);
+    setError(null);
+    
     try {
-      const canvas = await html2canvas(certificateRef.current, {
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        allowTaint: true,
-      });
-     
-      const imgData = canvas.toDataURL('image/png');
-     
-      // Create PDF with A4 dimensions
-      const pdf = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'a4'
-      });
-     
-      // A4 landscape dimensions
-      const pdfWidth = 297;
-      const pdfHeight = 210;
-     
-      // Calculate scaling to fit content properly on A4
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-     
-      // Center the image on the page
-      const xOffset = (pdfWidth - imgWidth * ratio) / 2;
-      const yOffset = (pdfHeight - imgHeight * ratio) / 2;
-     
-      pdf.addImage(
-        imgData,
-        'PNG',
-        xOffset,
-        yOffset,
-        imgWidth * ratio,
-        imgHeight * ratio
+      // The fetch API with responseType: 'blob' to handle binary data (PDF)
+      const response = await fetchWithAuth(
+        `/api/certificates/generate/${userInductionId}`, 
+        { responseType: 'blob' }
       );
-     
-      // Create a safe filename
-      const safeFilename = displayName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-      const filename = `${safeFilename}_certificate.pdf`;
-      pdf.save(filename);
-    } catch (error) {
-      console.error('Error generating PDF:', error);
+      
+      // If there's an error
+      if (!response.ok) {
+        let errorMessage = "Failed to generate certificate";
+        
+        // Try to parse error message if it's JSON
+        try {
+          // Convert blob to text to read error message
+          const errorText = await response.text();
+          const errorData = JSON.parse(errorText);
+          errorMessage = errorData.message || errorData.error || errorMessage;
+        } catch (parseErr) {
+          console.error('Error parsing error response:', parseErr);
+        }
+        
+        throw new Error(errorMessage);
+      }
+      
+      // Get the filename from the Content-Disposition header if available
+      const contentDisposition = response.headers.get('Content-Disposition');
+      let filename = 'certificate.pdf';
+      
+      if (contentDisposition) {
+        const filenameMatch = contentDisposition.match(/filename="(.+)"/i);
+        if (filenameMatch && filenameMatch[1]) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      // Create a blob URL for the PDF and trigger download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+      
+      // Clean up blob URL
+      window.URL.revokeObjectURL(url);
+      
+      // Show success message
+      message.success('Certificate downloaded successfully!');
+      
+      // Close the modal once downloaded
+      setIsModalVisible(false);
+    } catch (err) {
+      console.error('Certificate download error:', err);
+      setError(err.message || 'Failed to download certificate');
+      message.error('Could not generate certificate: ' + (err.message || 'Server error'));
     } finally {
-      setGenerating(false);
+      setLoading(false);
     }
   };
-  const printCertificate = () => {
-    window.print();
-  };
-  // Add print styles to the document head
-  useEffect(() => {
-    const styleElement = document.createElement('style');
-    styleElement.type = 'text/css';
-    styleElement.innerHTML = `
-      @media print {
-        body * {
-          visibility: hidden;
-        }
-        #certificate-container, #certificate-container * {
-          visibility: visible;
-        }
-        #certificate-container {
-          position: absolute;
-          left: 0;
-          top: 0;
-          width: 100%;
-          height: 100%;
-          margin: 0;
-          padding: 0;
-          box-sizing: border-box;
-          page-break-inside: avoid;
-        }
-        
-        /* Ensure the black strips are visible in print with !important */
-        #certificate-top-strip, #certificate-bottom-strip {
-          visibility: visible !important;
-          display: block !important;
-          background-color: #000 !important;
-          print-color-adjust: exact !important;
-          -webkit-print-color-adjust: exact !important;
-        }
-        
-        /* Force landscape orientation */
-        @page {
-          size: landscape;
-          margin: 0;
-        }
-      }
-     
-      .certificate-btn {
-        background-color: #52c41a;
-        border-color: #52c41a;
-      }
-     
-      .certificate-btn:hover {
-        background-color: #389e0d;
-        border-color: #389e0d;
-      }
-    `;
-   
-    document.head.appendChild(styleElement);
-   
-    return () => {
-      document.head.removeChild(styleElement);
-    };
-  }, []);
+  
   return (
     <>
       <Button
@@ -168,177 +107,62 @@ const CompletionCertificate = ({ induction, user, completionDate, fallbackName }
       >
         View Certificate
       </Button>
+      
       <Modal
-        title="Completion Certificate"
+        title={
+          <div style={{ display: 'flex', alignItems: 'center' }}>
+            <SafetyCertificateOutlined style={{ fontSize: '20px', marginRight: '10px' }} />
+            Completion Certificate
+          </div>
+        }
         open={isModalVisible}
         onCancel={handleCancel}
-        width={800}
-        styles={{ body: { padding: '20px' } }}
-        destroyOnClose={false}
         footer={[
           <Button key="close" onClick={handleCancel}>
             Close
           </Button>,
           <Button
-            key="print"
-            icon={<PrinterOutlined />}
-            onClick={printCertificate}
-          >
-            Print
-          </Button>,
-          <Button
             key="download"
             type="primary"
             icon={<DownloadOutlined />}
-            onClick={downloadAsPDF}
-            loading={generating}
+            onClick={downloadCertificate}
+            loading={loading}
+            style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
           >
-            Download PDF
+            Download Certificate
           </Button>,
         ]}
       >
-        {generating && (
-          <div style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: 'rgba(255, 255, 255, 0.7)',
-            zIndex: 10
-          }}>
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '30px' }}>
             <Spin size="large" tip="Generating your certificate..." />
+            <p style={{ marginTop: '20px' }}>Please wait while we validate and generate your certificate...</p>
+          </div>
+        ) : error ? (
+          <div style={{
+            padding: '20px',
+            textAlign: 'center',
+            color: '#ff4d4f',
+            border: '1px solid #ffccc7',
+            borderRadius: '4px',
+            backgroundColor: '#fff2f0',
+          }}>
+            <p style={{ fontSize: '16px', fontWeight: 'bold' }}>Certificate Error</p>
+            <p>{error}</p>
+          </div>
+        ) : (
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <SafetyCertificateOutlined style={{ fontSize: '60px', color: '#52c41a', marginBottom: '20px' }} />
+            <h2>Your Certificate is Ready!</h2>
+            <p>
+              Congratulations on completing <strong>{induction?.inductionName || 'your induction'}</strong>!
+            </p>
+            <p>Click the Download button below to get your official completion certificate.</p>
+            <p style={{ marginTop: '20px', fontSize: '14px', color: '#888' }}>
+              All certificates are securely generated and verified by our system.
+            </p>
           </div>
         )}
-       
-        <div
-          id="certificate-container"
-          ref={certificateRef}
-          className="certificate-container"
-          style={{
-            border: '2px solid #000',
-            padding: '0',
-            textAlign: 'center',
-            position: 'relative',
-            background: '#ffffff',
-            borderRadius: '5px',
-            boxShadow: '0 4px 8px rgba(0,0,0,0.1)',
-            marginBottom: '20px',
-            width: '100%',
-            aspectRatio: '1.414 / 1',
-            overflow: 'hidden'
-          }}
-        >
-          {/* Black header strip for logo */}
-          <div 
-            id="certificate-top-strip"
-            style={{
-              position: 'relative',
-              width: '100%',
-              height: '70px',
-              background: '#000000',
-              backgroundColor: '#000000',
-              display: 'flex',
-              alignItems: 'center',
-              paddingLeft: '20px',
-              WebkitPrintColorAdjust: 'exact',
-              printColorAdjust: 'exact'
-            }}
-          >
-            <img
-              src="/images/AUTEventsInductionPortal.jpg"
-              alt="AUT Events Induction Portal"
-              style={{
-                height: '50px',
-                objectFit: 'contain',
-                marginRight: '10px'
-              }}
-              onError={(e) => { e.target.style.display = 'none' }}
-            />
-           
-          </div>
-         
-          <div style={{
-            padding: '30px 40px',
-            fontFamily: 'Arial, sans-serif',
-            color: '#000'
-          }}>
-            <h1 style={{
-              fontSize: '36px',
-              fontWeight: 'bold',
-              marginBottom: '10px',
-              color: '#000'
-            }}>
-              Certificate of Completion
-            </h1>
-           
-            <p style={{
-              fontSize: '18px',
-              margin: '20px 0'
-            }}>
-              This is to certify that
-            </p>
-           
-            <h2 style={{
-              fontSize: '30px',
-              fontWeight: 'bold',
-              margin: '10px 0',
-              color: '#000'
-            }}>
-              {user?.displayName || user?.email || 'Team Member'}
-            </h2>
-           
-            <p style={{
-              fontSize: '18px',
-              margin: '20px 0'
-            }}>
-              has successfully completed the
-            </p>
-           
-            <h2 style={{
-              fontSize: '28px',
-              fontWeight: 'bold',
-              margin: '10px 0 20px',
-              color: '#000',
-              padding: '0 40px'
-            }}>
-              {displayName}
-            </h2>
-           
-            <p style={{
-              fontSize: '18px',
-              margin: '30px 0 10px'
-            }}>
-              Completion Date: <b>{formatDate(completionDate)}</b>
-            </p>
-           
-            <div style={{
-              margin: '60px 0 20px',
-              fontSize: '14px',
-              color: '#666'
-            }}>
-              <p>Certificate ID: {`CERT-${Date.now().toString(36).slice(-6).toUpperCase()}`}</p>
-            </div>
-          </div>
-         
-          {/* Black footer strip */}
-          <div 
-            id="certificate-bottom-strip"
-            style={{
-              position: 'absolute',
-              bottom: '0',
-              width: '100%',
-              height: '20px',
-              background: '#000000',
-              backgroundColor: '#000000',
-              WebkitPrintColorAdjust: 'exact',
-              printColorAdjust: 'exact'
-            }}
-          ></div>
-        </div>
       </Modal>
     </>
   );
