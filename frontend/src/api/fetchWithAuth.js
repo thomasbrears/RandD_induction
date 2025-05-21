@@ -8,6 +8,14 @@ const API_URL =
 
 let isLoggingOut = false; // Prevent multiple redirects
 
+/**
+ * Makes an authenticated API request with the current user's token
+ * @param {string} endpoint - The API endpoint to call (starting with /)
+ * @param {Object} options - Fetch options
+ * @param {boolean} retry - Whether to retry with a fresh token if authentication fails
+ * @param {string} responseType - The type of response to return ('json', 'blob', 'text')
+ * @returns {Promise<any>} - The API response
+ */
 const fetchWithAuth = async (endpoint, options = {}, retry = true) => {
   try {
     const user = auth.currentUser;
@@ -46,8 +54,15 @@ const fetchWithAuth = async (endpoint, options = {}, retry = true) => {
     if (!response.ok) {
       throw new Error(`HTTP error! Status: ${response.status}`);
     }
-
-    return response.json();
+    
+    // Check if we need to return a specific response type
+    if (options.responseType === 'blob') {
+      return response; // Return the response directly for blob handling
+    } else if (options.responseType === 'text') {
+      return response.text();
+    } else {
+      return response.json(); // Default to JSON
+    }
   } catch (error) {
     console.error("Error in fetchWithAuth:", error);
     throw error;

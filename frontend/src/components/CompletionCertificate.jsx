@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Modal, Button, message, Spin } from 'antd';
 import { DownloadOutlined, TrophyOutlined, SafetyCertificateOutlined } from '@ant-design/icons';
-import { fetchWithAuth } from '../api/fetchWithAuth';
+import fetchWithAuth from '../api/fetchWithAuth';
 
 /**
  * Completion Certificate component that requests certificate generation from the backend
