@@ -73,87 +73,22 @@ const DateCell = ({ date, label }) => {
 
 // Certificate Button Component
 const CertificateButton = ({ record, user }) => {
-  const [fullInduction, setFullInduction] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
-
-  const loadInductionDetails = async () => {
-    if (fullInduction) {
-      return;
-    }
-    
-    setLoading(true);
-    setError(false);
-    
-    try {
-      // Get induction details from API
-      const data = await getUserInductionById(user, record.id);
-      
-      if (data) {
-        // Normalize completion date
-        let completionDate = record.completedAt || record.completionDate;
-        
-        // Handle Firestore Timestamp objects
-        if (completionDate && typeof completionDate === 'object') {
-          if (completionDate._seconds !== undefined || completionDate.seconds !== undefined) {
-            const seconds = completionDate._seconds !== undefined ? completionDate._seconds : completionDate.seconds;
-            completionDate = new Date(seconds * 1000);
-          } else if (typeof completionDate.toDate === 'function') {
-            completionDate = completionDate.toDate();
-          }
-        }
-        
-        setFullInduction({
-          ...data,
-          name: data.inductionName || record.inductionName || 'Unnamed Induction',
-          completionDate: completionDate
-        });
-      } else {
-        throw new Error('No data returned');
-      }
-    } catch (error) {
-      setError(true);
-      notifyError('Certificate Error', 'Unable to generate certificate. Please try again later.');
-    } finally {
-      setLoading(false);
-    }
+  // Directly create the induction object for download
+  const induction = {
+    id: record.id,
+    inductionId: record.inductionId,
+    inductionName: record.inductionName || 'Induction Certificate',
+    userId: user?.uid,
+    // Include other properties needed by CompletionCertificate
+    completedAt: record.completedAt || record.completionDate
   };
 
-  const handleCertificateClick = () => {
-    loadInductionDetails();
-  };
-
-  // If there was an error, allow retrying
-  if (error) {
-    return (
-      <Button 
-        type="default"
-        danger
-        icon={<TrophyOutlined />}
-        onClick={handleCertificateClick}
-        loading={loading}
-      >Retry Certificate
-      </Button>
-    );
-  }
-
-  return fullInduction ? (
+  // Directly render CompletionCertificate to enable one-click download
+  return (
     <CompletionCertificate 
-      induction={fullInduction}
+      induction={induction}
       user={user}
-      completionDate={fullInduction.completionDate}
-      fallbackName={record.inductionName}
     />
-  ) : (
-    <Button 
-      type="primary" 
-      icon={<TrophyOutlined />}
-      onClick={handleCertificateClick}
-      loading={loading}
-      className="certificate-btn"
-      style={{ backgroundColor: '#52c41a', borderColor: '#52c41a' }}
-    >View Certificate
-    </Button>
   );
 };
 
