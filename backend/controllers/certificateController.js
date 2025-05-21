@@ -94,12 +94,18 @@ export const generateCertificate = async (req, res) => {
     // Create temp directory for certificate
     const tempDir = os.tmpdir();
     const pdfPath = path.join(tempDir, `${certificateId}.pdf`);
+
+    // IMPORTANT: Using fixed dimensions to ensure content fits on one page
+    // A4 landscape: 842 x 595 points
+    const pageWidth = 842;
+    const pageHeight = 595;
     
     // Generate the PDF certificate
     const doc = new PDFDocument({
-      size: 'A4', 
-      layout: 'landscape',
-      margins: { top: 50, bottom: 50, left: 50, right: 50 },
+      size: [pageWidth, pageHeight],
+      margin: 0,
+      autoFirstPage: true,
+      bufferPages: false, // Important: This prevents automatic page management
       info: {
         Title: `Certificate of Completion - ${inductionName}`,
         Author: 'AUT Events Induction Portal',
@@ -110,128 +116,122 @@ export const generateCertificate = async (req, res) => {
       }
     });
     
+    // CRITICAL: Disable automatic page creation
+    const originalAddPage = doc.addPage;
+    doc.addPage = function() {
+      console.log('Blocked attempt to add new page');
+      return this; // Return the document without adding a page
+    };
+
     // Pipe to file
     const stream = fs.createWriteStream(pdfPath);
     doc.pipe(stream);
     
-    // Background with elegant gradient
-    doc.rect(0, 0, doc.page.width, doc.page.height)
-       .fill('white');
+    // Background
+    doc.rect(0, 0, pageWidth, pageHeight).fill('white');
     
-    // Add decorative border
-    const borderWidth = 15;
+    // Add decorative border - keep it thin for more content space
+    const borderWidth = 8;
     const borderColor = '#000000';
     doc.lineWidth(borderWidth);
-    doc.rect(borderWidth/2, borderWidth/2, doc.page.width - borderWidth, doc.page.height - borderWidth)
+    doc.rect(borderWidth/2, borderWidth/2, pageWidth - borderWidth, pageHeight - borderWidth)
        .stroke(borderColor);
     
     // Header strip with logo
-    doc.rect(0, 0, doc.page.width, 90)
-       .fill('#000000');
+    doc.rect(0, 0, pageWidth, 80).fill('#000000');
     
     // Add logo if available
     if (logoBuffer) {
-      doc.image(logoBuffer, 50, 15, { width: 150 });
+      doc.image(logoBuffer, 50, 15, { width: 120 });
     }
     
     // Add certificate title
     doc.font('Helvetica-Bold')
-       .fontSize(46)
+       .fontSize(36)
        .fillColor('#000000')
-       .text('Certificate of Completion', 0, 120, { align: 'center' });
+       .text('Certificate of Completion', 0, 110, { align: 'center' });
     
     // Add decorative line
-    const centerX = doc.page.width / 2;
+    const centerX = pageWidth / 2;
     doc.strokeColor('#52c41a')
-       .lineWidth(3)
-       .moveTo(centerX - 150, 180)
-       .lineTo(centerX + 150, 180)
+       .lineWidth(2)
+       .moveTo(centerX - 150, 160)
+       .lineTo(centerX + 150, 160)
        .stroke();
     
     // Add certification text
     doc.font('Helvetica')
-       .fontSize(20)
+       .fontSize(16)
        .fillColor('#333333')
-       .text('This is to certify that', 0, 210, { align: 'center' });
+       .text('This is to certify that', 0, 180, { align: 'center' });
     
     // Add recipient name
     doc.font('Helvetica-Bold')
-       .fontSize(30)
+       .fontSize(24)
        .fillColor('#000000')
-       .text(userDetails.displayName, 0, 250, { align: 'center' });
+       .text(userDetails.displayName, 0, 210, { align: 'center' });
     
     // Add achievement text
     doc.font('Helvetica')
-       .fontSize(20)
+       .fontSize(16)
        .fillColor('#333333')
-       .text('has successfully completed the', 0, 310, { align: 'center' });
+       .text('has successfully completed the', 0, 250, { align: 'center' });
     
     // Add course name
     doc.font('Helvetica-Bold')
-       .fontSize(28)
+       .fontSize(22)
        .fillColor('#000000')
-       .text(inductionName, 0, 350, { align: 'center' });
+       .text(inductionName, 0, 280, { align: 'center' });
     
-    // Add completion date with more elegant styling
+    // Add completion date
     doc.font('Helvetica')
-       .fontSize(18)
+       .fontSize(16)
        .fillColor('#333333')
-       .text(`Completed on ${completionDate}`, 0, 410, { align: 'center' });
+       .text(`Completed on ${completionDate}`, 0, 320, { align: 'center' });
     
     // Add verification information
     doc.font('Helvetica')
-       .fontSize(14)
+       .fontSize(12)
        .fillColor('#666666')
-       .text(`Certificate ID: ${certificateId}`, 0, 470, { align: 'center' });
+       .text(`Certificate ID: ${certificateId}`, 0, 360, { align: 'center' });
     
     // Add verification note
     doc.font('Helvetica')
-       .fontSize(12)
+       .fontSize(10)
        .fillColor('#777777')
-       .text('This certificate can be verified through the AUT Events Induction Portal', 0, 500, { align: 'center' });
+       .text('This certificate can be verified through the AUT Events Induction Portal', 0, 385, { align: 'center' });
     
     // Add footer strip
-    doc.rect(0, doc.page.height - 50, doc.page.width, 50).fill('#000000');
+    doc.rect(0, pageHeight - 40, pageWidth, 40).fill('#000000');
     doc.font('Helvetica')
-       .fontSize(14)
+       .fontSize(12)
        .fillColor('#ffffff')
-       .text('AUT Events Induction Portal', doc.page.width - 250, doc.page.height - 30);
+       .text('AUT Events Induction Portal', pageWidth - 200, pageHeight - 25);
     
-    // Finalize the PDF
+    // End document immediately to prevent auto page creation
     doc.end();
     
     // Wait for the PDF to be created
     stream.on('finish', async () => {
-      // Generate download URL
-      const certificate = {
-        id: certificateId,
-        recipientName: userDetails.displayName,
-        inductionName: inductionName,
-        completionDate: userInduction.completedAt,
-        userId: userId,
-        userInductionId: userInductionId,
-        validated: true
-      };
-      
-      // Log this certificate generation
       try {
+        // Log this certificate generation
         await db.collection("certificateLogs").add({
           certificateId: certificateId,
           userInductionId: userInductionId,
           userId: userId,
           inductionId: userInduction.inductionId,
           generatedAt: admin.firestore.FieldValue.serverTimestamp(),
-          ipAddress: req.ip // If you want to track IP for audit purposes
+          ipAddress: req.ip
         });
       } catch (logError) {
         console.error("Error logging certificate generation:", logError);
         // Continue even if logging fails
       }
       
-      // Read PDF file and send it as response
+      // Read PDF file
       const pdfBuffer = fs.readFileSync(pdfPath);
       
-      // Set response headers for PDF
+      // Set response headers
       res.setHeader('Content-Type', 'application/pdf');
       res.setHeader('Content-Disposition', `attachment; filename="${inductionName.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_certificate.pdf"`);
       res.setHeader('Content-Length', pdfBuffer.length);
