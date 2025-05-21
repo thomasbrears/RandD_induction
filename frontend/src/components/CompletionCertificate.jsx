@@ -35,9 +35,14 @@ const CompletionCertificate = ({ induction, user }) => {
     setError(null);
     
     try {
+      // Log the URL and ID for debugging
+      console.log(`Generating certificate for ID: ${userInductionId}`);
+      console.log(`API URL: /certificates/generate/${userInductionId}`);
+      
       // The fetch API with responseType: 'blob' to handle binary data (PDF)
+      // NOTE: The fetchWithAuth function already includes the /api prefix in its API_URL
       const response = await fetchWithAuth(
-        `/api/certificates/generate/${userInductionId}`, 
+        `/certificates/generate/${userInductionId}`, 
         { responseType: 'blob' }
       );
       
