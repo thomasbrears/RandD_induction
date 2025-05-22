@@ -12,6 +12,7 @@ import fileRoutes from "./routes/fileRoutes.js";
 import contentRoutes from "./routes/contentRoutes.js";
 import cronRoutes from "./routes/cronRoutes.js";
 import emailSettingsRoutes from "./routes/emailSettingsRoutes.js";
+import certificateRoutes from "./routes/certificateRoutes.js";
 
 const app = express();
 
@@ -87,6 +88,9 @@ app.use("/api/files", fileRoutes);
 
 // Content Routes
 app.use("/api/content", contentRoutes);
+
+// Certificate Routes
+app.use("/api/certificates", certificateRoutes);
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {
