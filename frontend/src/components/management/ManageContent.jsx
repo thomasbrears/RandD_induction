@@ -695,12 +695,6 @@ const ManageContent = () => {
             </Text>
           </div>
           
-          <div className="bg-yellow-50 p-3 rounded-md mb-4 border border-yellow-100">
-            <Text type="warning">
-              <strong>Note:</strong> Image upload, delete and change functionality is yet to be implemented. Coming soon - Stay tuned!
-            </Text>
-          </div>
-          
           {/* Image Grid */}
           <div className="mb-6">
             <h4 className="text-lg font-medium mb-4">Current Header Images</h4>
@@ -788,12 +782,6 @@ const ManageContent = () => {
               Manage the background images used on key pages. 
               Recommended size is 1920x1080 pixels with a 16:9 aspect ratio.
             </p>
-          </div>
-          
-          <div className="bg-yellow-50 p-3 rounded-md mb-4 border border-yellow-100">
-            <Text type="warning">
-            <strong>Note:</strong> Image upload, delete and change functionality is yet to be implemented. Coming soon - Stay tuned!
-            </Text>
           </div>
           
           <div className="space-y-6">
