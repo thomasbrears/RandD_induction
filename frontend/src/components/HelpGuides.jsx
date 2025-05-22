@@ -36,7 +36,9 @@ const guidesData = [
     category: 'User profile',
     accessLevel: 'user',
     items: [
-      // TODO: Add user profile guides here
+      { title: 'How to: Update my password', path: '/guides/update-password.pdf' },
+      { title: 'How to: Update my email address', path: '/guides/update-email.pdf' },
+      { title: 'How to: Update my name', path: '/guides/update-name.pdf' },
     ]
   },
   {
@@ -57,10 +59,18 @@ const guidesData = [
     ]
   },
   {
+    category: 'Module Management',
+    accessLevel: 'manager',
+    items: [
+      { title: 'How to: Create an Induction Module', path: '/guides/create-module.pdf' },
+      { title: 'How to: Edit an Induction Module', path: '/guides/edit-module.pdf' },
+    ]
+  },
+  {
     category: 'System Settings',
     accessLevel: 'admin', 
     items: [
-      // TODO: Add admin guides here
+      { title: 'System settings overview', path: '/guides/system-settings.pdf' },
     ]
   },
   {
