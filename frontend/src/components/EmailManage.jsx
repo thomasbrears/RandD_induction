@@ -154,20 +154,28 @@ const EmailManage = () => {
   const handleEmailChange = async (values) => {
     setIsLoading(true);
 
+    // Client-side validation
     if (!values.currentPassword) {
-      notifyError('Validation Error', 'Password is required to change email.');
+      notifyError('Password Required', 'Please enter your current password to verify your identity.');
       setIsLoading(false);
       return;
     }
 
     if (!values.newEmail || !values.confirmEmail) {
-      notifyError('Validation Error', 'All email fields are required.');
+      notifyError('Email Required', 'Please fill in both email fields.');
       setIsLoading(false);
       return;
     }
 
     if (values.newEmail !== values.confirmEmail) {
-      notifyError('Validation Error', 'Emails do not match.');
+      notifyError('Emails Don\'t Match', 'The new email addresses you entered don\'t match. Please check and try again.');
+      setIsLoading(false);
+      return;
+    }
+
+    // Check if new email is same as current email
+    if (values.newEmail.toLowerCase() === currentEmail.toLowerCase()) {
+      notifyError('Same Email Address', 'The new email address is the same as your current email. Please enter a different email address.');
       setIsLoading(false);
       return;
     }
@@ -209,14 +217,31 @@ const EmailManage = () => {
     } catch (error) {
       console.error('Email update error:', error);
       
-      if (error.code === 'auth/wrong-password') {
-        notifyError('Authentication Error', 'The current password you entered is incorrect.');
-      } else if (error.code === 'auth/requires-recent-login') {
-        notifyError('Authentication Error', 'For security reasons, you need to log out and log back in before changing your email.');
-      } else if (error.code === 'auth/email-already-in-use') {
-        notifyError('Email Error', 'This email is already associated with another account.');
-      } else {
-        notifyError('Error', error.message || 'An unknown error occurred');
+      // User-friendly error messages
+      switch (error.code) {
+        case 'auth/wrong-password':
+          notifyError('Incorrect Password', 'The password you entered is incorrect. Please check your password and try again.');
+          break;
+        case 'auth/invalid-credential':
+          notifyError('Invalid Credentials', 'The password you entered is incorrect. Please check your password and try again.');
+          break;
+        case 'auth/requires-recent-login':
+          notifyError('Session Expired', 'For security reasons, please sign out and sign back in before changing your email address.');
+          break;
+        case 'auth/email-already-in-use':
+          notifyError('Email Already Taken', 'This email address is already being used by another account. Please choose a different email address.');
+          break;
+        case 'auth/invalid-email':
+          notifyError('Invalid Email Format', 'Please enter a valid email address.');
+          break;
+        default:
+          // Fallback for any other errors
+          if (error.message) {
+            notifyError('Update Failed', `Unable to update your email: ${error.message}`);
+          } else {
+            notifyError('Update Failed', 'An unexpected error occurred while updating your email. Please try again.');
+          }
+          break;
       }
     } finally {
       setIsLoading(false);
