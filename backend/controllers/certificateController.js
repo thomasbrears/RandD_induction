@@ -83,7 +83,7 @@ export const generateCertificate = async (req, res) => {
     
     // Try to load the AUT Events logo
     try {
-      const logoUrl = 'https://dev-aut-events-induction.vercel.app/images/AUTEvents_ReverseLogo2019-01.jpg';
+      const logoUrl = 'https://dev-aut-events-induction.vercel.app/images/AUTEventsInductionPortal.jpg';
       const logoResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
       logoBuffer = Buffer.from(logoResponse.data, 'binary');
     } catch (logoError) {
