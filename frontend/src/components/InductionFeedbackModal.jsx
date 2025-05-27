@@ -245,78 +245,93 @@ const InductionFeedbackModal = ({ visible, onClose, inductionId, inductionName =
         onFieldsChange={handleFieldsChange}
         onFinish={handleSubmit}
       >
-        <Space direction="vertical" size="large" className="w-full">
-          <div>
-            <p className="text-gray-600 text-sm">
-              Your feedback helps us improve the induction process and is much appreciated.
-            </p>
+        {/* Introduction text with controlled spacing */}
+        <div className="mb-4">
+          <p className="text-gray-600 text-sm mb-0">
+            Your feedback helps us improve the induction process and is much appreciated.
+          </p>
+        </div>
+
+        {/* Overall rating section */}
+        <Form.Item
+          name="overallRating"
+          label="How would you rate your overall induction experience?"
+          rules={[{ required: true, message: 'Please rate your experience' }]}
+          className="mb-6"
+        >
+          <Rate
+            className="text-3xl"
+            value={selectedRating}
+            onChange={checkForDetailedFeedback}
+            character={({ index }) => customIcons[index + 1]}
+            count={3}
+          />
+        </Form.Item>
+
+        <Divider className="my-4" />
+
+        {/* Website usability section */}
+        <Form.Item
+          name="websiteUsability"
+          label="How easy was it to complete the induction using our website?"
+          rules={[{ required: true, message: 'Please rate the website usability' }]}
+          className="mb-6"
+        >
+          <Radio.Group>
+            <Space direction="vertical" size="small">
+              <Radio value="veryEasy">Very easy - I had no issues</Radio>
+              <Radio value="easy">Easy - I had minor issues</Radio>
+              <Radio value="neutral">Neutral</Radio>
+              <Radio value="difficult">Difficult - I had several issues</Radio>
+              <Radio value="veryDifficult">Very difficult - I had many issues</Radio>
+            </Space>
+          </Radio.Group>
+        </Form.Item>
+
+        <Divider className="my-4" />
+
+        {/* Content clarity section */}
+        <Form.Item
+          name="contentClarity"
+          label="How clear and helpful was the induction content?"
+          rules={[{ required: true, message: 'Please rate the content clarity' }]}
+          className="mb-6"
+        >
+          <Radio.Group>
+            <Space direction="vertical" size="small">
+              <Radio value="veryClear">Very clear and helpful</Radio>
+              <Radio value="mostlyClear">Mostly clear and helpful</Radio>
+              <Radio value="somewhatClear">Somewhat clear and helpful</Radio>
+              <Radio value="notClear">Not clear or helpful</Radio>
+            </Space>
+          </Radio.Group>
+        </Form.Item>
+
+        <Divider className="my-4" />
+
+        {/* Conditional feedback prompt */}
+        {needsDetailedFeedback && (
+          <div className="bg-amber-50 p-4 rounded-md border border-amber-200 mb-4">
+            <Text className="text-amber-800">
+              We noticed you didn't have the best experience. Please tell us what went wrong and how we can improve.
+            </Text>
           </div>
-          <Form.Item
-            name="overallRating"
-            label="How would you rate your overall induction experience?"
-            rules={[{ required: true, message: 'Please rate your experience' }]}
-          >
-            <Rate
-              className="text-3xl"
-              value={selectedRating}
-              onChange={checkForDetailedFeedback}
-              character={({ index }) => customIcons[index + 1]}
-              count={3}
-            />
-          </Form.Item>
-          <Divider />
-          <Form.Item
-            name="websiteUsability"
-            label="How easy was it to complete the induction using our website?"
-            rules={[{ required: true, message: 'Please rate the website usability' }]}
-          >
-            <Radio.Group>
-              <Space direction="vertical">
-                <Radio value="veryEasy">Very easy - I had no issues</Radio>
-                <Radio value="easy">Easy - I had minor issues</Radio>
-                <Radio value="neutral">Neutral</Radio>
-                <Radio value="difficult">Difficult - I had several issues</Radio>
-                <Radio value="veryDifficult">Very difficult - I had many issues</Radio>
-              </Space>
-            </Radio.Group>
-          </Form.Item>
-          <Divider />
-          <Form.Item
-            name="contentClarity"
-            label="How clear and helpful was the induction content?"
-            rules={[{ required: true, message: 'Please rate the content clarity' }]}
-          >
-            <Radio.Group>
-              <Space direction="vertical">
-                <Radio value="veryClear">Very clear and helpful</Radio>
-                <Radio value="mostlyClear">Mostly clear and helpful</Radio>
-                <Radio value="somewhatClear">Somewhat clear and helpful</Radio>
-                <Radio value="notClear">Not clear or helpful</Radio>
-              </Space>
-            </Radio.Group>
-          </Form.Item>
-          <Divider />
-          {needsDetailedFeedback && (
-            <div className="bg-amber-50 p-4 rounded-md border border-amber-200 mb-4">
-              <Text className="text-amber-800">
-                We noticed you didn't have the best experience. Please tell us what went wrong and how we can improve.
-              </Text>
-            </div>
-          )}
+        )}
          
-          <Form.Item
-            name="detailedFeedback"
-            label="Do you have any specific feedback or suggestions for improvement?"
-            rules={needsDetailedFeedback ? [{ required: true, message: 'Please provide your feedback for improvement' }] : []}
-          >
-            <TextArea
-              rows={4}
-              placeholder={needsDetailedFeedback ?
-                "Please tell us what issues you encountered and how we can improve..." :
-                "Please share your thoughts, suggestions, or any issues you encountered..."}
-            />
-          </Form.Item>
-        </Space>
+        {/* Detailed feedback section */}
+        <Form.Item
+          name="detailedFeedback"
+          label="Do you have any specific feedback or suggestions for improvement?"
+          rules={needsDetailedFeedback ? [{ required: true, message: 'Please provide your feedback for improvement' }] : []}
+          className="mb-6"
+        >
+          <TextArea
+            rows={4}
+            placeholder={needsDetailedFeedback ?
+              "Please tell us what issues you encountered and how we can improve..." :
+              "Please share your thoughts, suggestions, or any issues you encountered..."}
+          />
+        </Form.Item>
 
         {/* Form submit button */}
         <div className="flex justify-end mt-6">
