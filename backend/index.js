@@ -21,19 +21,19 @@ const corsOptions = {
   origin: (origin, callback) => {
     // List of allowed origins
     const allowedOrigins = [
-      'https://dev-aut-events-induction.vercel.app',
-      'https://aut-events-induction.vercel.app'
+      'https://inductions.autevents.co.nz',
+      'https://aut-events-induction-portal.vercel.app'
     ];
     
     // Check for thomasbrears-projects pattern matching
-    const isThomaseProject = origin && 
-      (origin.startsWith('https://thomasbrears-projects.vercel.app') || 
-       origin.includes('-thomasbrears-projects.vercel.app'));
+    const IS_AUT_EVENTS_PROJECT = origin && 
+      (origin.startsWith('https://aut-events-induction-portal.vercel.app') || 
+       origin.includes('-aut-events-induction-portal.vercel.app'));
     
     // In production, check against allowed list or pattern
     if (process.env.NODE_ENV === 'production') {
-      // Check if origin is allowed or matches Thomasbrears pattern
-      if (!origin || allowedOrigins.includes(origin) || isThomaseProject) {
+      // Check if origin is allowed or matches AUT Events Project pattern
+      if (!origin || allowedOrigins.includes(origin) || IS_AUT_EVENTS_PROJECT) {
         callback(null, true);
       } else {
         console.log(`CORS rejected: ${origin}`);

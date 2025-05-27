@@ -3,7 +3,7 @@ import { toast } from "react-toastify";
 
 const API_URL =
   process.env.NODE_ENV === "production"
-    ? "https://dev-aut-events-induction.vercel.app/api"
+    ? 'https://inductions.autevents.co.nz/api' // production website
     : "http://localhost:8000/api";
 
 let isLoggingOut = false; // Prevent multiple redirects
