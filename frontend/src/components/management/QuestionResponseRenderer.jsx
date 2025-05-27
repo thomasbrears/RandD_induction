@@ -113,18 +113,6 @@ const QuestionResponseFilter = ({
           ))}
         </Select>
 
-        {/* Importance Filter */}
-        <Select
-          style={{ width: 200 }}
-          placeholder="Question Importance"
-          allowClear
-          value={importanceFilter}
-          onChange={setImportanceFilter}
-        >
-          <Select.Option value="important">Important Questions</Select.Option>
-          <Select.Option value="standard">Standard Questions</Select.Option>
-        </Select>
-
         {/* Reset Filters Button */}
         <Button 
           icon={<FilterOutlined />} 
