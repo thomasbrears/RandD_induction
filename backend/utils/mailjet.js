@@ -135,7 +135,9 @@ export const sendEmail = async (toEmail, subject, bodyContent, replyToEmail = nu
     // Use provided emails or fall back to settings from database
     const fromEmail = options.fromEmail || emailSettings.defaultFrom;
     const replyTo = replyToEmail || emailSettings.defaultReplyTo;
-    const ccList = ccEmails.length > 0 ? ccEmails : emailSettings.defaultCc;
+    
+    const shouldUseCc = ccEmails && ccEmails.length > 0;
+    const ccList = shouldUseCc ? ccEmails : [];
     
     // Use the default email template for the content with optional customization
     const htmlContent = generateDefaultEmailTemplate(bodyContent, options);
@@ -162,8 +164,8 @@ export const sendEmail = async (toEmail, subject, bodyContent, replyToEmail = nu
       };
     }
 
-    // Add CC emails if provided
-    if (ccList && ccList.length > 0) {
+    // Only add CC emails if they actually exist
+    if (ccList.length > 0) {
       messageData.Cc = ccList.map(email => ({ Email: email }));
     }
     
