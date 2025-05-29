@@ -1,6 +1,6 @@
 import { bucket, storage } from "../gcs.js";
 
-const BUCKET_NAME = "r_and_d_induction_files";
+const BUCKET_NAME = "aut-events-induction-files";
 
 export const uploadFile = async (req, res) => {
   try {
