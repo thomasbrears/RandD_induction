@@ -101,7 +101,7 @@ const StaffInductionResultsPage = () => {
         </div>
 
         {/* Main content area */}
-        <div className="flex-1 ml-6 md:ml-8 p-6">
+        <div className="flex-1 p-4">
           <StaffInductionResultsComponent 
             userId={userId} 
             assignmentId={assignmentId} 

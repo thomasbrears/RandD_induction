@@ -1,0 +1,143 @@
+
+@media (max-width: 640px) {
+  .ant-descriptions-item-label {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+  }
+  
+  .ant-descriptions-item-content {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+  }
+  
+  .ant-card {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  
+  .ant-card-body {
+    padding: 12px !important;
+  }
+  
+  .ant-descriptions-bordered .ant-descriptions-item-label,
+  .ant-descriptions-bordered .ant-descriptions-item-content {
+    padding: 8px !important;
+  }
+
+  /* Card and general layout fixes */
+  .ant-card {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  
+  .ant-card-body {
+    padding: 12px !important;
+  }
+  
+  /* Descriptions component fixes */
+  .ant-descriptions-item-label {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    padding: 8px !important;
+  }
+  
+  .ant-descriptions-item-content {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    padding: 8px !important;
+  }
+  
+  .ant-descriptions-bordered .ant-descriptions-item-label,
+  .ant-descriptions-bordered .ant-descriptions-item-content {
+    padding: 8px !important;
+  }
+  
+  /* Tag spacing fixes */
+  .ant-tag {
+    margin-bottom: 4px !important;
+    margin-right: 4px !important;
+  }
+  
+  /* Collapse content padding */
+  .ant-collapse-content-box {
+    padding: 8px 12px !important;
+  }
+  
+  /* Pagination responsive fixes */
+  .ant-pagination {
+    text-align: center !important;
+  }
+  
+  .ant-pagination-item, 
+  .ant-pagination-prev, 
+  .ant-pagination-next {
+    margin: 2px !important;
+    min-width: 32px !important;
+  }
+  
+  .ant-pagination-options {
+    display: none !important;
+  }
+  
+  /* Input and Select responsive fixes */
+  .ant-input,
+  .ant-select {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+  }
+  
+  /* Space component wrapping */
+  .ant-space {
+    flex-wrap: wrap !important;
+  }
+  
+  /* Button responsive fixes */
+  .ant-btn-sm {
+    padding: 4px 8px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* Utility classes for text wrapping and layout */
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Ensure flex children can shrink properly */
+.min-w-0 {
+  min-width: 0;
+}
+
+/* Break word utility for long text */
+.break-words {
+  word-wrap: break-word;
+  word-break: break-word;
+  overflow-wrap: break-word;
+}
+
+.break-all {
+  word-break: break-all;
+}
+
+@media (max-width: 480px) {
+  .ant-card-head-title {
+    font-size: 16px !important;
+  }
+  
+  .ant-btn {
+    font-size: 14px !important;
+  }
+  
+  .ant-input {
+    padding: 8px 11px !important;
+  }
+}

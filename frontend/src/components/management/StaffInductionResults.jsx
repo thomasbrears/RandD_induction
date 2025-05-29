@@ -15,6 +15,7 @@ import { formatDate, formatDuration } from '../../utils/dateUtils';
 import { SectionRenderer } from './QuestionResponseRenderer';
 import FeedbackSection from './FeedbackSection';
 import ExportSection from './ExportSection';
+import '../../style/Results.css';
 
 const { Panel } = Collapse;
 
@@ -237,86 +238,104 @@ const StaffInductionResults = ({ userId, assignmentId, pageTitle, compactHeader 
   }
 
   return (
-    <div className="w-full overflow-x-hidden" style={{ maxWidth: '100vw' }}>
+    <div className="w-full min-h-screen px-2 sm:px-4 lg:px-6" style={{ maxWidth: '100vw', overflowX: 'hidden' }}>
       {/* Header Section - only show full header if not compactHeader */}
       {!compactHeader ? (
-        <div className="mb-8">
-          <div className="flex flex-row items-center mb-4">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center mb-4 gap-2">
             <Button 
               icon={<LeftOutlined />} 
               onClick={() => navigate(`/management/results/induction/${induction.id}`)}
-              className="mr-3"
+              className="shrink-0"
+              size="small sm:default"
             >
-              Back to Induction Results
+              <span className="hidden sm:inline">Back to Induction Results</span>
+              <span className="sm:hidden">Back</span>
             </Button>
           </div>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-800 mb-1">
+          <div className="space-y-2">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 break-words">
               {getUserName()} - {induction.name}
             </h1>
-            <p className="text-gray-600">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-2">
               <StatusTag status={userInduction.status} />
-              <span className="ml-2">{getUserEmail()}</span>
-            </p>
+              <span className="text-sm sm:text-base text-gray-600 break-all">
+                {getUserEmail()}
+              </span>
+            </div>
           </div>
         </div>
       ) : (
-        <div className="mb-8">
-          <div className="flex flex-row items-center mb-4">
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center mb-4">
             <Button 
               icon={<LeftOutlined />} 
               onClick={() => navigate(`/management/results/induction/${induction.id}`)}
-              className="mr-3"
-            >Back to Induction Results
+              size="small sm:default"
+            >
+              <span className="hidden sm:inline">Back to Induction Results</span>
+              <span className="sm:hidden">Back</span>
             </Button>
           </div>
         </div>
       )}
 
       {/* Summary Card */}
-      <Card className="mb-8 shadow-md overflow-hidden">
+      <Card className="mb-6 sm:mb-8 shadow-md overflow-hidden mx-0">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-semibold">Induction Summary</h2>
+          <h2 className="text-base sm:text-lg font-semibold">Induction Summary</h2>
         </div>
-        <Descriptions bordered column={{ xxl: 4, xl: 3, lg: 3, md: 2, sm: 1, xs: 1 }}>
-          <Descriptions.Item label="Status">
-            <StatusTag status={userInduction.status} />
-          </Descriptions.Item>
-          <Descriptions.Item label="Induction">
-            {induction.name}
-          </Descriptions.Item>
-          <Descriptions.Item label="User">
-            {getUserName()}
-          </Descriptions.Item>
-          <Descriptions.Item label="Email">
-            {getUserEmail()}
-          </Descriptions.Item>
-          <Descriptions.Item label="Assigned Date">
-            {formatDate(userInduction.assignedAt)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Available From">
-            {formatDate(userInduction.availableFrom)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Due Date">
-            {formatDate(userInduction.dueDate)}
-          </Descriptions.Item>
-          <Descriptions.Item label="Started Date">
-            {userInduction.startedAt ? formatDate(userInduction.startedAt) : 'Not available'}
-          </Descriptions.Item>
-          {/* Show completion date and time only if completed*/}
-          {isCompleted && (
-            <>
-              <Descriptions.Item label="Completed Date">
-                {userInduction.completedAt ? formatDate(userInduction.completedAt) : 'Not completed'}
-              </Descriptions.Item>
-              <Descriptions.Item label="Completion Time">
-                {userInduction.startedAt && userInduction.completedAt 
-                  ? formatDuration(userInduction.startedAt, userInduction.completedAt) 
-                  : 'Not available'}
-              </Descriptions.Item>
-            </>
-          )}
-        </Descriptions>
+        <div className="overflow-x-auto">
+          <Descriptions 
+            bordered 
+            column={{ xxl: 4, xl: 3, lg: 3, md: 2, sm: 1, xs: 1 }}
+            size="small"
+            className="min-w-0"
+          >
+            <Descriptions.Item label="Status">
+              <StatusTag status={userInduction.status} />
+            </Descriptions.Item>
+            <Descriptions.Item label="Induction" className="break-words">
+              <span className="break-words">{induction.name}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="User" className="break-words">
+              <span className="break-words">{getUserName()}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="Email" className="break-all">
+              <span className="break-all text-sm">{getUserEmail()}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="Assigned Date">
+              <span className="text-sm">{formatDate(userInduction.assignedAt)}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="Available From">
+              <span className="text-sm">{formatDate(userInduction.availableFrom)}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="Due Date">
+              <span className="text-sm">{formatDate(userInduction.dueDate)}</span>
+            </Descriptions.Item>
+            <Descriptions.Item label="Started Date">
+              <span className="text-sm">
+                {userInduction.startedAt ? formatDate(userInduction.startedAt) : 'Not available'}
+              </span>
+            </Descriptions.Item>
+            {isCompleted && (
+              <>
+                <Descriptions.Item label="Completed Date">
+                  <span className="text-sm">
+                    {userInduction.completedAt ? formatDate(userInduction.completedAt) : 'Not completed'}
+                  </span>
+                </Descriptions.Item>
+                <Descriptions.Item label="Completion Time">
+                  <span className="text-sm">
+                    {userInduction.startedAt && userInduction.completedAt 
+                      ? formatDuration(userInduction.startedAt, userInduction.completedAt) 
+                      : 'Not available'}
+                  </span>
+                </Descriptions.Item>
+              </>
+            )}
+          </Descriptions>
+        </div>
       </Card>
 
       {/* Export Section - Only shown if completed */}
@@ -335,15 +354,15 @@ const StaffInductionResults = ({ userId, assignmentId, pageTitle, compactHeader 
           {/* Responses Section - Only shown if completed */}
           <Card 
             title={
-              <div className="flex justify-between items-center">
-                <h2 className="text-lg font-semibold">Induction Responses</h2>
-                <Space>
-                  <Button onClick={expandAllQuestions} icon={<DownOutlined />}>Expand All</Button>
-                  <Button onClick={collapseAllQuestions} icon={<UpOutlined />}>Collapse All</Button>
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                <h2 className="text-base sm:text-lg font-semibold">Induction Responses</h2>
+                <Space size="small" wrap>
+                  <Button onClick={expandAllQuestions} icon={<DownOutlined />} size="small"><span className="hidden sm:inline">Expand All</span><span className="sm:hidden">Expand</span></Button>
+                  <Button onClick={collapseAllQuestions} icon={<UpOutlined />}size="small"><span className="hidden sm:inline">Collapse All</span><span className="sm:hidden">Collapse</span></Button>
                 </Space>
               </div>
             }
-            className="shadow-md mb-6"
+            className="shadow-md mb-6 mx-0"
           >
             {sections.length === 0 ? (
               <Empty description="No responses available" />
