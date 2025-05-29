@@ -145,14 +145,20 @@ export const submitContactForm = async (req, res) => {
     // Fetch email settings from the database
     const emailSettingsSnapshot = await db.collection("emailSettings").get();
     let replyToEmail = "autevents@brears.xyz"; // Default
-    let adminEmail = "autevents@brears.xyz"; // Default
+    let defaultManagerEmail = "autevents@brears.xyz"; // Default fallback manager email
+    let fromEmail = "autevents@brears.xyz"; // Default from email for sending
 
     if (!emailSettingsSnapshot.empty) {
       const emailSettings = emailSettingsSnapshot.docs[0].data();
       replyToEmail = emailSettings.defaultReplyTo || replyToEmail;
+      fromEmail = emailSettings.defaultFrom || fromEmail;
       
-      // Use the defaultFrom as the admin email
-      adminEmail = emailSettings.defaultFrom || emailSettings.defaultReplyTo || adminEmail;
+      // Use a specific field for the default manager email (not the from address)
+      // This should be where notifications go when there's no department email
+      defaultManagerEmail = emailSettings.defaultManagerEmail || 
+                           emailSettings.adminEmail || 
+                           emailSettings.defaultReplyTo || 
+                           defaultManagerEmail;
     }
     
     // Only send user confirmation if not skipped (feedback form skips)
@@ -217,26 +223,18 @@ export const submitContactForm = async (req, res) => {
        `;
     }
     
-    // Determine where to send the notification email
-    if (isLoggedIn && departmentEmail) {
-      // If logged-in user has a department with email, send to that department and CC admin
-      await sendEmail(
-        departmentEmail, // Send to department
-        adminEmailSubject,
-        adminEmailBody,
-        email, // Set reply-to as users email
-        [] // No CC
-      );
-    } else {
-      // For non-logged-in users or if no department email, send to admin only
-      await sendEmail(
-        adminEmail,
-        adminEmailSubject,
-        adminEmailBody,
-        email, // Set reply-to as users email
-        [] // No CC
-      );
-    }
+    // Determine the recipient email address
+    // Priority: departmentEmail > defaultManagerEmail
+    const recipientEmail = departmentEmail || defaultManagerEmail;
+    
+    // Send notification email to the appropriate recipient
+    await sendEmail(
+      recipientEmail, // Send to department email or default manager email
+      adminEmailSubject,
+      adminEmailBody,
+      email, // Set reply-to as user's email so replies go back to the submitter
+      [] // No CC
+    );
     
     res.status(201).json({ 
       message: 'Form submitted successfully',

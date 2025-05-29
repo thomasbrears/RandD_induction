@@ -209,7 +209,7 @@ const FileResultRenderer = ({ answer }) => {
           description={
             <div>
               <p>You need to be logged in to access this file. Please ensure you're logged in and try again.</p>
-              <p className="mt-2 text-sm">File: {fileName}</p>
+              <p className="mt-2 text-sm break-words">File: {fileName}</p>
             </div>
           }
           type="warning"
@@ -263,17 +263,23 @@ const FileResultRenderer = ({ answer }) => {
   
   return (
     <div className="p-4 border border-gray-200 rounded-md">
-      <div className="flex justify-between">
-        <div className="flex items-start space-x-3">
-          {getFileIcon()}
-          <div>
-            <p className="text-sm font-medium">{fileName}</p>
+      {/* File info section */}
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-3">
+        {/* File info */}
+        <div className="flex items-start space-x-3 flex-1 min-w-0">
+          <div className="flex-shrink-0">
+            {getFileIcon()}
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium break-words">{fileName}</p>
             <p className="text-xs text-gray-500">
               {fileType ? fileType.charAt(0).toUpperCase() + fileType.slice(1) + ' file' : 'File'}
             </p>
           </div>
         </div>
-        <div className="flex space-x-2">
+        
+        {/* Action buttons - separate line on mobile, same line on desktop */}
+        <div className="flex space-x-2 sm:flex-shrink-0">
           {fileUrl && (
             <Tooltip title={getViewTooltip()}>
               <Button 

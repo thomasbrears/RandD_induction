@@ -10,6 +10,6 @@ const storage = new Storage({
 });
 
 // Reference your storage bucket
-const bucket = storage.bucket("r_and_d_induction_files");
+const bucket = storage.bucket("aut-events-induction-files");
 
 export { bucket, storage };

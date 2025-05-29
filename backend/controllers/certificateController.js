@@ -195,12 +195,6 @@ export const generateCertificate = async (req, res) => {
        .fillColor('#666666')
        .text(`Certificate ID: ${certificateId}`, 0, 360, { align: 'center' });
     
-    // Add verification note
-    doc.font('Helvetica')
-       .fontSize(10)
-       .fillColor('#777777')
-       .text('This certificate can be verified through the AUT Events Induction Portal', 0, 385, { align: 'center' });
-    
     // Add footer strip
     doc.rect(0, pageHeight - 40, pageWidth, 40).fill('#000000');
     doc.font('Helvetica')
