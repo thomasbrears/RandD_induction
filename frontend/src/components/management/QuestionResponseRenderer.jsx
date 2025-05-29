@@ -8,6 +8,8 @@ import {
   QuestionCircleOutlined, DownOutlined, UpOutlined, 
   SearchOutlined, FilterOutlined
 } from '@ant-design/icons';
+import FileResultRenderer from './FileResultRenderer';
+import useAuth from '../../hooks/useAuth';
 
 // Filter and search component for question responses
 const QuestionResponseFilter = ({ 
@@ -111,18 +113,6 @@ const QuestionResponseFilter = ({
           ))}
         </Select>
 
-        {/* Importance Filter */}
-        <Select
-          style={{ width: 200 }}
-          placeholder="Question Importance"
-          allowClear
-          value={importanceFilter}
-          onChange={setImportanceFilter}
-        >
-          <Select.Option value="important">Important Questions</Select.Option>
-          <Select.Option value="standard">Standard Questions</Select.Option>
-        </Select>
-
         {/* Reset Filters Button */}
         <Button 
           icon={<FilterOutlined />} 
@@ -150,6 +140,7 @@ const QuestionResponseFilter = ({
     isCollapsed, 
     onToggleCollapse
   }) => {
+    const { user } = useAuth();
     const [expandedDescriptions, setExpandedDescriptions] = useState({});
   
     // Function to toggle description expansion
@@ -365,8 +356,22 @@ const QuestionResponseFilter = ({
                 answerData.selectedOption === 1 || answerData.selectedOption === "1" ? 
                 "No" : "No selection";
           
-        case 'file_upload':
-          return answerData.fileUploaded ? "File uploaded" : "No file uploaded";
+        case 'file_upload':          
+          // Check if we have a filename in the answer
+          if (!answerData || (!answerData.fileName && !answerData.uploadedName)) {
+            return <p className="text-gray-500 italic">No file uploaded</p>;
+          }
+          
+          // use fileresult renderer to display the file
+          const fileData = {
+            uploadedName: answerData.fileName || answerData.uploadedName,
+            fileType: answerData.fileType,
+            name: answerData.fileName ? 
+              answerData.fileName.split('/').pop() : 
+              (answerData.uploadedName ? answerData.uploadedName.split('/').pop() : 'file')
+          };
+          
+          return <FileResultRenderer answer={fileData} user={user} />;
           
         case 'short_answer':
           const textValue = answerData.textValue || "No text provided";

@@ -217,9 +217,9 @@ const InductionCreate = () => {
         // Clear local draft since we've saved to DB
         clearSavedInductionDraft(tempId, false);
         
-        messageSuccess("Draft saved to database successfully!");
+        notifySuccess("Draft saved to database successfully!");
+        navigate("/management/inductions/view");
         
-        // No auto navigation - allow the user to continue editing
       } else {
         messageWarning("Error while saving draft module.");
       }
@@ -576,13 +576,11 @@ const InductionCreate = () => {
           {/* Main content area */}
           {loading && <Loading message={loadingMessage} />} {/* Loading animation */}
           <div className="flex bg-gray-50 w-full">
-            {/* Management Sidebar */}
-            <div className="hidden md:flex">
-              <ManagementSidebar />
-            </div>
+            {/* Management Sidebar - always rendered for mobile toggle */}
+            <ManagementSidebar />
 
             {!showModal && (
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 ml-0 md:ml-8">
                 {/* Induction Form Component */}
                 <InductionFormHeader
                   induction={induction}

@@ -89,8 +89,8 @@ export const assignInductionToUser = async (req, res) => {
 
         <br>
         <h3>How to complete the induction?</h3>
-        <p>Simply head to our induction portal website (${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://your-portal-url.com'}) and log in using this email address. Navigate to the "My Inductions" tab, find this induction, and click "Start".</p>
-        <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://your-portal-url.com'}/inductions/my-inductions" class="button">AUT Events Induction Portal</a>
+        <p>Simply head to our induction portal website (${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://inductions.autevents.co.nz'}) and log in using this email address. Navigate to the "My Inductions" tab, find this induction, and click "Start".</p>
+        <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://inductions.autevents.co.nz'}/inductions/my-inductions" class="button">AUT Events Induction Portal</a>
 
         <p>If you have any questions, please feel free to reach out to your manager or reply to this email.</p>
 
@@ -263,8 +263,8 @@ const handleBatchAssignments = async (req, res) => {
 
           <br>
           <h3>How to complete these inductions?</h3>
-          <p>Simply head to our induction portal website (${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://your-portal-url.com'}) and log in using this email address. Navigate to the "My Inductions" tab, find each induction, and click "Start".</p>
-          <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://your-portal-url.com'}/inductions/my-inductions" class="button">AUT Events Induction Portal</a>
+          <p>Simply head to our induction portal website (${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://inductions.autevents.co.nz'}) and log in using this email address. Navigate to the "My Inductions" tab, find each induction, and click "Start".</p>
+          <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://inductions.autevents.co.nz'}/inductions/my-inductions" class="button">AUT Events Induction Portal</a>
 
           <p>If you have any questions, please feel free to reach out to your manager or reply to this email.</p>
 
@@ -1028,7 +1028,7 @@ export const sendInductionReminder = async (req, res) => {
       <p>Please complete this induction${isOverdue ? ' as soon as possible' : ' by the due date'}.</p>
       
       <p>You can access your induction through our portal:</p>
-      <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://aut-events-induction-portal.vercel.app'}/inductions/my-inductions" 
+      <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT || 'https://inductions.autevents.co.nz'}/inductions/my-inductions" 
          style="display: inline-block; padding: 10px 20px; margin: 20px 0; background-color: #1890ff; color: white; text-decoration: none; border-radius: 4px;">
         AUT Events Induction Portal
       </a>
@@ -1810,7 +1810,7 @@ export const exportInductionResultsToPDF = async (req, res) => {
     // Try to download the AUT Events Induction Protal logo
     let logoBuffer = null;
     try {
-      const logoUrl = 'https://dev-aut-events-induction.vercel.app/images/AUTEventsInductionPortal.jpg';
+      const logoUrl = 'https://inductions.autevents.co.nz/images/AUTEventsInductionPortal.jpg';
       const logoResponse = await axios.get(logoUrl, { responseType: 'arraybuffer' });
       logoBuffer = Buffer.from(logoResponse.data, 'binary');
     } catch (logoError) {
@@ -2433,6 +2433,15 @@ export const exportStaffInductionResultsToExcel = async (req, res) => {
     const formatAnswerWithOptions = (answer) => {
       if (!answer) return "No answer provided";
 
+      // File upload questions
+      if (answer.type === 'file_upload' || answer.questionType === 'file_upload' || 
+      answer.type === 'file' || answer.questionType === 'file') {
+    
+        // Use generic message for all file upload questions
+        return "For file responses, please refer to the website interface to view or download any uploaded files";
+      }
+
+      // short answer questions
       if (answer.type === 'short_answer' || answer.questionType === 'short_answer' || 
         answer.type === 'text' || answer.questionType === 'text') {
       
@@ -3259,6 +3268,15 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
         return "No answer provided";
       }
 
+      // File upload 
+      if (answer.type === 'file_upload' || answer.questionType === 'file_upload' || 
+      answer.type === 'file' || answer.questionType === 'file') {
+    
+        // Use generic message for all file upload questions
+        return "For file responses, please refer to the website interface to view or download any uploaded files";
+      }
+
+      // short answer text
       if (answer.type === 'short_answer' || answer.questionType === 'short_answer' || 
         answer.type === 'text' || answer.questionType === 'text') {
       

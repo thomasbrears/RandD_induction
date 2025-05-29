@@ -28,7 +28,7 @@ const getEmailSettings = async () => {
     if (snapshot.empty) {
       // Return default settings if none exist
       return {
-        defaultFrom: "aut-events-induction-portal@pricehound.tech",
+        defaultFrom: "auteventsinductionportal@gmail.com",
         defaultReplyTo: "autevents@brears.xyz",
         defaultCc: ["manager@brears.xyz"]
       };
@@ -39,7 +39,7 @@ const getEmailSettings = async () => {
     console.error("Error fetching email settings:", error);
     // Return default settings on error
     return {
-      defaultFrom: "aut-events-induction-portal@pricehound.tech",
+      defaultFrom: "auteventsinductionportal@gmail.com",
       defaultReplyTo: "autevents@brears.xyz",
       defaultCc: ["manager@brears.xyz"]
     };
@@ -48,7 +48,7 @@ const getEmailSettings = async () => {
 
 // Helper function for generating the default email template (unchanged)
 export const generateDefaultEmailTemplate = (bodyContent, { 
-  logoUrl = 'https://dev-aut-events-induction.vercel.app/images/AUTEventsInductionPortal.jpg', 
+  logoUrl = 'https://inductions.autevents.co.nz/images/AUTEventsInductionPortal.jpg', 
   logoAlt = 'AUT Events Induction Portal',
   backgroundColor = '#f4f4f4',
   containerBackgroundColor = '#ffffff',

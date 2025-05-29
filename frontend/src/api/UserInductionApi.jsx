@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Dynamic API URL for local or deployed environments
 const API_URL = process.env.NODE_ENV === 'production'
-  ? 'https://dev-aut-events-induction.vercel.app/api' // Development website
+  ? 'https://inductions.autevents.co.nz/api' // production website
   : 'http://localhost:8000/api'; 
 
 // Assign an induction to a user
@@ -224,7 +224,7 @@ export const exportInductionResultsToExcel = async (user, inductionId, exportTyp
     
     // Set up the API URL
     const baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://dev-aut-events-induction.vercel.app/api'
+      ? 'https://inductions.autevents.co.nz/api' // production website
       : 'http://localhost:8000/api';
     
     const url = `${baseUrl}/user-inductions/export-excel/${inductionId}?type=${exportType}&token=${encodeURIComponent(token)}`;
@@ -270,7 +270,7 @@ export const exportInductionResultsToPDF = async (user, inductionId, exportType 
     
     // Set up the API URL
     const baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://dev-aut-events-induction.vercel.app/api'
+      ? 'https://inductions.autevents.co.nz/api' // production website
       : 'http://localhost:8000/api';
     
     const url = `${baseUrl}/user-inductions/export-pdf/${inductionId}?type=${exportType}&token=${encodeURIComponent(token)}`;
@@ -360,7 +360,7 @@ export const exportStaffInductionResultsToExcel = async (user, userInductionId, 
     
     // Set up the API URL
     const baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://dev-aut-events-induction.vercel.app/api'
+      ? 'https://inductions.autevents.co.nz/api' // production website
       : 'http://localhost:8000/api';
     
     const url = `${baseUrl}/user-inductions/export-excel/staff/${userInductionId}?type=${exportType}&token=${encodeURIComponent(token)}`;
@@ -387,7 +387,7 @@ export const exportStaffInductionResultsToPDF = async (user, userInductionId, ex
     
     // Set up the API URL
     const baseUrl = process.env.NODE_ENV === 'production'
-      ? 'https://dev-aut-events-induction.vercel.app/api'
+      ? 'https://inductions.autevents.co.nz/api' // production website
       : 'http://localhost:8000/api';
     
     const url = `${baseUrl}/user-inductions/export-pdf/staff/${userInductionId}?type=${exportType}&token=${encodeURIComponent(token)}`;

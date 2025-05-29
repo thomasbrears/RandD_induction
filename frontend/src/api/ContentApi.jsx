@@ -2,7 +2,7 @@ import axios from 'axios';
 import { getAuth } from 'firebase/auth';
 
 const API_URL = process.env.NODE_ENV === 'production'
-  ? 'https://dev-aut-events-induction.vercel.app/api' // Development website
+  ? 'https://inductions.autevents.co.nz/api' // production website
   : 'http://localhost:8000/api'; // Local development
 
 // Get website content

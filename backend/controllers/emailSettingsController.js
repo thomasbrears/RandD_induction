@@ -7,7 +7,7 @@ export const getEmailSettings = async (req, res) => {
     if (snapshot.empty) {
       // Return default settings if none exist
       return res.json({
-        defaultFrom: "aut-events-induction-portal@pricehound.tech",
+        defaultFrom: "auteventsinductionportal@gmail.com",
         defaultReplyTo: "autevents@brears.xyz",
         defaultCc: ["manager@brears.xyz"]
       });
@@ -56,7 +56,7 @@ export const updateEmailSettings = async (req, res) => {
       // Create new settings if none exist
       docRef = db.collection("emailSettings").doc("default");
       await docRef.set({
-        defaultFrom: defaultFrom || "aut-events-induction-portal@pricehound.tech",
+        defaultFrom: defaultFrom || "auteventsinductionportal@gmail.com",
         defaultReplyTo: defaultReplyTo || "autevents@brears.xyz",
         defaultCc: defaultCc || ["manager@brears.xyz"],
         updatedAt: new Date()

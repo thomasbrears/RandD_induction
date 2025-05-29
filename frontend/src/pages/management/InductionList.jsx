@@ -17,13 +17,11 @@ const InductionList = () => {
 
       {/* Main container */}
       <div className="flex px-4 md:px-0 bg-gray-50">
-        {/* Management Sidebar */}
-        <div className="hidden md:flex">
-          <ManagementSidebar />
-        </div>
+        {/* Management Sidebar - Always render for toggle functionality on mobile */}
+        <ManagementSidebar />
 
         {/* Main content area */}
-        <div className="flex-1 ml-6 md:ml-8 p-6 max-w-full overflow-hidden">
+        <div className="flex-1 ml-0 md:ml-8 p-6 max-w-full overflow-hidden">
           <InductionsTable />
         </div>
       </div>

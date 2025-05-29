@@ -116,7 +116,8 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
             type: form.getFieldValue('type') || QuestionTypes.MULTICHOICE,
             options: form.getFieldValue('options') || [],
             answers: form.getFieldValue('answers') || [],
-            requiresValidation: form.getFieldValue('requiresValidation') || true,
+            requiresValidation: form.getFieldValue('requiresValidation') ?? true, // FIXED: Use ?? instead of ||
+            isRequired: form.getFieldValue('requiresValidation') ?? true, // ADDED: For compatibility with QuestionRenderer
             hint: form.getFieldValue('hint') || "",
             imageFile: form.getFieldValue('imageFile') || null,
             youtubeUrl: form.getFieldValue('youtubeUrl') || null,
