@@ -6,35 +6,37 @@ import { format } from "date-fns";
 
 /**
  * Updates induction statuses to "overdue" for assignments with passed due dates
- * Security is implemented with an API key provided as a URL parameter
+ * Supports both Vercel cron (automatic) and manual testing (with API key)
  */
 export const updateOverdueInductions = async (req, res) => {
   try {
-    // Verify API key
+    // Check authentication - either Vercel cron or API key
     const { apiKey } = req.query;
-    const expectedApiKey = process.env.CRON_API_KEY;
+    const isVercelCron = req.headers['x-vercel-cron-signature'] !== undefined;
+    const isValidApiKey = apiKey === process.env.CRON_API_KEY;
     
-    if (!apiKey) {
-      console.log("Missing API key in request");
+    // Allow access if it's either a Vercel cron OR valid API key
+    if (!isVercelCron && !isValidApiKey) {
+      console.log("Unauthorized access attempt");
       return res.status(401).json({ 
-        error: "Unauthorized: API key is required" 
+        error: "Unauthorized: Invalid or missing API key" 
       });
     }
     
-    if (apiKey !== expectedApiKey) {
-      console.log("Invalid API key provided");
-      return res.status(401).json({ 
-        error: "Unauthorized: Invalid API key" 
-      });
-    }
+    // Log the execution source
+    const source = isVercelCron ? 'Vercel Cron' : 'Manual API Call';
+    console.log(`Cron job started via: ${source}`);
     
-    // Get current date without time for comparison
+    // Get current date for comparison
     const now = new Date();
+    console.log(`Current time: ${now.toISOString()}`);
     
     // Get all userInductions that are not completed and have a due date
     const snapshot = await db.collection("userInductions")
       .where("status", "!=", Status.COMPLETE)
       .get();
+    
+    console.log(`Found ${snapshot.docs.length} non-completed inductions to check`);
     
     // Keep track of updates
     let updatedCount = 0;
@@ -66,20 +68,28 @@ export const updateOverdueInductions = async (req, res) => {
           dueDate: dueDate
         });
         
+        console.log(`Marked induction ${doc.id} as overdue for user ${data.userId}`);
+        
         // Send overdue notification email to user
         try {
           await sendOverdueNotification(data.userId, data);
+          console.log(`Sent overdue notification for induction ${doc.id}`);
         } catch (emailError) {
           console.error(`Error sending overdue notification for ${doc.id}:`, emailError);
         }
       }
     }
     
+    const responseMessage = `${updatedCount} induction${updatedCount !== 1 ? 's' : ''} marked as overdue`;
+    console.log(`Cron job completed: ${responseMessage}`);
+    
     res.json({
       success: true,
       updated: updatedCount,
-      message: `${updatedCount} induction${updatedCount !== 1 ? 's' : ''} marked as overdue`,
-      updatedInductions
+      message: responseMessage,
+      updatedInductions,
+      executedAt: now.toISOString(),
+      source: source
     });
   } catch (error) {
     console.error("Error updating overdue inductions:", error);
@@ -176,7 +186,6 @@ const sendOverdueNotification = async (userId, inductionData) => {
     const userEmailResult = await sendEmail(email, emailSubject, emailBody, replyToEmail, ccEmails);
     
     // If the department has an email but it's different from the standard CC, send a separate notification
-    // This is useful when departments have a dedicated notification address different from the manager
     if (departmentEmail && !ccEmails.includes(departmentEmail)) {
       // Create department-specific notification
       const deptEmailSubject = `Staff Member Induction Overdue: ${userAuthData.displayName || email}`;
@@ -195,9 +204,9 @@ const sendOverdueNotification = async (userId, inductionData) => {
         <h3>Action Required:</h3>
         <p>Please follow up with this staff member to ensure timely completion of their required induction.</p>
         
-        <p>You can access the admin dashboard to check staff completion status:</p>
-        <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}/admin/inductions" style="display: inline-block; padding: 10px 20px; margin: 20px 0; background-color: #1890ff; color: white; text-decoration: none; border-radius: 4px;">
-          Induction Management Dashboard
+        <p>You can access the management dashboard to check staff completion status:</p>
+        <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}/management/dashboard" style="display: inline-block; padding: 10px 20px; margin: 20px 0; background-color: #1890ff; color: white; text-decoration: none; border-radius: 4px;">
+          Management Dashboard
         </a>
 
         <p>Ngā mihi (kind regards),<br/>AUT Events Management</p>
