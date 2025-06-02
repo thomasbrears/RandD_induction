@@ -48,7 +48,7 @@ const getEmailSettings = async () => {
 
 // Helper function for generating the default email template (unchanged)
 export const generateDefaultEmailTemplate = (bodyContent, { 
-  logoUrl = 'https://inductions.autevents.co.nz/images/AUTEventsInductionPortal.jpg', 
+  logoUrl = 'https://dev-aut-events-induction.vercel.app/images/AUTEventsInductionPortal.jpg', 
   logoAlt = 'AUT Events Induction Portal',
   backgroundColor = '#f4f4f4',
   containerBackgroundColor = '#ffffff',
