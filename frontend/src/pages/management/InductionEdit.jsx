@@ -347,7 +347,7 @@ const InductionEdit = () => {
     setConfirmModalVisible(false);
   };
 
-  const handleSubmit = async () => {
+const handleSubmit = async () => {
   if (submitting) return; // Prevent multiple submission attempts
   
   setSubmitting(true);
@@ -369,8 +369,14 @@ const InductionEdit = () => {
     // Handle all of the file uploads and deletion
     const updatedInduction = await handleSubmitFileChanges();
     
+    // When publishing, explicitly set isDraft to false
+    const finalInductionData = {
+      ...updatedInduction,
+      isDraft: false  // Ensures the induction is published, not saved as draft
+    };
+    
     if (user) {
-      const result = await updateInduction(user, updatedInduction);
+      const result = await updateInduction(user, finalInductionData);
       
       // Clear the timeout since we got a response
       clearTimeout(timeoutId);
@@ -382,14 +388,14 @@ const InductionEdit = () => {
         notifySuccess("Module updated successfully!");
         
         // Update the original questions snapshot to reflect the current state
-        const snapshot = updatedInduction.questions.map((q) => ({
+        const snapshot = finalInductionData.questions.map((q) => ({
           id: q.id,
           imageFile: q.imageFile || null,
         }));
         setOriginalQuestions(snapshot);
         
-        // Refresh state
-        setInduction(updatedInduction);
+        // Refresh state with the published induction
+        setInduction(finalInductionData);
         setFileBuffer(new Map());
         
         // Navigate to inductions list view after successful update

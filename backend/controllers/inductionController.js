@@ -101,7 +101,7 @@ export const getInductionById = async (req, res) => {
 
 export const updateInductionById = async (req, res) => {
   try {
-    const { id, name, department, description, questions, expiryMonths } = req.body;
+    const { id, name, department, description, questions, expiryMonths, isDraft } = req.body;
 
     if (!id || typeof id !== "string") {
       return res.status(400).json({ message: "Valid induction ID is required" });
@@ -152,6 +152,12 @@ export const updateInductionById = async (req, res) => {
         return res.status(400).json({ message: "Questions must be an array" });
       }
     }
+
+    // Validate isDraft status
+    if (isDraft !== undefined && typeof isDraft !== "boolean") {
+      console.error("Invalid isDraft type:", typeof isDraft);
+      return res.status(400).json({ message: "isDraft must be a boolean" });
+    }
     
     // Check if induction exists
     const inductionRef = db.collection("inductions").doc(id);
@@ -179,6 +185,11 @@ export const updateInductionById = async (req, res) => {
     
     if (questions !== undefined) {
       updateData.questions = questions;
+    }
+
+    // Handle isDraft field
+    if (isDraft !== undefined) {
+      updateData.isDraft = isDraft;
     }
     
     updateData.updatedAt = new Date();
