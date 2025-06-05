@@ -144,7 +144,7 @@ export const createUser = async (req, res) => {
       <ol>
         <li><strong>Visit the Homepage:</strong> Click the button below to visit the AUT Events Induction Portal:</li>
         <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}" class="button">AUT Events Induction Homepage</a>
-        <li><strong>Log In:</strong> From the homepage, you can log in using this email address and choose the passwordless login option, or you can set a password <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}/reset-password">here</a>.</li>
+        <li><strong>Log In:</strong> From the homepage, you can log in using this email address and choose the passwordless login option, or you can set a password <a href="${process.env.REACT_APP_VERCEL_DEPLOYMENT}/auth/reset-password">here</a>.</li>
       </ol>
 
       <p>One of our managers will guide you through the necessary induction process when you start with us.</p>
