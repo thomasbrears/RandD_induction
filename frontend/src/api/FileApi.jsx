@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-// Dynamic API URL for local or deployed environments
 const API_URL = process.env.NODE_ENV === 'production'
-  ? 'https://dev-aut-events-induction.vercel.app/api' // production website
+  ? 'https://dev-aut-events-induction.vercel.app/api' // Development website
   : 'http://localhost:8000/api'; // Local development
 
 export const getSignedUrl = async (user, fileName) => {
