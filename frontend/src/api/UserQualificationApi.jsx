@@ -2,7 +2,7 @@ import axios from "axios";
 
 // Dynamic API URL
 const API_URL = process.env.NODE_ENV === 'production'
-  ? 'https://inductions.autevents.co.nz/api' // production website
+  ? 'https://dev-aut-events-induction.vercel.app/api' // Development website
   : 'http://localhost:8000/api'; // Local development
 
 export const uploadUserQualification = async (user, file, qualificationData) => {
