@@ -1,9 +1,8 @@
 import axios from 'axios';
 import { auth } from "../firebaseConfig";
 
-// Dynamic API URL for local or deployed environments
 const API_URL = process.env.NODE_ENV === 'production'
-  ? 'https://inductions.autevents.co.nz/api' // production website
+  ? 'https://dev-aut-events-induction.vercel.app/api' // Development website
   : 'http://localhost:8000/api'; // Local development
 
 export const getAllCertificateTypes = async () => {
