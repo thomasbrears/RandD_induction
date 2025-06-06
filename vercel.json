@@ -13,11 +13,7 @@
   ],
   "crons": [
     {
-      "path": "/api/cron/update-overdue",
-      "schedule": "0 12 * * *"
-    },
-    {
-      "path": "/api/cron/check-certificate-expiries",
+      "path": "/api/cron/daily-jobs",
       "schedule": "0 12 * * *"
     }
   ],
