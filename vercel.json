@@ -13,8 +13,12 @@
   ],
   "crons": [
     {
-      "path": "/api/cron/update-overdue?apiKey=${CRON_API_KEY}",
-      "schedule": "0 0 * * *"
+      "path": "/api/cron/update-overdue",
+      "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/check-certificate-expiries",
+      "schedule": "0 12 * * *"
     }
   ],
   "routes": [

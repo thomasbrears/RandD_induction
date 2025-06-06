@@ -6,6 +6,7 @@ import { notifyError } from '../../utils/notificationService';
 import { AiOutlineSetting } from 'react-icons/ai';
 import { FaBuilding, FaUserTie } from 'react-icons/fa';
 import { IoLocation } from "react-icons/io5";
+import { GrCertificate } from "react-icons/gr";
 import { EditOutlined, MailOutlined } from '@ant-design/icons';
 import useAuth from '../../hooks/useAuth';
 import PageHeader from '../../components/PageHeader';
@@ -15,6 +16,7 @@ import ManageLocations from '../../components/management/ManageLocations';
 import ManagePositions from '../../components/management/ManagePositions';
 import ManageContent from '../../components/management/ManageContent';
 import ManageEmailSettings from '../../components/management/ManageEmailSettings';
+import ManageCertificateTypes from '../../components/management/ManageCertificateTypes'; // New import
 
 const { Title, Paragraph } = Typography;
 const { TabPane } = Tabs;
@@ -61,18 +63,25 @@ const Settings = () => {
       tabKey: '4'
     },
     {
+      key: 'certificate-types',
+      title: 'Certificate Types',
+      description: 'View, add, and manage qualification certificate types.',
+      icon: <GrCertificate className="text-teal-500 text-3xl" />,
+      tabKey: '5'
+    },
+    {
       key: 'email',
       title: 'Email Settings',
       description: 'Configure email addresses used for system notifications.',
       icon: <MailOutlined className="text-red-500 text-3xl" />,
-      tabKey: '5'
+      tabKey: '6'
     },
     {
       key: 'content',
       title: 'Website Content',
       description: 'Update content displayed across different pages of the portal.',
       icon: <EditOutlined className="text-orange-500 text-3xl" />,
-      tabKey: '6'
+      tabKey: '7'
     }
   ];
 
@@ -94,7 +103,7 @@ const Settings = () => {
             <Skeleton active paragraph={{ rows: 2 }} className="mb-6" />
             
             <Row gutter={[16, 16]}>
-              {[1, 2, 3, 4].map(item => (
+              {[1, 2, 3, 4, 5, 6].map(item => (
                 <Col xs={24} sm={12} lg={6} key={item}>
                   <Card className="h-full">
                     <Skeleton active paragraph={{ rows: 3 }} avatar={{ shape: 'circle' }} />
@@ -221,7 +230,20 @@ const Settings = () => {
               <ManageLocations />
             </TabPane>
 
-            {/* Manage defult Email Settings Tab */}
+            {/* Manage Certificate Types Tab */}
+            <TabPane
+              tab={
+                <span>
+                  <GrCertificate className="inline-block mr-2" />
+                  Manage Certificate Types
+                </span>
+              }
+              key="5"
+            >
+              <ManageCertificateTypes />
+            </TabPane>
+
+            {/* Manage Email Settings Tab */}
             <TabPane
               tab={
                 <span>
@@ -229,7 +251,7 @@ const Settings = () => {
                   Email Settings
                 </span>
               }
-              key="5"
+              key="6"
             >
               <ManageEmailSettings />
             </TabPane>
@@ -242,7 +264,7 @@ const Settings = () => {
                   Manage Website Content
                 </span>
               }
-              key="6"
+              key="7"
             >
               <ManageContent />
             </TabPane>

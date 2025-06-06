@@ -53,7 +53,9 @@ const Footer = () => {
               {IS_AUTHENTICATED && (
                 <>
                   <li><Link to="/inductions/my-inductions" className="hover:text-blue-400">My Inductions</Link></li>
-                  
+                  <li><Link to="/account/qualifications" className="hover:text-blue-400">My Qualifications & Certificates</Link></li>
+                  <li><Link to="/account/manage" className="hover:text-blue-400">My Account</Link></li>
+
                   {IS_ADMIN_OR_MODERATOR && (
                     <>
                       <li><Link to="/management/dashboard" className="hover:text-blue-400">Dashboard</Link></li>
@@ -61,6 +63,7 @@ const Footer = () => {
                       <li><Link to="/management/results" className="hover:text-blue-400">View Induction Results</Link></li>
                       <li><Link to="/management/users/view" className="hover:text-blue-400">Manage Users</Link></li>
                       <li><Link to="/management/contact-submissions" className="hover:text-blue-400">Contact Submissions</Link></li>
+                      <li><Link to="/management/qualifications" className="hover:text-blue-400">Manage Qualifications</Link></li>
                     </>
                   )}
                   

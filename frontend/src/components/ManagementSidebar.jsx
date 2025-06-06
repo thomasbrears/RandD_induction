@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { FaCog, FaUsers, FaUserPlus, FaClipboardList, FaChartBar, FaHome, FaBars, FaTimes } from 'react-icons/fa';
 import { IoCreate } from "react-icons/io5";
-import { GrContact } from "react-icons/gr";
+import { GrContact, GrCertificate } from "react-icons/gr";
 import useAuth from "../hooks/useAuth";
 
 const ManagementSidebar = () => {
@@ -36,12 +36,13 @@ const ManagementSidebar = () => {
     { path: '/management/inductions/create', label: 'Create Induction', icon: <IoCreate /> },
     { path: '/management/results', label: 'View Results', icon: <FaChartBar /> },
     { path: '/management/contact-submissions', label: 'Submissions', icon: <GrContact /> },
+    { path: '/management/qualifications', label: 'Qualifications', icon: <GrCertificate  /> },
     { path: '/admin/settings', label: 'Settings', icon: <FaCog />, adminOnly: true }
   ];
 
   return (
     <div className="relative">
-      {/* Desktop Sidebar (unchanged) */}
+      {/* Desktop Sidebar */}
       {!isMobile && (
         <div className="bg-gray-100 text-gray-800 h-full w-20 md:w-24 lg:w-28 flex flex-col items-center py-8 space-y-6 shadow-md">
           {links.map((link, index) => {

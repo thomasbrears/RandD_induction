@@ -33,6 +33,8 @@ import Results from './pages/management/ResultsPage';
 import InductionResultsPage from './pages/management/InductionResultsPage';
 import StaffInductionResultsPage from './pages/management/StaffInductionResultsPage';
 import FloatingHelpProvider from './components/FloatingHelpProvider';
+import QualificationsPage from './pages/QualificationsPage';
+import ManageQualificationsPage from './pages/management/ManageQualificationsPage';
 
 // Auth hook and components
 import useAuth from './hooks/useAuth';
@@ -116,6 +118,7 @@ const App = () => {
                     <Route path="/inductions/my-inductions" element={<PrivateRoute component={FormListPage} />} />
                     <Route path="/induction/take" element={<PrivateRoute component={InductionFormPage} />} />
                     <Route path="/account/manage" element={<PrivateRoute component={ManageAccount} />} />
+                    <Route path="/account/qualifications" element={<PrivateRoute component={QualificationsPage} />} />
 
                     {/* Management restricted routes for admin and/or mananger */}
                     <Route path="/admin/settings" element={<PrivateRoute component={Settings} roleRequired={[Permissions.ADMIN]} />} />
@@ -131,6 +134,7 @@ const App = () => {
                     <Route path="/management/results" element={<PrivateRoute component={Results} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
                     <Route path="/management/results/induction/:inductionId" element={<PrivateRoute component={InductionResultsPage} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
                     <Route path="/management/results/user/:userId/:assignmentId" element={<PrivateRoute component={StaffInductionResultsPage} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
+                    <Route path="/management/qualifications" element={<PrivateRoute component={ManageQualificationsPage} roleRequired={[Permissions.ADMIN, Permissions.MANAGER]} />} />
                   </Routes>
                 </div>
                 <Footer />
