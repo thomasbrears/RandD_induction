@@ -13,7 +13,7 @@
   ],
   "crons": [
     {
-      "path": "/api/cron/update-overdue",
+      "path": "/api/cron/daily-jobs",
       "schedule": "0 12 * * *"
     }
   ],

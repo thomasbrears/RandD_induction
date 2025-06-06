@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import ManagementSidebar from '../../components/ManagementSidebar';
 import { FaUsers, FaClipboardList, FaChartBar, FaCog } from 'react-icons/fa';
-import { GrContact } from "react-icons/gr";
+import { GrContact, GrCertificate } from "react-icons/gr";
 import useAuth from '../../hooks/useAuth';
 
 const Dashboard = () => {
@@ -45,6 +45,14 @@ const Dashboard = () => {
       links: [
         { text: "View Submissions", path: "/management/contact-submissions" }
       ]  
+    },
+    {
+      icon: <GrCertificate className="inline mr-2" />,
+      title: "Qualifications & Certificates",
+      description: "View & Manage uploaded qualifications and certificates",
+      links: [
+        { text: "View qualifications", path: "/management/qualifications" },
+      ]
     },
     {
       icon: <FaCog className="inline mr-2" />,

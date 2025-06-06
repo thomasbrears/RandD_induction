@@ -13,6 +13,8 @@ import contentRoutes from "./routes/contentRoutes.js";
 import cronRoutes from "./routes/cronRoutes.js";
 import emailSettingsRoutes from "./routes/emailSettingsRoutes.js";
 import certificateRoutes from "./routes/certificateRoutes.js";
+import userQualificationRoutes from "./routes/userQualificationRoutes.js";
+import certificateTypeRoutes from "./routes/certificateTypeRoutes.js";
 
 const app = express();
 
@@ -68,6 +70,9 @@ app.use("/api/locations", locationRoutes);
 // Position Routes
 app.use("/api/positions", positionRoutes);
 
+// Certificate/qualification type Routes
+app.use("/api/certificate-types", certificateTypeRoutes);
+
 // Email Settings Routes
 app.use("/api/email-settings", emailSettingsRoutes);
 
@@ -91,6 +96,9 @@ app.use("/api/content", contentRoutes);
 
 // Certificate Routes
 app.use("/api/certificates", certificateRoutes);
+
+// User Qualification Routes
+app.use("/api/user-qualifications", userQualificationRoutes);
 
 const PORT = process.env.PORT || 8000;
 app.listen(PORT, () => {

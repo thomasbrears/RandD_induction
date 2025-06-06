@@ -62,6 +62,7 @@ const Navbar = () => {
                       <Link to="/management/results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
                       <Link to="/management/inductions/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Inductions</Link>
                       <Link to="/management/contact-submissions" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Contact Submissions</Link>
+                      <Link to="/management/qualifications" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Qualifications & Certificates</Link>
                       <Link to="/admin/settings" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Settings</Link>
                     </div>
                   )}
@@ -84,6 +85,7 @@ const Navbar = () => {
                       <Link to="/management/results" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Results</Link>
                       <Link to="/management/inductions/view" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Inductions</Link>
                       <Link to="/management/contact-submissions" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Contact Submissions</Link>
+                      <Link to="/management/qualifications" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}>Qualifications & Certificates</Link>
                       </div>
                   )}
                 </div>
@@ -99,8 +101,8 @@ const Navbar = () => {
                 
                 {userDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
-                    <Link to="/account/manage" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}> Manage my Account
-                    </Link>
+                    <Link to="/account/manage" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}> Manage my Account</Link>
+                    <Link to="/account/qualifications" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}> Manage Qualifications & Certificates</Link>
                     <button
                       onClick={() => {
                         signOut();
@@ -145,6 +147,7 @@ const Navbar = () => {
                     <Link to="/management/users/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage Users</Link>
                     <Link to="/management/results" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Results</Link>
                     <Link to="/management/inductions/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Inductions</Link>
+                    <Link to="/management/qualifications" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Qualifications & Certificates</Link>
                     <Link to="/admin/settings" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Settings</Link>
                   </div>
                 )}
@@ -157,6 +160,7 @@ const Navbar = () => {
                       <Link to="/management/users/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage Users</Link>
                       <Link to="/management/results" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Results</Link>
                       <Link to="/management/inductions/view" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Inductions</Link>
+                      <Link to="/management/qualifications" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Qualifications & Certificates</Link>
                     </div>
                 )}
 
@@ -164,6 +168,7 @@ const Navbar = () => {
                 <div className="mt-2">
                   <p className="text-blue-400">Kia ora, {user.displayName ? user.displayName.split(" ")[0] : ""}</p>
                   <Link to="/account/manage" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage my Account</Link>
+                  <Link to="/account/qualifications" className="block text-white hover:text-blue-400 px-4" onClick={handleLinkClick}>Manage Qualifications & Certificates</Link>
                   <button
                     onClick={() => {
                       signOut();
