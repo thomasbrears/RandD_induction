@@ -6,7 +6,8 @@ import{
     getSignedUrl,
     deleteFile,
     uploadPublicFile,
-    downloadFile
+    downloadFile,
+    getDownloadUrl
 } from "../controllers/fileController.js";
 
 const router = express.Router();
@@ -28,6 +29,7 @@ router.post("/upload-file", (req, res, next) => {
   }, uploadFile);
   
 router.get("/signed-url", getSignedUrl);
+router.get("/download-url", getDownloadUrl);
 router.delete("/delete-file", deleteFile);
 router.post("/upload-public-file", (req, res, next) => {
   upload.single("file")(req, res, function (err) {
