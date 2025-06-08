@@ -5,8 +5,21 @@ import { sendEmail } from "../utils/mailjet.js";
 import { format } from "date-fns";
 
 /**
- * Combined cron job that handles both overdue inductions and expired/expiring certificates
- * Runs daily and processes both tasks in sequence
+ * Helper function to calculate what the status should be based on expiry date
+ */
+const calculateQualificationStatus = (expiryDate, now = new Date()) => {
+  if (!expiryDate) return 'active'; // No expiry date means always active
+  
+  const twoMonths = new Date(now.getTime() + (60 * 24 * 60 * 60 * 1000));
+  
+  if (expiryDate < now) return 'expired';
+  if (expiryDate < twoMonths) return 'expiring_soon';
+  return 'active';
+};
+
+/**
+ * Combined cron job that handles overdue inductions, expired/expiring certificates, and status cleanup
+ * Runs daily and processes all tasks in sequence
  */
 export const runDailyCronJobs = async (req, res) => {
   try {
@@ -28,10 +41,11 @@ export const runDailyCronJobs = async (req, res) => {
     const now = new Date();
     console.log(`Current time: ${now.toISOString()}`);
     
-    // Run both cron jobs
-    const [inductionResults, qualificationResults] = await Promise.all([
+    // Run all cron jobs
+    const [inductionResults, qualificationResults, statusResults] = await Promise.all([
       updateOverdueInductionsInternal(),
-      checkQualificationExpiriesInternal()
+      checkQualificationExpiriesInternal(),
+      updateQualificationStatuses()
     ]);
     
     const combinedResults = {
@@ -40,7 +54,8 @@ export const runDailyCronJobs = async (req, res) => {
       source: source,
       results: {
         overdue_inductions: inductionResults,
-        qualification_expiries: qualificationResults
+        qualification_expiries: qualificationResults,
+        status_updates: statusResults
       }
     };
     
@@ -149,42 +164,70 @@ const checkQualificationExpiriesInternal = async () => {
       const data = doc.data();
       const expiryDate = new Date(data.expiryDate.toDate());
       const reminderStatus = data.remindersSent || {};
+      const currentStatus = data.status || 'active';
       
-      // Check if expired and not yet notified
-      if (expiryDate < now && !reminderStatus.expired) {
-        await sendQualificationExpiryNotification(data, 'expired');
-        await doc.ref.update({
-          'remindersSent.expired': true,
-          status: 'expired',
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        reminderCount++;
-        processedQualifications.push({ ...data, reminderType: 'expired' });
-        console.log(`Sent expired notification for qualification ${doc.id}`);
+      // Calculate what the status should be based on expiry date
+      const computedStatus = calculateQualificationStatus(expiryDate, now);
+      
+      // Priority 1: Handle expired qualifications
+      if (expiryDate < now) {
+        // Only send expired notification if:
+        // 1. Not already notified about expiry
+        // 2. Current status is not already 'expired'
+        if (!reminderStatus.expired && currentStatus !== 'expired') {
+          await sendQualificationExpiryNotification(data, 'expired');
+          await doc.ref.update({
+            'remindersSent.expired': true,
+            status: 'expired',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          reminderCount++;
+          processedQualifications.push({ ...data, reminderType: 'expired' });
+          console.log(`Sent expired notification for qualification ${doc.id}`);
+        }
+        // If already expired, make sure status is correct but don't send notifications
+        else if (currentStatus !== 'expired') {
+          await doc.ref.update({
+            status: 'expired',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          console.log(`Updated status to expired for qualification ${doc.id}`);
+        }
       }
-      // Check if expiring in 1 month and not yet notified
-      else if (expiryDate < oneMonthFromNow && !reminderStatus.oneMonth) {
-        await sendQualificationExpiryNotification(data, 'oneMonth');
-        await doc.ref.update({
-          'remindersSent.oneMonth': true,
-          status: 'expiring_soon',
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        reminderCount++;
-        processedQualifications.push({ ...data, reminderType: 'oneMonth' });
-        console.log(`Sent 1-month expiry notification for qualification ${doc.id}`);
-      }
-      // Check if expiring in 2 months and not yet notified
-      else if (expiryDate < twoMonthsFromNow && !reminderStatus.twoMonths) {
-        await sendQualificationExpiryNotification(data, 'twoMonths');
-        await doc.ref.update({
-          'remindersSent.twoMonths': true,
-          status: 'expiring_soon',
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-        reminderCount++;
-        processedQualifications.push({ ...data, reminderType: 'twoMonths' });
-        console.log(`Sent 2-month expiry notification for qualification ${doc.id}`);
+      // Priority 2: Handle expiring qualifications (only if not expired)
+      else if (expiryDate >= now) {
+        // Check if expiring in 1 month and not yet notified
+        if (expiryDate < oneMonthFromNow && !reminderStatus.oneMonth) {
+          await sendQualificationExpiryNotification(data, 'oneMonth');
+          await doc.ref.update({
+            'remindersSent.oneMonth': true,
+            status: 'expiring_soon',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          reminderCount++;
+          processedQualifications.push({ ...data, reminderType: 'oneMonth' });
+          console.log(`Sent 1-month expiry notification for qualification ${doc.id}`);
+        }
+        // Check if expiring in 2 months and not yet notified
+        else if (expiryDate < twoMonthsFromNow && !reminderStatus.twoMonths) {
+          await sendQualificationExpiryNotification(data, 'twoMonths');
+          await doc.ref.update({
+            'remindersSent.twoMonths': true,
+            status: 'expiring_soon',
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          reminderCount++;
+          processedQualifications.push({ ...data, reminderType: 'twoMonths' });
+          console.log(`Sent 2-month expiry notification for qualification ${doc.id}`);
+        }
+        // Update status if it's currently showing as expired but shouldn't be
+        else if (currentStatus === 'expired') {
+          await doc.ref.update({
+            status: computedStatus,
+            updatedAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          console.log(`Corrected status from expired to ${computedStatus} for qualification ${doc.id}`);
+        }
       }
     }
     
@@ -199,6 +242,56 @@ const checkQualificationExpiriesInternal = async () => {
     
   } catch (error) {
     console.error("Error checking qualification expiries:", error);
+    throw error;
+  }
+};
+
+/**
+ * Updates qualification statuses to ensure they match actual expiry state
+ * This helps clean up any inconsistencies in the database
+ */
+const updateQualificationStatuses = async () => {
+  try {
+    const now = new Date();
+    
+    // Get all qualifications
+    const snapshot = await db.collection("userQualifications").get();
+    
+    console.log(`Updating status for ${snapshot.docs.length} qualifications`);
+    
+    let updatedCount = 0;
+    
+    for (const doc of snapshot.docs) {
+      const data = doc.data();
+      const currentStatus = data.status || 'active';
+      
+      let correctStatus = 'active';
+      
+      if (data.expiryDate) {
+        const expiryDate = new Date(data.expiryDate.toDate());
+        correctStatus = calculateQualificationStatus(expiryDate, now);
+      }
+      
+      // Update status if it's incorrect
+      if (currentStatus !== correctStatus) {
+        await doc.ref.update({
+          status: correctStatus,
+          updatedAt: admin.firestore.FieldValue.serverTimestamp()
+        });
+        updatedCount++;
+        console.log(`Updated qualification ${doc.id} status from ${currentStatus} to ${correctStatus}`);
+      }
+    }
+    
+    console.log(`Status update completed: ${updatedCount} qualifications updated`);
+    
+    return {
+      updated: updatedCount,
+      message: `${updatedCount} qualification status${updatedCount !== 1 ? 'es' : ''} updated`
+    };
+    
+  } catch (error) {
+    console.error("Error updating qualification statuses:", error);
     throw error;
   }
 };
@@ -369,7 +462,7 @@ export const checkQualificationExpiries = async (req, res) => {
   }
 };
 
-// Notification function
+// Notification function for overdue inductions
 const sendOverdueNotification = async (userId, inductionData) => {
   try {
     // Get user details
