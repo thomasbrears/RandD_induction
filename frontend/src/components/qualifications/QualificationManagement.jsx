@@ -14,12 +14,14 @@ import {
   DownloadOutlined,
   DeleteOutlined,
   ReloadOutlined,
-  ExportOutlined
+  ExportOutlined,
+  EditOutlined
 } from '@ant-design/icons';
 import QualificationStatusTag from '../qualifications/QualificationStatusTag';
 import QualificationViewModal from '../qualifications/QualificationViewModal';
+import QualificationModal from '../qualifications/QualificationModal';
 import useAuth from '../../hooks/useAuth';
-import { deleteUserQualification } from '../../api/UserQualificationApi';
+import { deleteUserQualification, updateUserQualification } from '../../api/UserQualificationApi';
 import { downloadFile } from '../../api/FileApi';
 import { formatDate } from '../../utils/dateUtils';
 import { notifySuccess, notifyError, notifyPromise } from '../../utils/notificationService';
@@ -32,6 +34,9 @@ const QualificationManagement = ({ qualifications = [], onRefresh }) => {
   const [filteredQualifications, setFilteredQualifications] = useState([]);
   const [selectedQualification, setSelectedQualification] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editQualification, setEditQualification] = useState(null);
+  const [modalLoading, setModalLoading] = useState(false);
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -116,6 +121,38 @@ const QualificationManagement = ({ qualifications = [], onRefresh }) => {
   const handleViewQualification = (qualification) => {
     setSelectedQualification(qualification);
     setViewModalOpen(true);
+  };
+
+  // Handle edit qualification
+  const handleEditQualification = (qualification) => {
+    setViewModalOpen(false); // Close view modal if open
+    setEditQualification(qualification); // Set separate edit state
+    setEditModalOpen(true); // Open immediately
+  };
+
+  // Handle edit submission
+  const handleEditSubmission = async (qualificationData, file) => {
+    if (!editQualification) return;
+    
+    setModalLoading(true);
+    try {
+      const updatePromise = updateUserQualification(user, editQualification.id, qualificationData, file);
+      
+      notifyPromise(updatePromise, {
+        pending: 'Updating qualification...',
+        success: 'Qualification updated successfully!',
+        error: 'Failed to update qualification'
+      });
+      
+      await updatePromise;
+      if (onRefresh) onRefresh(); // Refresh the data
+      setEditModalOpen(false);
+      setEditQualification(null); // Clear edit state
+    } catch (error) {
+      console.error('Error updating qualification:', error);
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   // Handle download qualification
@@ -319,6 +356,14 @@ const QualificationManagement = ({ qualifications = [], onRefresh }) => {
               onClick={() => handleViewQualification(record)}
             />
           </Tooltip>
+
+          <Tooltip title="Edit qualification">
+            <Button 
+              size="small" 
+              icon={<EditOutlined />} 
+              onClick={() => handleEditQualification(record)}
+            />
+          </Tooltip>
           
           <Tooltip title="Download file">
             <Button 
@@ -459,12 +504,23 @@ const QualificationManagement = ({ qualifications = [], onRefresh }) => {
           setSelectedQualification(null);
         }}
         qualification={selectedQualification}
-        onEdit={() => {
-          console.log('Edit not available in management view');
-        }}
+        onEdit={handleEditQualification}
         onDelete={handleDeleteQualification}
         onDownload={handleDownloadQualification}
         showActions={true}
+      />
+
+      {/* Edit Qualification Modal */}
+      <QualificationModal
+        open={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setEditQualification(null);
+        }}
+        onSubmit={handleEditSubmission}
+        qualification={editQualification}
+        loading={modalLoading}
+        title="Edit User Qualification"
       />
     </div>
   );

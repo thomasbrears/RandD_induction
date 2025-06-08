@@ -39,6 +39,23 @@ const QualificationModal = ({
 
   const isEditing = !!qualification;
 
+  // Convert Firestore date to dayjs object
+  const convertToDate = (date) => {
+    if (!date) return null;
+    
+    // Handle Firestore Timestamp
+    if (date && typeof date.toDate === 'function') {
+      return dayjs(date.toDate());
+    }
+    
+    // Handle ISO string or Date object
+    if (typeof date === 'string' || date instanceof Date) {
+      return dayjs(date);
+    }
+    
+    return null;
+  };
+
   // Fetch certificate types from database
   useEffect(() => {
     const fetchCertificateTypes = async () => {
@@ -71,42 +88,49 @@ const QualificationModal = ({
     }
   }, [open]);
 
+  // Separate effect for populating form when qualification changes
   useEffect(() => {
-    if (open) {
-      if (isEditing && qualification) {
-        // Pre-fill form for editing
-        form.setFieldsValue({
-          qualificationName: qualification.qualificationName,
-          qualificationType: qualification.qualificationType,
-          issuer: qualification.issuer,
-          issueDate: qualification.issueDate ? dayjs(qualification.issueDate) : null,
-          expiryDate: qualification.expiryDate ? dayjs(qualification.expiryDate) : null,
-          notes: qualification.notes
-        });
-        
-        // Set custom type if not in predefined list
-        if (!certificateTypes.includes(qualification.qualificationType)) {
-          setCustomType(qualification.qualificationType);
+    if (open && qualification && certificateTypes.length > 0) {
+      // Pre-fill form for editing
+      const formData = {
+        qualificationName: qualification.qualificationName || '',
+        qualificationType: qualification.qualificationType || '',
+        issuer: qualification.issuer || '',
+        issueDate: convertToDate(qualification.issueDate),
+        expiryDate: convertToDate(qualification.expiryDate),
+        notes: qualification.notes || ''
+      };
+      form.setFieldsValue(formData);
+      
+      // Set custom type if not in predefined list
+      if (qualification.qualificationType && !certificateTypes.includes(qualification.qualificationType)) {
+        setCustomType(qualification.qualificationType);
+        // Use setTimeout to ensure the form has been set first
+        setTimeout(() => {
           form.setFieldsValue({ qualificationType: 'Other' });
-        }
-        
-        // Set existing file info (for display only, not uploaded)
-        if (qualification.fileName) {
-          setFileList([{
-            uid: '1',
-            name: qualification.fileName,
-            status: 'done',
-            url: qualification.fileUrl
-          }]);
-        }
-      } else {
-        // Reset form for new qualification
-        form.resetFields();
-        setFileList([]);
-        setCustomType('');
+        }, 100);
+      }
+      
+      // Set existing file info (for display only, not uploaded)
+      if (qualification.fileName) {
+        setFileList([{
+          uid: '1',
+          name: qualification.fileName,
+          status: 'done',
+          url: qualification.fileUrl || '#'
+        }]);
       }
     }
-  }, [open, qualification, isEditing, form, certificateTypes]);
+  }, [qualification, certificateTypes, open, form]);
+
+  // Separate effect for resetting form when it's a new qualification
+  useEffect(() => {
+    if (open && !qualification) {
+      form.resetFields();
+      setFileList([]);
+      setCustomType('');
+    }
+  }, [open, qualification, form]);
 
   const handleSubmit = async (values) => {
     try {
@@ -188,9 +212,12 @@ const QualificationModal = ({
     onClose();
   };
 
+  // Determine the modal title
+  const modalTitle = title || (isEditing ? 'Edit Qualification' : 'Add New Qualification');
+
   return (
     <Modal
-      title={title || (isEditing ? 'Edit Qualification' : 'Add New Qualification')}
+      title={modalTitle}
       open={open}
       onCancel={handleCancel}
       footer={null}
@@ -203,6 +230,15 @@ const QualificationModal = ({
         onFinish={handleSubmit}
         requiredMark="optional"
       >
+        {/* Show user info if editing someone elses qualification */}
+        {isEditing && qualification?.userDisplayName && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <div className="text-sm">
+              <strong>Editing qualification for:</strong> {qualification.userDisplayName} ({qualification.userEmail})
+            </div>
+          </div>
+        )}
+
         {/* Qualification Name */}
         <Form.Item
           name="qualificationName"
@@ -342,7 +378,7 @@ const QualificationModal = ({
               loading={loading}
               icon={isEditing ? <SaveOutlined /> : <PlusOutlined />}
             >
-              {isEditing ? 'Update Qualification' : 'Add Qualification'}
+              {isEditing ? 'Save Changes' : 'Add Qualification'}
             </Button>
           </Space>
         </Form.Item>
