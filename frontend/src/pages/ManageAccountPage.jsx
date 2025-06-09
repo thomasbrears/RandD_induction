@@ -5,6 +5,7 @@ import useAuth from '../hooks/useAuth';
 import EmailManage from '../components/EmailManage';
 import PasswordManage from '../components/PasswordManage';
 import ProfileManage from '../components/ProfileManage';
+import QualificationsSummary from '../components/qualifications/QualificationsSummary';
 
 const ManageAccountPage = () => {
   const { user } = useAuth();
@@ -28,6 +29,11 @@ const ManageAccountPage = () => {
         <div className="w-full max-w-8xl grid grid-cols-1 md:grid-cols-2 gap-6">
           <PasswordManage />
           <EmailManage />
+        </div>
+
+        {/* Qualifications summary section at the bottom */}
+        <div className="w-full max-w-8xl">
+          <QualificationsSummary />
         </div>
       </div>
     </>
