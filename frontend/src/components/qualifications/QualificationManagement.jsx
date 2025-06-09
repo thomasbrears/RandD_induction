@@ -6,7 +6,10 @@ import {
   Input, 
   Select, 
   Popconfirm,
-  Tooltip
+  Tooltip,
+  Modal,
+  List,
+  Avatar
 } from 'antd';
 import { 
   FilterOutlined, 
@@ -14,12 +17,17 @@ import {
   DownloadOutlined,
   DeleteOutlined,
   ReloadOutlined,
-  ExportOutlined
+  ExportOutlined,
+  EditOutlined,
+  UserAddOutlined,
+  UserOutlined
 } from '@ant-design/icons';
 import QualificationStatusTag from '../qualifications/QualificationStatusTag';
 import QualificationViewModal from '../qualifications/QualificationViewModal';
+import QualificationModal from '../qualifications/QualificationModal';
 import useAuth from '../../hooks/useAuth';
-import { deleteUserQualification } from '../../api/UserQualificationApi';
+import { deleteUserQualification, updateUserQualification, uploadUserQualification } from '../../api/UserQualificationApi';
+import { getAllUsers } from '../../api/UserApi';
 import { downloadFile } from '../../api/FileApi';
 import { formatDate } from '../../utils/dateUtils';
 import { notifySuccess, notifyError, notifyPromise } from '../../utils/notificationService';
@@ -32,6 +40,13 @@ const QualificationManagement = ({ qualifications = [], onRefresh }) => {
   const [filteredQualifications, setFilteredQualifications] = useState([]);
   const [selectedQualification, setSelectedQualification] = useState(null);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editQualification, setEditQualification] = useState(null);
+  const [addForUserModalOpen, setAddForUserModalOpen] = useState(false);
+  const [userSelectionModalOpen, setUserSelectionModalOpen] = useState(false);
+  const [selectedUserForAdd, setSelectedUserForAdd] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [modalLoading, setModalLoading] = useState(false);
   
   // Filters
   const [searchTerm, setSearchTerm] = useState('');
@@ -92,6 +107,19 @@ const QualificationManagement = ({ qualifications = [], onRefresh }) => {
     setFilteredQualifications(filtered);
   }, [qualifications, searchTerm, statusFilter, typeFilter, userFilter]);
 
+  // Fetch users when needed
+  const fetchUsers = async () => {
+    if (!user) return;
+    
+    try {
+      const usersData = await getAllUsers(user);
+      setUsers(usersData || []);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      notifyError('Failed to load users', 'Please try again later');
+    }
+  };
+
   // Get unique values for filters
   const getUniqueTypes = () => {
     const types = [...new Set(qualifications.map(qual => qual.qualificationType))].filter(Boolean);
@@ -116,6 +144,80 @@ const QualificationManagement = ({ qualifications = [], onRefresh }) => {
   const handleViewQualification = (qualification) => {
     setSelectedQualification(qualification);
     setViewModalOpen(true);
+  };
+
+  // Handle edit qualification
+  const handleEditQualification = (qualification) => {
+    setViewModalOpen(false); // Close view modal if open
+    setEditQualification(qualification); // Set separate edit state
+    setEditModalOpen(true); // Open immediately
+  };
+
+  // Handle edit submission
+  const handleEditSubmission = async (qualificationData, file) => {
+    if (!editQualification) return;
+    
+    setModalLoading(true);
+    try {
+      const updatePromise = updateUserQualification(user, editQualification.id, qualificationData, file);
+      
+      notifyPromise(updatePromise, {
+        pending: 'Updating qualification...',
+        success: 'Qualification updated successfully!',
+        error: 'Failed to update qualification'
+      });
+      
+      await updatePromise;
+      if (onRefresh) onRefresh(); // Refresh the data
+      setEditModalOpen(false);
+      setEditQualification(null); // Clear edit state
+    } catch (error) {
+      console.error('Error updating qualification:', error);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  // Handle user selection for adding qualification
+  const handleOpenUserSelectionModal = () => {
+    setUserSelectionModalOpen(true);
+    fetchUsers();
+  };
+
+  const handleUserSelected = (selectedUser) => {
+    setSelectedUserForAdd(selectedUser);
+    setUserSelectionModalOpen(false);
+    setAddForUserModalOpen(true);
+  };
+
+  // Handle add qualification for user
+  const handleAddQualificationForUser = async (qualificationData, file) => {
+    if (!selectedUserForAdd) return;
+    
+    setModalLoading(true);
+    try {
+      const dataToSubmit = {
+        ...qualificationData,
+        userId: selectedUserForAdd.uid
+      };
+      
+      const addPromise = uploadUserQualification(user, file, dataToSubmit);
+      
+      notifyPromise(addPromise, {
+        pending: 'Adding qualification...',
+        success: 'Qualification added successfully!',
+        error: 'Failed to add qualification'
+      });
+      
+      await addPromise;
+      setAddForUserModalOpen(false);
+      setSelectedUserForAdd(null);
+      if (onRefresh) onRefresh();
+    } catch (error) {
+      console.error('Error adding qualification for user:', error);
+    } finally {
+      setModalLoading(false);
+    }
   };
 
   // Handle download qualification
@@ -319,6 +421,14 @@ const QualificationManagement = ({ qualifications = [], onRefresh }) => {
               onClick={() => handleViewQualification(record)}
             />
           </Tooltip>
+
+          <Tooltip title="Edit qualification">
+            <Button 
+              size="small" 
+              icon={<EditOutlined />} 
+              onClick={() => handleEditQualification(record)}
+            />
+          </Tooltip>
           
           <Tooltip title="Download file">
             <Button 
@@ -418,6 +528,13 @@ const QualificationManagement = ({ qualifications = [], onRefresh }) => {
             Showing {filteredQualifications.length} of {qualifications.length} qualifications
           </span>
           <Space>
+            <Button 
+              type="primary"
+              icon={<UserAddOutlined />} 
+              onClick={handleOpenUserSelectionModal}
+            >
+              Add on Behalf
+            </Button>
             <Button onClick={resetFilters} icon={<FilterOutlined />}>
               Clear Filters
             </Button>
@@ -451,6 +568,67 @@ const QualificationManagement = ({ qualifications = [], onRefresh }) => {
         className="bg-white shadow-sm rounded-lg"
       />
 
+      {/* User Selection Modal */}
+      <Modal
+        title="Select User to Add Qualification For"
+        open={userSelectionModalOpen}
+        onCancel={() => setUserSelectionModalOpen(false)}
+        footer={null}
+        width={600}
+        destroyOnClose
+      >
+        <div className="mb-4">
+          <Input.Search
+            placeholder="Search users by name or email..."
+            style={{ marginBottom: 16 }}
+          />
+        </div>
+        
+        <List
+          dataSource={users}
+          pagination={{
+            pageSize: 8,
+            size: 'small',
+            showTotal: (total, range) => `${range[0]}-${range[1]} of ${total} users`,
+          }}
+          renderItem={(user) => (
+            <List.Item
+              actions={[
+                <Button 
+                  type="primary" 
+                  size="small"
+                  onClick={() => handleUserSelected(user)}
+                >
+                  Select
+                </Button>
+              ]}
+            >
+              <List.Item.Meta
+                avatar={<Avatar icon={<UserOutlined />} />}
+                title={`${user.firstName} ${user.lastName}`}
+                description={user.email}
+              />
+            </List.Item>
+          )}
+        />
+      </Modal>
+
+      {/* Add Qualification for User Modal */}
+      <QualificationModal
+        open={addForUserModalOpen}
+        onClose={() => {
+          setAddForUserModalOpen(false);
+          setSelectedUserForAdd(null);
+        }}
+        onSubmit={handleAddQualificationForUser}
+        qualification={selectedUserForAdd ? {
+          userDisplayName: `${selectedUserForAdd.firstName} ${selectedUserForAdd.lastName}`,
+          userEmail: selectedUserForAdd.email
+        } : null}
+        loading={modalLoading}
+        title={`Add Qualification for ${selectedUserForAdd ? `${selectedUserForAdd.firstName} ${selectedUserForAdd.lastName}` : 'User'}`}
+      />
+
       {/* View Qualification Modal */}
       <QualificationViewModal
         open={viewModalOpen}
@@ -459,12 +637,23 @@ const QualificationManagement = ({ qualifications = [], onRefresh }) => {
           setSelectedQualification(null);
         }}
         qualification={selectedQualification}
-        onEdit={() => {
-          console.log('Edit not available in management view');
-        }}
+        onEdit={handleEditQualification}
         onDelete={handleDeleteQualification}
         onDownload={handleDownloadQualification}
         showActions={true}
+      />
+
+      {/* Edit Qualification Modal */}
+      <QualificationModal
+        open={editModalOpen}
+        onClose={() => {
+          setEditModalOpen(false);
+          setEditQualification(null);
+        }}
+        onSubmit={handleEditSubmission}
+        qualification={editQualification}
+        loading={modalLoading}
+        title="Edit User Qualification"
       />
     </div>
   );

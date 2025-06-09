@@ -3,6 +3,7 @@ import { Helmet } from 'react-helmet-async'; // HelmetProvider to dynamicly set 
 import useAuth from '../hooks/useAuth';
 import AssignedInductions from '../components/AssignedInductions';
 import PageHeader from '../components/PageHeader';
+import QualificationsSummary from '../components/qualifications/QualificationsSummary';
 
 const FormListPage = () => {
   const { user } = useAuth();
@@ -16,6 +17,8 @@ const FormListPage = () => {
       />
       <div className="p-6">
         <AssignedInductions />
+
+        <QualificationsSummary />
       </div>
     </>
   );
