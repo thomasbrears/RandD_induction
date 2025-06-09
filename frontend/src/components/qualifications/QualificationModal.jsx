@@ -37,7 +37,8 @@ const QualificationModal = ({
   const [certificateTypes, setCertificateTypes] = useState([]);
   const [loadingTypes, setLoadingTypes] = useState(false);
 
-  const isEditing = !!qualification;
+  const isEditing = !!qualification?.id; // Only editing if qualification has an ID
+  const isAddingForUser = !isEditing && qualification?.userDisplayName; // Adding for another user
 
   // Convert Firestore date to dayjs object
   const convertToDate = (date) => {
@@ -90,7 +91,7 @@ const QualificationModal = ({
 
   // Separate effect for populating form when qualification changes
   useEffect(() => {
-    if (open && qualification && certificateTypes.length > 0) {
+    if (open && isEditing && qualification && certificateTypes.length > 0) {
       // Pre-fill form for editing
       const formData = {
         qualificationName: qualification.qualificationName || '',
@@ -121,16 +122,16 @@ const QualificationModal = ({
         }]);
       }
     }
-  }, [qualification, certificateTypes, open, form]);
+  }, [qualification, certificateTypes, open, form, isEditing]);
 
   // Separate effect for resetting form when it's a new qualification
   useEffect(() => {
-    if (open && !qualification) {
+    if (open && !isEditing) {
       form.resetFields();
       setFileList([]);
       setCustomType('');
     }
-  }, [open, qualification, form]);
+  }, [open, isEditing, form]);
 
   const handleSubmit = async (values) => {
     try {
@@ -230,11 +231,11 @@ const QualificationModal = ({
         onFinish={handleSubmit}
         requiredMark="optional"
       >
-        {/* Show user info if editing someone elses qualification */}
-        {isEditing && qualification?.userDisplayName && (
+        {/* Show user info if editing someone else's qualification OR adding for another user */}
+        {(isEditing || isAddingForUser) && qualification?.userDisplayName && (
           <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
             <div className="text-sm">
-              <strong>Editing qualification for:</strong> {qualification.userDisplayName} ({qualification.userEmail})
+              <strong>{isEditing ? 'Editing qualification for:' : 'Adding qualification for:'}</strong> {qualification.userDisplayName} ({qualification.userEmail})
             </div>
           </div>
         )}
@@ -246,7 +247,10 @@ const QualificationModal = ({
           rules={[{ required: true, message: 'Please enter the qualification name' }]}
         >
           <Input 
-            placeholder="e.g., John Doe's Duty Manager Certificate"
+            placeholder={isAddingForUser 
+              ? `e.g., ${qualification?.userDisplayName?.split(' ')[0]}'s Duty Manager Certificate`
+              : "e.g., John Doe's Duty Manager Certificate"
+            }
             maxLength={100}
           />
         </Form.Item>

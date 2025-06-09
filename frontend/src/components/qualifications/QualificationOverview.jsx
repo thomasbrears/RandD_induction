@@ -34,7 +34,7 @@ import QualificationStatusTag from './QualificationStatusTag';
 import { formatDate } from '../../utils/dateUtils';
 import { requestQualificationFromUser } from '../../api/UserQualificationApi';
 import { getAllUsers } from '../../api/UserApi';
-import { getAllCertificateTypes } from '../../api/CertificateTypeApi'; // New import
+import { getAllCertificateTypes } from '../../api/CertificateTypeApi';
 import { notifySuccess, notifyError, notifyPromise } from '../../utils/notificationService';
 import useAuth from '../../hooks/useAuth';
 import dayjs from 'dayjs';
