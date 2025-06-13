@@ -13,7 +13,7 @@ import ShortAnswerQuestion from "./ShortAnswerQuestion";
 import InformationQuestion from "./InformationQuestion";
 import { FaChevronDown, FaChevronUp, FaEdit, FaCopy, FaYoutube } from 'react-icons/fa';
 import { FaArrowsUpDown } from 'react-icons/fa6';
-import { DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined, LinkOutlined } from '@ant-design/icons';
 import QuestionTypes from "../../models/QuestionTypes";
 
 // Helper function to extract YouTube video ID
@@ -36,6 +36,7 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, onQuestionDu
     const [isAnimating, setIsAnimating] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [imageUrl, setImageUrl] = useState(null);
+    const [imageUrls, setImageUrls] = useState([]);
     
     // Refs for the areas we want to exclude from edit click
     const actionsRef = useRef(null);
@@ -43,21 +44,27 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, onQuestionDu
 
     // Load image if available
     useEffect(() => {
-        if (question.imageFile) {
-            const loadImage = async () => {
-                try {
-                    const url = await getImageUrl(question.id);
-                    setImageUrl(url);
-                } catch (error) {
-                    console.error("Error loading image:", error);
-                    setImageUrl(null);
+        if (question.imageFiles?.length > 0) {
+            const loadImages = async () => {
+                const urls = [];
+                for (let i = 0; i < question.imageFiles.length; i++) {
+                    if (question.imageFiles[i]) {
+                        try {
+                            const url = await getImageUrl(question.id, i);
+                            urls[i] = url;
+                        } catch (error) {
+                            console.error(`Error loading image ${i}:`, error);
+                            urls[i] = null;
+                        }
+                    }
                 }
+                setImageUrls(urls);
             };
-            loadImage();
+            loadImages();
         } else {
-            setImageUrl(null);
+            setImageUrls([]);
         }
-    }, [question.imageFile, question.id, getImageUrl]);
+    }, [question.imageFiles, question.id, getImageUrl]);
 
     const toggleExpand = (e) => {
         e.stopPropagation();
@@ -181,6 +188,60 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, onQuestionDu
         );
     };
 
+    // Render website links preview
+    const renderWebsiteLinks = () => {
+        if (!question.websiteLinks || question.websiteLinks.length === 0) return null;
+        
+        return (
+            <div className="mt-3">
+                <p className="text-sm font-medium text-gray-700 mb-2">Website Links:</p>
+                <div className="flex flex-wrap gap-2">
+                    {question.websiteLinks.map((link, index) => (
+                        <div key={index} className="flex items-center space-x-2 bg-blue-50 p-2 rounded-md border border-blue-200">
+                            <LinkOutlined className="text-blue-600" />
+                            <div className="flex flex-col">
+                                <span className="text-sm font-medium text-blue-800">{link.title}</span>
+                                <a 
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:underline max-w-[200px] truncate"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {link.url}
+                                </a>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    // Render multiple images in a responsive grid
+    const renderImages = () => {
+        if (!imageUrls.length) return null;
+        
+        const validUrls = imageUrls.filter(url => url);
+        if (!validUrls.length) return null;
+        
+        return (
+            <div className="mt-4 mb-4">
+                <div className={`grid gap-2 ${validUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                    {validUrls.map((url, index) => (
+                        <img
+                            key={index}
+                            src={url}
+                            alt={`Question Image ${index + 1}`}
+                            className="max-h-[200px] object-contain border rounded-md w-full"
+                        />
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    // Render the main question component based on type
     const renderQuestion = () => {
         const component = (() => {
             switch (question.type) {
@@ -235,15 +296,7 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, onQuestionDu
                 {question.youtubeUrl && renderYoutubePreview()}
 
                 {/* Display question image (smaller size) */}
-                {imageUrl && (
-                    <div className="mt-4 mb-4">
-                        <img
-                            src={imageUrl}
-                            alt="Question Image"
-                            className="max-h-[200px] object-contain border rounded-md"
-                        />
-                    </div>
-                )}
+                {imageUrls.length > 0 && renderImages()}
             </div>
         );
     };

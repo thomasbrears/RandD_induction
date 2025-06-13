@@ -8,7 +8,8 @@ import { DefaultNewQuestion } from "../../models/Question";
 import { UpOutlined, PlusOutlined } from "@ant-design/icons";
 import "../../style/AntdOverride.css";
 import { v4 as uuidv4 } from 'uuid';
-import ImageUpload from "../ImageUpload";
+import MultiImageUpload from "./MultiImageUpload";
+import WebsiteLinksManager from "./WebsiteLinksManager";
 
 const { Option } = Select;
 
@@ -17,26 +18,39 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
     const selectedType = Form.useWatch('type', form);
     const requiresValidation = Form.useWatch('requiresValidation', form);
     const answers = Form.useWatch('answers', form);
-    const [tempFile, setTempFile] = useState(null);
-    const [fileUrl, setFileUrl] = useState(null);
+    
+    const [imageFiles, setImageFiles] = useState([]); 
     const isEditMode = questionData?.id ? true : false;
 
-    const handleFileChange = (file) => {
-        if (fileUrl?.startsWith("blob:")) {
-            URL.revokeObjectURL(fileUrl);
+    // Handle multiple image file changes
+    const handleImageFilesChange = (fileChanges) => {
+        const questionId = form.getFieldValue('id');        
+        const newImageFiles = [];
+        
+        // Process each file change
+        fileChanges.forEach(({ index, file, fileName, isNew, isExisting }) => {
+            if (isNew && file) {
+                // New file to be uploaded
+                saveFileChange(questionId, file, index);
+                newImageFiles[index] = fileName;
+            } else if (isExisting) {
+                // Existing file that should be kept
+                newImageFiles[index] = fileName;
+                // Dont call saveFileChange for existing files - they're already handled
+            }
+        });
+        
+        for (let i = 0; i < 2; i++) {
+            if (!fileChanges.some(change => change.index === i)) {
+                // This slot should be empty
+                saveFileChange(questionId, null, i);
+            }
         }
-    
-        if (file) {
-            setTempFile(file);
-            form.setFieldValue("imageFile", file.name);
-    
-            const previewUrl = URL.createObjectURL(file);
-            setFileUrl(previewUrl);
-        } else {
-            setTempFile(null);
-            form.setFieldValue("imageFile", null);
-            setFileUrl(null);
-        }
+        
+        const finalImageFiles = newImageFiles.filter(Boolean);
+                
+        form.setFieldValue("imageFiles", finalImageFiles);
+        setImageFiles(finalImageFiles);
     };
 
     const handleQuestionTypeChange = (value) => {
@@ -77,6 +91,8 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
             const initialValues = {
                 ...DefaultNewQuestion,
                 ...questionData,
+                // Convert legacy imageFile to imageFiles array for backward compatibility
+                imageFiles: questionData?.imageFiles || (questionData?.imageFile ? [questionData.imageFile] : [])
             };
 
             // If new question generate new ID
@@ -87,28 +103,13 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
 
             form.resetFields();
             form.setFieldsValue(initialValues);
-
-            //File/image handling
-            setTempFile(null);
-            setFileUrl(null);
-            if (questionData && questionData.imageFile) {
-                const loadImage = async () => {
-                    const url = await getImageUrl(form.getFieldValue('id'));
-                    setFileUrl(url);
-                };
-    
-                loadImage();
-            }
+            
+            // Set local state for image files
+            setImageFiles(initialValues.imageFiles);
         }
     }, [questionData, visible]);
 
     const onFinish = (formData) => {
-        if(tempFile && form.getFieldValue('imageFile')){
-            saveFileChange(form.getFieldValue('id'), tempFile);
-        } else if (!tempFile && !form.getFieldValue('imageFile')){
-            saveFileChange(form.getFieldValue('id'), null);
-        }
-
         const newQuestion = {
             id: form.getFieldValue('id'),
             question: form.getFieldValue('question') || "",
@@ -116,11 +117,12 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
             type: form.getFieldValue('type') || QuestionTypes.MULTICHOICE,
             options: form.getFieldValue('options') || [],
             answers: form.getFieldValue('answers') || [],
-            requiresValidation: form.getFieldValue('requiresValidation') ?? true, // FIXED: Use ?? instead of ||
-            isRequired: form.getFieldValue('requiresValidation') ?? true, // ADDED: For compatibility with QuestionRenderer
+            requiresValidation: form.getFieldValue('requiresValidation') ?? true,
+            isRequired: form.getFieldValue('requiresValidation') ?? true,
             hint: form.getFieldValue('hint') || "",
-            imageFile: form.getFieldValue('imageFile') || null,
+            imageFiles: form.getFieldValue('imageFiles') || [],
             youtubeUrl: form.getFieldValue('youtubeUrl') || null,
+            websiteLinks: form.getFieldValue('websiteLinks') || [],
         }
 
         onSave(newQuestion);
@@ -262,30 +264,31 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                                     <TiptapEditor
                                                         description={form.getFieldValue('description')}
                                                         handleChange={(value) => {
-                                                            // Carefully update the form value without triggering a full form reset
                                                             form.setFieldsValue({ 
                                                                 description: value 
                                                             });
                                                             
-                                                            // Prevent immediate validation
                                                             setTimeout(() => {
                                                                 form.validateFields(['description'])
-                                                                    .catch(() => {
-                                                                        // Silently catch validation errors to prevent UI disruption
-                                                                    });
+                                                                    .catch(() => {});
                                                             }, 500);
                                                         }}
                                                     />
                                                 </Form.Item>
                                             </div>
 
-                                            {/* Image Upload Section */}
+                                            {/* Multi-Image Upload Section */}
                                             <div className="mt-6 pt-2 border-t border-gray-300">
-                                                <span className="font-semibold">Add an Image (Optional):</span>
-                                                <ImageUpload
-                                                    fileUrl={fileUrl}
-                                                    saveFileChange={handleFileChange}
-                                                />
+                                                <span className="font-semibold">Add Images (Optional - Max 2):</span>
+                                                <div className="mt-2">
+                                                    <MultiImageUpload
+                                                        questionId={form.getFieldValue('id')}
+                                                        initialImageFiles={imageFiles}
+                                                        getImageUrl={getImageUrl}
+                                                        onFilesChange={handleImageFilesChange}
+                                                        maxImages={2}
+                                                    />
+                                                </div>
                                             </div>
 
                                             {/* YouTube Video URL Section */}
@@ -298,13 +301,27 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                                     />
                                                 </Form.Item>
                                             </div>
+
+                                            {/* Website Links Section */}
+                                            <div className="mt-6 pt-2 border-t border-gray-300">
+                                                <span className="font-semibold">Add Website Links (Optional - Max 3):</span>
+                                                <div className="mt-2">
+                                                    <WebsiteLinksManager
+                                                        initialLinks={form.getFieldValue('websiteLinks') || []}
+                                                        onLinksChange={(links) => {
+                                                            form.setFieldsValue({ websiteLinks: links });
+                                                        }}
+                                                        maxLinks={3}
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
                                     ),
                                 }
                             ]}
                         />
 
-                        {/* Collapsible Validation Settings */}
+                        {/* Validation Settings */}
                         {(selectedType === QuestionTypes.MULTICHOICE ||
                             selectedType === QuestionTypes.TRUE_FALSE ||
                             selectedType === QuestionTypes.DROPDOWN ||
@@ -334,7 +351,6 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                                         </Form.Item>
                                                     </div>
 
-                                                    {/* Show Hint only if Requires Validation is enabled */}
                                                     {requiresValidation && (
                                                         <Form.Item
                                                             name="hint"
@@ -402,7 +418,6 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                                         className={`flex gap-2 p-2 pb-0 rounded-md border-2 transition-colors mb-2
                                                         ${answers.includes(index) ? "bg-green-100 border-green-500" : "bg-gray-200 border-gray-400"}`}
                                                     >
-                                                        {/* Answer Selection Button */}
                                                         <button
                                                             type="button"
                                                             onClick={() => handleAnswerClick(index)}
@@ -416,7 +431,6 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                                             )}
                                                         </button>
 
-                                                        {/* Option Input */}
                                                         <Form.Item
                                                             {...restField}
                                                             name={[name]}
@@ -431,7 +445,6 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                                             />
                                                         </Form.Item>
 
-                                                        {/* Remove Option Button */}
                                                         <Button
                                                             onClick={() => handleRemove(index)}
                                                             className="text-white bg-red-500 hover:bg-red-600 px-3 py-1 rounded-md"
@@ -442,7 +455,6 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                                     </div>
                                                 ))}
 
-                                                {/* Add Option Button*/}
                                                 <div className="flex items-center justify-center">
                                                     <Button
                                                         type="dashed"
@@ -464,7 +476,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                             </Form.Item>
                         )}
 
-                        {/*Radio for options*/}
+                        {/* Radio for True/False and Yes/No */}
                         {(selectedType === QuestionTypes.TRUE_FALSE || selectedType === QuestionTypes.YES_NO) && (
                             <Form.Item
                                 label={<span className="font-semibold">Options:</span>}

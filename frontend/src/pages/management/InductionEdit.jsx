@@ -10,7 +10,8 @@ import ManagementSidebar from "../../components/ManagementSidebar";
 import { FaSave, FaCloudUploadAlt } from 'react-icons/fa';
 import Loading from "../../components/Loading";
 import "react-quill/dist/quill.snow.css";
-import InductionFormContent from "../../components/InductionFormContent";import { Modal, Button, Tooltip } from "antd";
+import InductionFormContent from "../../components/InductionFormContent";
+import { Modal, Button, Tooltip } from "antd";
 import { messageWarning, notifySuccess, messageSuccess, notifyError } from '../../utils/notificationService';
 import { getSignedUrl, uploadFile, deleteFile } from "../../api/FileApi";
 import { CheckCircleOutlined, InfoCircleOutlined } from '@ant-design/icons';
@@ -64,10 +65,11 @@ const InductionEdit = () => {
             isDraft: inductionData.isDraft === true || inductionData.isDraft === "true"
           };
           
-          // Create snapshot of original questions
+          // Create snapshot of original questions - support both legacy and new format
           const snapshot = inductionData.questions.map((q) => ({
             id: q.id,
-            imageFile: q.imageFile || null,
+            imageFiles: q.imageFiles || (q.imageFile ? [q.imageFile] : []), // Support legacy
+            imageFile: q.imageFile || null, // Keep for compatibility during transition
           }));
           setOriginalQuestions(snapshot);
           
@@ -145,22 +147,35 @@ const InductionEdit = () => {
     messageSuccess("Discarding draft and using last saved version.");
   };
 
-  //File handling
-  const handleFileBufferUpdate = (questionId, file) => {
+  // Updated file handling to support multiple images per question
+  const handleFileBufferUpdate = (questionId, file, imageIndex = 0) => {
     setFileBuffer(prev => {
       const newBuffer = new Map(prev);
+      const key = `${questionId}_${imageIndex}`;
+      
       if (file) {
-        newBuffer.set(questionId, file);
+        newBuffer.set(key, file);
       } else {
-        newBuffer.delete(questionId);
+        newBuffer.delete(key);
       }
       return newBuffer;
     });
   };
 
-  const getImageUrl = async (questionId) => {
-    const fileFromBuffer = fileBuffer.get(questionId);
-    const fileFromInduction = induction.questions.find(q => q.id === questionId)?.imageFile;
+  // Updated to support multiple images per question
+  const getImageUrl = async (questionId, imageIndex = 0) => {
+    const key = `${questionId}_${imageIndex}`;
+    const fileFromBuffer = fileBuffer.get(key);
+    const question = induction.questions.find(q => q.id === questionId);
+    
+    // Support both legacy imageFile and new imageFiles
+    let fileFromInduction;
+    if (question?.imageFiles && question.imageFiles[imageIndex]) {
+      fileFromInduction = question.imageFiles[imageIndex];
+    } else if (imageIndex === 0 && question?.imageFile) {
+      // Backward compatibility: treat legacy imageFile as first image
+      fileFromInduction = question.imageFile;
+    }
 
     if (fileFromBuffer) {
       return URL.createObjectURL(fileFromBuffer); // Local preview
@@ -177,49 +192,73 @@ const InductionEdit = () => {
     }
   };
 
+  // Updated to support multiple images
   const handleSubmitFileChanges = async () => {
     const deletes = [];
     const uploads = [];
 
+    // Create map of original questions with their image files
     const oldMap = new Map(originalQuestions.map(q => [q.id, q]));
     const currentIds = new Set(induction.questions.map(q => q.id));
 
-    const getFileName = (question, file) => `induction_images/${induction.id}/${question.id}_${file.name}`;
+    const getFileName = (question, file, imageIndex) => 
+      `induction_images/${induction.id}/${question.id}_${imageIndex}_${file.name}`;
 
     for (const newQ of induction.questions) {
       const oldQ = oldMap.get(newQ.id);
-      const newFileName = newQ.imageFile;
-      const oldFileName = oldQ?.imageFile;
+      
+      // Handle multiple images per question
+      for (let imageIndex = 0; imageIndex < 2; imageIndex++) {
+        const key = `${newQ.id}_${imageIndex}`;
+        const newFileName = newQ.imageFiles?.[imageIndex];
+        
+        // Get old filename - support both legacy and new format
+        let oldFileName;
+        if (oldQ?.imageFiles?.[imageIndex]) {
+          oldFileName = oldQ.imageFiles[imageIndex];
+        } else if (imageIndex === 0 && oldQ?.imageFile) {
+          // Legacy support: treat old imageFile as first image
+          oldFileName = oldQ.imageFile;
+        }
 
-      // === CASE: DELETE ===
-      if (oldFileName && !newFileName) {
-        deletes.push(deleteFile(user, oldFileName));
-        continue;
+        // === CASE: DELETE ===
+        if (oldFileName && !newFileName) {
+          deletes.push(deleteFile(user, oldFileName));
+          continue;
+        }
+
+        // === UPLOAD NEW or CHANGED ===
+        const file = fileBuffer.get(key);
+        if ((oldFileName !== newFileName || !oldFileName) && file && newFileName) {
+          if (oldFileName) deletes.push(deleteFile(user, oldFileName));
+
+          const finalFileName = getFileName(newQ, file, imageIndex);
+          uploads.push({ file, finalFileName, question: newQ, imageIndex });
+          continue;
+        }
+
+        // === NEW QUESTION with FILE ===
+        if (!oldQ && newFileName && file) {
+          const finalFileName = getFileName(newQ, file, imageIndex);
+          uploads.push({ file, finalFileName, question: newQ, imageIndex });
+        }
+
+        // No changes — skip
       }
-
-      // === UPLOAD NEW or CHANGED ===
-      const file = fileBuffer.get(newQ.id);
-      if ((oldFileName !== newFileName || !oldFileName) && file && newFileName) {
-        if (oldFileName) deletes.push(deleteFile(user, oldFileName));
-
-        const finalFileName = getFileName(newQ, file);
-        uploads.push({ file, finalFileName, question: newQ });
-        continue;
-      }
-
-      // === NEW QUESTION with FILE ===
-      if (!oldQ && newFileName && file) {
-        const finalFileName = getFileName(newQ, file);
-        uploads.push({ file, finalFileName, question: newQ });
-      }
-
-      // No changes — skip
     }
 
     // === DELETED QUESTIONS ===
     for (const [oldId, oldQ] of oldMap) {
-      if (!currentIds.has(oldId) && oldQ.imageFile) {
-        deletes.push(deleteFile(user, oldQ.imageFile));
+      if (!currentIds.has(oldId)) {
+        // Delete all images for deleted questions
+        if (oldQ.imageFiles) {
+          oldQ.imageFiles.forEach(imageFile => {
+            if (imageFile) deletes.push(deleteFile(user, imageFile));
+          });
+        } else if (oldQ.imageFile) {
+          // Legacy support
+          deletes.push(deleteFile(user, oldQ.imageFile));
+        }
       }
     }
 
@@ -230,16 +269,26 @@ const InductionEdit = () => {
       messageWarning("Some deletions failed", err);
     }
 
-    // === Run uploads and update imageFile ===
+    // === Run uploads and update imageFiles ===
     const updatedInduction = { ...induction };
-    for (const { file, finalFileName, question } of uploads) {
+    for (const { file, finalFileName, question, imageIndex } of uploads) {
       try {
         const response = await uploadFile(user, file, finalFileName);
         const newFileName = response.gcsFileName || finalFileName;
 
-        updatedInduction.questions = updatedInduction.questions.map(q =>
-          q.id === question.id ? { ...q, imageFile: newFileName } : q
-        );
+        updatedInduction.questions = updatedInduction.questions.map(q => {
+          if (q.id === question.id) {
+            const newImageFiles = [...(q.imageFiles || [])];
+            newImageFiles[imageIndex] = newFileName;
+            return { 
+              ...q, 
+              imageFiles: newImageFiles,
+              // Remove legacy imageFile field
+              imageFile: undefined
+            };
+          }
+          return q;
+        });
       } catch (err) {
         messageWarning(`Upload failed for ${file.name}`, err);
       }
@@ -303,11 +352,18 @@ const InductionEdit = () => {
     }
   };
 
+  // Updated to support multiple images
   const handleDeleteFileChanges = async () => {
     const deletes = [];
 
     for (const q of originalQuestions) {
-      if (q.imageFile) {
+      // Delete all images for the question
+      if (q.imageFiles) {
+        q.imageFiles.forEach(imageFile => {
+          if (imageFile) deletes.push(deleteFile(user, imageFile));
+        });
+      } else if (q.imageFile) {
+        // Legacy support
         deletes.push(deleteFile(user, q.imageFile));
       }
     }
@@ -347,84 +403,85 @@ const InductionEdit = () => {
     setConfirmModalVisible(false);
   };
 
-const handleSubmit = async () => {
-  if (submitting) return; // Prevent multiple submission attempts
-  
-  setSubmitting(true);
-  setLoading(true);
-  setLoadingMessage(`Saving the Module's details...`);
-  setError(null); // Reset error state
-  
-  try {
-    // Set a timeout to automatically stop loading after 30 seconds
-    const timeoutId = setTimeout(() => {
-      if (submitting) {
-        setLoading(false);
-        setSubmitting(false);
-        setError("The request timed out. Please try again.");
-        messageWarning("The request is taking longer than expected. Please try again.");
+  const handleSubmit = async () => {
+    if (submitting) return;
+    
+    setSubmitting(true);
+    setLoading(true);
+    setLoadingMessage(`Saving the Module's details...`);
+    setError(null); // Reset error state
+    
+    try {
+      // Set a timeout to automatically stop loading after 30 seconds
+      const timeoutId = setTimeout(() => {
+        if (submitting) {
+          setLoading(false);
+          setSubmitting(false);
+          setError("The request timed out. Please try again.");
+          messageWarning("The request is taking longer than expected. Please try again.");
+        }
+      }, 30000);
+      
+      // Handle all of the file uploads and deletion
+      const updatedInduction = await handleSubmitFileChanges();
+      
+      // When publishing, explicitly set isDraft to false
+      const finalInductionData = {
+        ...updatedInduction,
+        isDraft: false  // Ensures the induction is published, not saved as draft
+      };
+      
+      if (user) {
+        const result = await updateInduction(user, finalInductionData);
+        
+        // Clear the timeout since we got a response
+        clearTimeout(timeoutId);
+        
+        if (result) {
+          // Clear the saved draft since we've successfully submitted
+          clearSavedInductionDraft(id, true);
+          
+          notifySuccess("Module updated successfully!");
+          
+          // Update the original questions snapshot to reflect the current state
+          const snapshot = finalInductionData.questions.map((q) => ({
+            id: q.id,
+            imageFiles: q.imageFiles || [],
+            imageFile: null, // Clear legacy field
+          }));
+          setOriginalQuestions(snapshot);
+          
+          // Refresh state with the published induction
+          setInduction(finalInductionData);
+          setFileBuffer(new Map());
+          
+          // Navigate to inductions list view after successful update
+          setTimeout(() => {
+            navigate("/management/inductions/view");
+          }, 1500); // Delay to allow the success notification to be seen
+        } else {
+          messageWarning("Error while updating Module.");
+        }
       }
-    }, 30000);
-    
-    // Handle all of the file uploads and deletion
-    const updatedInduction = await handleSubmitFileChanges();
-    
-    // When publishing, explicitly set isDraft to false
-    const finalInductionData = {
-      ...updatedInduction,
-      isDraft: false  // Ensures the induction is published, not saved as draft
-    };
-    
-    if (user) {
-      const result = await updateInduction(user, finalInductionData);
-      
-      // Clear the timeout since we got a response
-      clearTimeout(timeoutId);
-      
-      if (result) {
-        // Clear the saved draft since we've successfully submitted
-        clearSavedInductionDraft(id, true);
+    } catch (err) {
+      // Handle specific error cases
+      if (err.response && err.response.status === 400) {
+        const errorMessage = err.response.data?.message || "Bad request - please check your data";
+        messageWarning(errorMessage);
         
-        notifySuccess("Module updated successfully!");
-        
-        // Update the original questions snapshot to reflect the current state
-        const snapshot = finalInductionData.questions.map((q) => ({
-          id: q.id,
-          imageFile: q.imageFile || null,
-        }));
-        setOriginalQuestions(snapshot);
-        
-        // Refresh state with the published induction
-        setInduction(finalInductionData);
-        setFileBuffer(new Map());
-        
-        // Navigate to inductions list view after successful update
-        setTimeout(() => {
-          navigate("/management/inductions/view");
-        }, 1500); // Delay to allow the success notification to be seen
+        console.error("Request failed with status 400. Details:", {
+          message: err.message,
+          responseData: err.response.data,
+          sentData: induction
+        });
       } else {
-        messageWarning("Error while updating Module.");
+        messageWarning(err.message || "Error while updating Module");
       }
+    } finally {
+      setSubmitting(false);
+      setLoading(false);
     }
-  } catch (err) {
-    // Handle specific error cases
-    if (err.response && err.response.status === 400) {
-      const errorMessage = err.response.data?.message || "Bad request - please check your data";
-      messageWarning(errorMessage);
-      
-      console.error("Request failed with status 400. Details:", {
-        message: err.message,
-        responseData: err.response.data,
-        sentData: induction
-      });
-    } else {
-      messageWarning(err.message || "Error while updating Module");
-    }
-  } finally {
-    setSubmitting(false);
-    setLoading(false);
-  }
-};
+  };
 
   const checkForMissingFields = () => {
     const missingFields = [];
