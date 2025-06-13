@@ -23,7 +23,7 @@ const corsOptions = {
   origin: (origin, callback) => {
     // List of allowed origins
     const allowedOrigins = [
-      'https://dev-aut-events-induction.vercel.app/',
+      'https://dev-aut-events-induction.vercel.app',
       'https://aut-events-induction.vercel.app'
     ];
     
