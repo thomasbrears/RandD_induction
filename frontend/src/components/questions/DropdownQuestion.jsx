@@ -8,27 +8,27 @@ const DropdownQuestion = ({ question, getImageUrl }) => {
   useEffect(() => {
     if (question.imageFile) {
       const loadImage = async () => {
-        const url = await getImageUrl(question.id);
-        setImageUrl(url);
+          const url = await getImageUrl(question.id);
+          setImageUrl(url);
       };
 
       loadImage();
-    } else {
+  } else {
       setImageUrl(null);
-    }
+  }
   }, [question.imageFile]);
 
   const handleExpiredImage = async () => {
     if (question.imageFile) {
       const loadImage = async () => {
-        const url = await getImageUrl(question.id);
-        setImageUrl(url);
+          const url = await getImageUrl(question.id);
+          setImageUrl(url);
       };
 
       loadImage();
-    } else {
+  } else {
       setImageUrl(null);
-    }
+  }
   };
 
   return (

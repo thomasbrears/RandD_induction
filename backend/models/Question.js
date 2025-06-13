@@ -25,5 +25,7 @@ export const DefaultNewQuestion = {
     requiresValidation: true,
     hint: "",
     imageFile: null,
-    incorrectAnswerMessage: ""
+    imageFiles: [],
+    incorrectAnswerMessage: "",
+    websiteLinks: []
 };

@@ -26,4 +26,5 @@ export const DefaultNewQuestion = {
     hint: "",
     imageFile: null,
     youtubeUrl: null,
+    websiteLinks: [],
 };

@@ -135,55 +135,87 @@ const InductionCreate = () => {
   return hasName && hasQuestions;
 };
 
-  //File Handling
-  const handleFileBufferUpdate = (questionId, file) => {
+  // Updated file handling to support multiple images per question
+  const handleFileBufferUpdate = (questionId, file, imageIndex = 0) => {
     setFileBuffer(prev => {
       const newBuffer = new Map(prev);
+      const key = `${questionId}_${imageIndex}`;
+      
       if (file) {
-        newBuffer.set(questionId, file);
+        newBuffer.set(key, file);
       } else {
-        newBuffer.delete(questionId);
+        newBuffer.delete(key);
       }
       return newBuffer;
     });
   };
 
-  const getImageUrl = async (questionId) => {
-    const file = fileBuffer.get(questionId);
+  // Updated to support multiple images per question
+  const getImageUrl = async (questionId, imageIndex = 0) => {
+    const key = `${questionId}_${imageIndex}`;
+    const file = fileBuffer.get(key);
     return file ? URL.createObjectURL(file) : null;
   };
 
+  // Updated to support multiple images
   const handleUploadNewQuestionFiles = async (inductionId) => {
     let updatedInduction = { ...induction };
 
-    const getFileName = (question, file) => `induction_images/${inductionId}/${question.id}_${file.name}`;
+    const getFileName = (question, file, imageIndex) => 
+      `induction_images/${inductionId}/${question.id}_${imageIndex}_${file.name}`;
 
     for (const q of induction.questions) {
-      const hasFileInBuffer = fileBuffer.has(q.id);
-      const currentFileName = q.imageFile;
+      const updatedImageFiles = [];
+      
+      // Handle multiple images per question (max 2)
+      for (let imageIndex = 0; imageIndex < 2; imageIndex++) {
+        const key = `${q.id}_${imageIndex}`;
+        const hasFileInBuffer = fileBuffer.has(key);
+        
+        // Get current filename for this image index
+        const currentFileName = q.imageFiles?.[imageIndex] || (imageIndex === 0 ? q.imageFile : null);
 
-      if (hasFileInBuffer) {
-        const file = fileBuffer.get(q.id);
-        const finalFileName = getFileName(q, file);
+        if (hasFileInBuffer) {
+          const file = fileBuffer.get(key);
+          const finalFileName = getFileName(q, file, imageIndex);
 
-        if (currentFileName !== finalFileName) {
-          try {
-            const result = await uploadFile(user, file, finalFileName);
-            const uploadedFileName = result.gcsFileName || finalFileName;
-
-            updatedInduction = {
-              ...updatedInduction,
-              questions: updatedInduction.questions.map((question) =>
-                question.id === q.id
-                  ? { ...question, imageFile: uploadedFileName }
-                  : question
-              ),
-            };
-          } catch (err) {
-            messageWarning(`Failed to upload file for question ${q.id}`, err);
+          if (currentFileName !== finalFileName) {
+            try {
+              const result = await uploadFile(user, file, finalFileName);
+              const uploadedFileName = result.gcsFileName || finalFileName;
+              updatedImageFiles[imageIndex] = uploadedFileName;
+            } catch (err) {
+              messageWarning(`Failed to upload file for question ${q.id}, image ${imageIndex}`, err);
+              // Keep existing file if upload fails
+              if (currentFileName) {
+                updatedImageFiles[imageIndex] = currentFileName;
+              }
+            }
+          } else {
+            // No change needed, keep existing
+            if (currentFileName) {
+              updatedImageFiles[imageIndex] = currentFileName;
+            }
           }
+        } else if (currentFileName) {
+          // Keep existing file
+          updatedImageFiles[imageIndex] = currentFileName;
         }
       }
+
+      // Update the question with new imageFiles array
+      updatedInduction = {
+        ...updatedInduction,
+        questions: updatedInduction.questions.map((question) =>
+          question.id === q.id
+            ? { 
+                ...question, 
+                imageFiles: updatedImageFiles.filter(Boolean),
+                imageFile: undefined 
+              }
+            : question
+        ),
+      };
     }
 
     return updatedInduction;

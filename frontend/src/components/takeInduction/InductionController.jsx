@@ -156,19 +156,47 @@ const InductionController = ({ inductionId }) => {
     
     const imageUrlsMap = {};
     const questions = inductionData.questions || [];
-    
     try {
       await Promise.all(
         questions.map(async (q, index) => {
-          if (q.imageFile) {
+          // Check if imageFiles exists and is an array
+          if (Array.isArray(q.imageFiles) && q.imageFiles.length > 0) {
+
+            // Primary image (first in array)
+            if (q.imageFiles[0]) {
+              try {
+                const result = await getSignedUrl(user, q.imageFiles[0]);
+                if (result && result.url) {
+                  imageUrlsMap[index] = result.url;
+                }
+              } catch (err) {
+                console.warn(`Could not fetch primary image for question ${index}:`, err);
+              }
+            }
+            
+            // Secondary image (second in array)
+            if (q.imageFiles[1]) {
+              try {
+                const result = await getSignedUrl(user, q.imageFiles[1]);
+                if (result && result.url) {
+                  imageUrlsMap[`${index}_secondary`] = result.url;
+                }
+              } catch (err) {
+                console.warn(`Could not fetch secondary image for question ${index}:`, err);
+              }
+            }
+          } else if (q.imageFiles && typeof q.imageFiles === 'string') {
+            // Handle case where imageFiles is a single string (backwards compatibility)
             try {
-              const result = await getSignedUrl(user, q.imageFile);
+              const result = await getSignedUrl(user, q.imageFiles);
               if (result && result.url) {
                 imageUrlsMap[index] = result.url;
               }
             } catch (err) {
-              console.warn(`Could not fetch image for question ${index}:`, err);
+              console.warn(`Could not fetch single image for question ${index}:`, err);
             }
+          } else {
+            console.log(`No imageFiles found for question ${index} (or empty array)`);
           }
         })
       );
@@ -525,7 +553,7 @@ const InductionController = ({ inductionId }) => {
               currentIndex={currentQuestionIndex}
               totalQuestions={induction.questions.length}
               handleGoToSubmissionScreen={handleGoToSubmissionScreen}
-              imageUrl={imageUrls[currentQuestionIndex]}
+              imageUrls={imageUrls}
             />
           )}
         </InductionLayout>

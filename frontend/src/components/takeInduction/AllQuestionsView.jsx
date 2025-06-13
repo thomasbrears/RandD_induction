@@ -1,5 +1,6 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import { Image } from 'antd';
 import QuestionRenderer from './QuestionRenderer';
 
 /**
@@ -10,8 +11,57 @@ const AllQuestionsView = ({
   answers, 
   handleAnswerChange, 
   answerFeedback,
-  isSubmitting 
+  isSubmitting,
+  imageUrls = {}
 }) => {
+  
+  // Helper function to get image URLs for a specific question
+  const getQuestionImageUrls = (questionIndex) => {
+    if (!imageUrls || typeof imageUrls !== 'object') return [];
+    
+    const urls = [];
+    
+    // Check for primary image
+    if (imageUrls[questionIndex]) {
+      urls.push(imageUrls[questionIndex]);
+    }
+    
+    // Check for secondary image
+    if (imageUrls[`${questionIndex}_secondary`]) {
+      urls.push(imageUrls[`${questionIndex}_secondary`]);
+    }
+    
+    return urls.filter(url => url); // Remove any null/undefined values
+  };
+
+  // Render multiple images for a question
+  const renderQuestionImages = (questionIndex) => {
+    const validUrls = getQuestionImageUrls(questionIndex);
+    if (!validUrls.length) return null;
+    
+    return (
+      <div className="mb-4">
+        <div className={`grid gap-3 ${validUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
+          {validUrls.map((url, index) => (
+            <div key={index} className="flex justify-center">
+              <img
+                src={url}
+                alt={`Question Image ${index + 1}`}
+                className="max-w-full max-h-64 object-contain border rounded-lg shadow-sm"
+                style={{ maxWidth: '100%', height: 'auto' }}
+                onError={(e) => {
+                  console.error('Image failed to load:', url);
+                  e.target.onerror = null;
+                  e.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2YxZjFmMSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwsIHNhbnMtc2VyaWYiIGZvbnQtc2l6ZT0iMTQiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIiBmaWxsPSIjNjY2Ij5JbWFnZSBub3QgYXZhaWxhYmxlPC90ZXh0Pjwvc3ZnPg==';
+                }}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6">
       <div className="space-y-8">
@@ -34,12 +84,16 @@ const AllQuestionsView = ({
               />
             )}
             
+            {/* Display Images if available */}
+            {renderQuestionImages(index)}
+            
             <div className="mt-2">
               <QuestionRenderer
                 question={question}
                 answer={answers[question.id]}
                 handleAnswerChange={(answer) => handleAnswerChange(question.id, answer)}
                 answerFeedback={answerFeedback}
+                imageUrls={getQuestionImageUrls(index)} // Pass image URLs to QuestionRenderer
               />
             </div>
           </div>
@@ -71,7 +125,8 @@ AllQuestionsView.propTypes = {
     message: PropTypes.string,
     showFeedback: PropTypes.bool
   }).isRequired,
-  isSubmitting: PropTypes.bool.isRequired
+  isSubmitting: PropTypes.bool.isRequired,
+  imageUrls: PropTypes.object
 };
 
 export default AllQuestionsView;
