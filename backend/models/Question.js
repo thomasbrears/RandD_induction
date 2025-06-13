@@ -26,5 +26,6 @@ export const DefaultNewQuestion = {
     hint: "",
     imageFile: null,
     imageFiles: [],
-    incorrectAnswerMessage: ""
+    incorrectAnswerMessage: "",
+    websiteLinks: []
 };

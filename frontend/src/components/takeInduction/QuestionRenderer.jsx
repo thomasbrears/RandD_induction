@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import QuestionTypes from '../../models/QuestionTypes';
 import { Upload, message, Image } from 'antd';
 import { InboxOutlined, FileOutlined, FilePdfOutlined, FileWordOutlined, FileExcelOutlined, FilePptOutlined } from '@ant-design/icons';
+import { FaExternalLinkAlt } from "react-icons/fa";
 import FormattedDescription from './FormattedDescription';
 
 const { Dragger } = Upload;
@@ -135,6 +136,33 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
     <span className="text-red-500 ml-1">*</span>
   ) : null;
 
+// Render website links component
+  const renderWebsiteLinks = () => {
+  if (!question.websiteLinks || question.websiteLinks.length === 0) {
+    return null;
+  }
+  
+  return (
+    <div className="mt-4 mb-2">
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <div className="flex flex-wrap gap-3">
+          {question.websiteLinks.map((link, index) => (
+            <a
+              key={index}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-sm hover:shadow-md"
+            >
+              <span className="mr-2">{link.title}</span>
+              <FaExternalLinkAlt className="w-3.5 h-3.5" />
+            </a>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
   // For File Upload component
   const [fileList, setFileList] = useState([]);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -221,6 +249,7 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
     case QuestionTypes.TRUE_FALSE:
       return (
         <div className="space-y-3">
+          {renderWebsiteLinks()}
           <div className="flex items-center">
             <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
           </div>
@@ -247,6 +276,7 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
     case QuestionTypes.YES_NO:
       return (
         <div className="space-y-3">
+          {renderWebsiteLinks()}
           <div className="flex items-center">
             <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
           </div>
@@ -273,6 +303,7 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
     case QuestionTypes.MULTICHOICE:
       return (
         <div className="space-y-3">
+          {renderWebsiteLinks()}
           <div className="flex items-center">
             <p className="text-sm font-medium text-gray-700">Select option(s){requiredIndicator}</p>
           </div>
@@ -309,6 +340,7 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
     case QuestionTypes.DROPDOWN:
       return (
         <div>
+          {renderWebsiteLinks()}
           <div className="flex items-center mb-2">
             <p className="text-sm font-medium text-gray-700">Select an option{requiredIndicator}</p>
           </div>
@@ -331,6 +363,7 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
     case QuestionTypes.SHORT_ANSWER:
       return (
         <div>
+          {renderWebsiteLinks()}
           <div className="flex items-center justify-between mb-2">
             <p className="text-sm font-medium text-gray-700">Enter your answer{requiredIndicator}</p>
             <p className={`text-xs ${
@@ -388,6 +421,7 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
     case QuestionTypes.INFORMATION:
       return (
         <div className="mt-2 bg-blue-50 p-4 rounded-md border border-blue-200">
+          {renderWebsiteLinks()}
           <FormattedDescription 
             description={question.description || 'No information provided.'} 
             initiallyExpanded={true}
@@ -399,6 +433,7 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
     case QuestionTypes.FILE_UPLOAD:
       return (
         <div>
+          {renderWebsiteLinks()}
           <div className="flex items-center mb-2">
             <p className="text-sm font-medium text-gray-700">Upload a file{requiredIndicator}</p>
           </div>
@@ -505,6 +540,7 @@ QuestionRenderer.propTypes = {
     minChars: PropTypes.number,
     maxChars: PropTypes.number,
     youtubeUrl: PropTypes.string,
+    websiteLinks: PropTypes.array,
   }).isRequired,
   answer: PropTypes.oneOfType([
     PropTypes.string,

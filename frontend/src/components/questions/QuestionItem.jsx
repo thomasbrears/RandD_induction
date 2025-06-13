@@ -13,7 +13,7 @@ import ShortAnswerQuestion from "./ShortAnswerQuestion";
 import InformationQuestion from "./InformationQuestion";
 import { FaChevronDown, FaChevronUp, FaEdit, FaCopy, FaYoutube } from 'react-icons/fa';
 import { FaArrowsUpDown } from 'react-icons/fa6';
-import { DeleteOutlined } from '@ant-design/icons';
+import { DeleteOutlined, LinkOutlined } from '@ant-design/icons';
 import QuestionTypes from "../../models/QuestionTypes";
 
 // Helper function to extract YouTube video ID
@@ -183,6 +183,36 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, onQuestionDu
                     >
                         Open in YouTube
                     </a>
+                </div>
+            </div>
+        );
+    };
+
+    // Render website links preview
+    const renderWebsiteLinks = () => {
+        if (!question.websiteLinks || question.websiteLinks.length === 0) return null;
+        
+        return (
+            <div className="mt-3">
+                <p className="text-sm font-medium text-gray-700 mb-2">Website Links:</p>
+                <div className="flex flex-wrap gap-2">
+                    {question.websiteLinks.map((link, index) => (
+                        <div key={index} className="flex items-center space-x-2 bg-blue-50 p-2 rounded-md border border-blue-200">
+                            <LinkOutlined className="text-blue-600" />
+                            <div className="flex flex-col">
+                                <span className="text-sm font-medium text-blue-800">{link.title}</span>
+                                <a 
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-xs text-blue-600 hover:underline max-w-[200px] truncate"
+                                    onClick={(e) => e.stopPropagation()}
+                                >
+                                    {link.url}
+                                </a>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
         );

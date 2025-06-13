@@ -9,6 +9,7 @@ import { UpOutlined, PlusOutlined } from "@ant-design/icons";
 import "../../style/AntdOverride.css";
 import { v4 as uuidv4 } from 'uuid';
 import MultiImageUpload from "./MultiImageUpload";
+import WebsiteLinksManager from "./WebsiteLinksManager";
 
 const { Option } = Select;
 
@@ -121,6 +122,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
             hint: form.getFieldValue('hint') || "",
             imageFiles: form.getFieldValue('imageFiles') || [],
             youtubeUrl: form.getFieldValue('youtubeUrl') || null,
+            websiteLinks: form.getFieldValue('websiteLinks') || [],
         }
 
         onSave(newQuestion);
@@ -298,6 +300,20 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                                         onChange={(e) => form.setFieldsValue({ youtubeUrl: e.target.value })}
                                                     />
                                                 </Form.Item>
+                                            </div>
+
+                                            {/* Website Links Section */}
+                                            <div className="mt-6 pt-2 border-t border-gray-300">
+                                                <span className="font-semibold">Add Website Links (Optional - Max 3):</span>
+                                                <div className="mt-2">
+                                                    <WebsiteLinksManager
+                                                        initialLinks={form.getFieldValue('websiteLinks') || []}
+                                                        onLinksChange={(links) => {
+                                                            form.setFieldsValue({ websiteLinks: links });
+                                                        }}
+                                                        maxLinks={3}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                     ),
