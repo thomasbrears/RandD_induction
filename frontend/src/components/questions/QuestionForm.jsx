@@ -92,13 +92,15 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                 ...DefaultNewQuestion,
                 ...questionData,
                 // Convert legacy imageFile to imageFiles array for backward compatibility
-                imageFiles: questionData?.imageFiles || (questionData?.imageFile ? [questionData.imageFile] : [])
+                imageFiles: questionData?.imageFiles || (questionData?.imageFile ? [questionData.imageFile] : []),
+                websiteLinks: questionData?.websiteLinks ? [...questionData.websiteLinks] : []
             };
 
             // If new question generate new ID
             if (!initialValues.id) {
                 initialValues.id = uuidv4();
                 initialValues.type = null;
+                initialValues.websiteLinks = [];
             }
 
             form.resetFields();
@@ -107,7 +109,7 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
             // Set local state for image files
             setImageFiles(initialValues.imageFiles);
         }
-    }, [questionData, visible]);
+    }, [questionData, visible, form]);
 
     const onFinish = (formData) => {
         const newQuestion = {
@@ -122,7 +124,8 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
             hint: form.getFieldValue('hint') || "",
             imageFiles: form.getFieldValue('imageFiles') || [],
             youtubeUrl: form.getFieldValue('youtubeUrl') || null,
-            websiteLinks: form.getFieldValue('websiteLinks') || [],
+            websiteLinks: [...(form.getFieldValue('websiteLinks') || [])],
+
         }
 
         onSave(newQuestion);
@@ -307,9 +310,11 @@ const QuestionForm = ({ visible, onClose, onSave, questionData, getImageUrl, sav
                                                 <span className="font-semibold">Add Website Links (Optional - Max 3):</span>
                                                 <div className="mt-2">
                                                     <WebsiteLinksManager
+                                                        key={`websitelinks-${form.getFieldValue('id')}`}
                                                         initialLinks={form.getFieldValue('websiteLinks') || []}
                                                         onLinksChange={(links) => {
-                                                            form.setFieldsValue({ websiteLinks: links });
+                                                            const newLinks = [...links];
+                                                            form.setFieldsValue({ websiteLinks: newLinks });
                                                         }}
                                                         maxLinks={3}
                                                     />
