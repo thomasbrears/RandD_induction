@@ -1,6 +1,6 @@
 import { bucket, storage } from "../gcs.js";
 
-const BUCKET_NAME = "aut-events-induction-files";
+const BUCKET_NAME = "r_and_d_induction_files";
 
 // Helper function for uploading files without sending response (for internal use)
 export const uploadFileToGCS = async (file, customFileName = null) => {
