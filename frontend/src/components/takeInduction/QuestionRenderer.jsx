@@ -10,7 +10,7 @@ const { Dragger } = Upload;
 /**
  * Component for rendering different question types
  */
-const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback }) => {
+const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback, imageUrls = [] }) => {
   // Determine if this question is required (default to true)
   const isRequired = question.isRequired !== false;
   
@@ -51,6 +51,29 @@ const QuestionRenderer = ({ question, answer, handleAnswerChange, answerFeedback
     setValidationError('');
     return true;
   };
+
+    // Render multiple images in a mobile-friendly format
+    const renderQuestionImages = () => {
+        const validUrls = imageUrls.filter(url => url);
+        if (!validUrls.length) return null;
+        
+        return (
+            <div className="mb-4">
+                <div className={`grid gap-3 ${validUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2'}`}>
+                    {validUrls.map((url, index) => (
+                        <div key={index} className="flex justify-center">
+                            <img
+                                src={url}
+                                alt={`Question Image ${index + 1}`}
+                                className="max-w-full max-h-64 object-contain border rounded-lg shadow-sm"
+                                style={{ maxWidth: '100%', height: 'auto' }}
+                            />
+                        </div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
   
   // Feedback display
   const renderFeedback = () => {

@@ -36,6 +36,7 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, onQuestionDu
     const [isAnimating, setIsAnimating] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
     const [imageUrl, setImageUrl] = useState(null);
+    const [imageUrls, setImageUrls] = useState([]);
     
     // Refs for the areas we want to exclude from edit click
     const actionsRef = useRef(null);
@@ -43,21 +44,27 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, onQuestionDu
 
     // Load image if available
     useEffect(() => {
-        if (question.imageFile) {
-            const loadImage = async () => {
-                try {
-                    const url = await getImageUrl(question.id);
-                    setImageUrl(url);
-                } catch (error) {
-                    console.error("Error loading image:", error);
-                    setImageUrl(null);
+        if (question.imageFiles?.length > 0) {
+            const loadImages = async () => {
+                const urls = [];
+                for (let i = 0; i < question.imageFiles.length; i++) {
+                    if (question.imageFiles[i]) {
+                        try {
+                            const url = await getImageUrl(question.id, i);
+                            urls[i] = url;
+                        } catch (error) {
+                            console.error(`Error loading image ${i}:`, error);
+                            urls[i] = null;
+                        }
+                    }
                 }
+                setImageUrls(urls);
             };
-            loadImage();
+            loadImages();
         } else {
-            setImageUrl(null);
+            setImageUrls([]);
         }
-    }, [question.imageFile, question.id, getImageUrl]);
+    }, [question.imageFiles, question.id, getImageUrl]);
 
     const toggleExpand = (e) => {
         e.stopPropagation();
@@ -181,6 +188,30 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, onQuestionDu
         );
     };
 
+    // Render multiple images in a responsive grid
+    const renderImages = () => {
+        if (!imageUrls.length) return null;
+        
+        const validUrls = imageUrls.filter(url => url);
+        if (!validUrls.length) return null;
+        
+        return (
+            <div className="mt-4 mb-4">
+                <div className={`grid gap-2 ${validUrls.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                    {validUrls.map((url, index) => (
+                        <img
+                            key={index}
+                            src={url}
+                            alt={`Question Image ${index + 1}`}
+                            className="max-h-[200px] object-contain border rounded-md w-full"
+                        />
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
+    // Render the main question component based on type
     const renderQuestion = () => {
         const component = (() => {
             switch (question.type) {
@@ -235,15 +266,7 @@ const QuestionItem = ({ question, onDeleteQuestion, onQuestionEdit, onQuestionDu
                 {question.youtubeUrl && renderYoutubePreview()}
 
                 {/* Display question image (smaller size) */}
-                {imageUrl && (
-                    <div className="mt-4 mb-4">
-                        <img
-                            src={imageUrl}
-                            alt="Question Image"
-                            className="max-h-[200px] object-contain border rounded-md"
-                        />
-                    </div>
-                )}
+                {imageUrls.length > 0 && renderImages()}
             </div>
         );
     };
