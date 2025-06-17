@@ -102,7 +102,6 @@ const Navbar = () => {
                 {userDropdownOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg z-10">
                     <Link to="/account/manage" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}> Manage my Account</Link>
-                    <Link to="/account/qualifications" className="block px-4 py-2 text-black hover:bg-gray-200" onClick={handleLinkClick}> Manage Qualifications & Certificates</Link>
                     <button
                       onClick={() => {
                         signOut();
