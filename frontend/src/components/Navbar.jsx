@@ -263,7 +263,7 @@ const Navbar = () => {
     }`;
 
   const mobileNavLinkClass = (path) =>
-    `block py-3 px-4 font-medium transition-all duration-200 rounded-md mx-2 ${
+    `block py-2 px-4 font-medium transition-all duration-200 rounded-md mx-2 ${
       isActiveRoute(path)
         ? 'text-blue-400 bg-blue-900/30'
         : 'text-white hover:text-blue-400 hover:bg-white/10'
@@ -380,166 +380,196 @@ const Navbar = () => {
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${
-          isOpen ? 'max-h-screen opacity-100' : 'max-h-0 opacity-0'
+        {/* Mobile Menu - Full screen container */}
+        <div className={`md:hidden fixed inset-0 z-50 transition-all duration-300 ease-in-out ${
+          isOpen ? 'opacity-100 visible' : 'opacity-0 invisible'
         }`}>
-          <div className="px-2 pb-4 space-y-1 bg-gray-900 border-t border-gray-700">
-            <Link to="/" className={mobileNavLinkClass('/')} onClick={handleLinkClick}>
-              Home
-            </Link>
-            <Link to="/contact" className={mobileNavLinkClass('/contact')} onClick={handleLinkClick}>
-              Contact
-            </Link>
-            
-            {user ? (
-              <>
-                <Link 
-                  to="/inductions/my-inductions" 
-                  className={mobileNavLinkClass('/inductions/my-inductions')} 
-                  onClick={handleLinkClick}
-                >
-                  My Inductions
-                </Link>
-                
-                {/* Management Links (expanded in mobile view) */}
-                {(user.role === 'admin' || user.role === 'manager') && (
-                  <div className="mt-4 pb-3 border-b border-gray-700">
-                    <p className="text-blue-400 font-semibold mb-3 px-4">Management</p>
-                    <div className="space-y-1">
-                      <Link 
-                        to="/management/dashboard" 
-                        className={`block py-2 px-6 transition-colors rounded-md mx-2 ${
-                          isActiveRoute('/management/dashboard')
-                            ? 'text-blue-400 bg-blue-900/30'
-                            : 'text-gray-300 hover:text-white hover:bg-white/10'
-                        }`}
-                        onClick={handleLinkClick}
-                      >
-                        Dashboard
-                      </Link>
-                      <Link 
-                        to="/management/users/view" 
-                        className={`block py-2 px-6 transition-colors rounded-md mx-2 ${
-                          isActiveRoute('/management/users')
-                            ? 'text-blue-400 bg-blue-900/30'
-                            : 'text-gray-300 hover:text-white hover:bg-white/10'
-                        }`}
-                        onClick={handleLinkClick}
-                      >
-                        Manage Users
-                      </Link>
-                      <Link 
-                        to="/management/results" 
-                        className={`block py-2 px-6 transition-colors rounded-md mx-2 ${
-                          isActiveRoute('/management/results')
-                            ? 'text-blue-400 bg-blue-900/30'
-                            : 'text-gray-300 hover:text-white hover:bg-white/10'
-                        }`}
-                        onClick={handleLinkClick}
-                      >
-                        Results
-                      </Link>
-                      <Link 
-                        to="/management/inductions/view" 
-                        className={`block py-2 px-6 transition-colors rounded-md mx-2 ${
-                          isActiveRoute('/management/inductions')
-                            ? 'text-blue-400 bg-blue-900/30'
-                            : 'text-gray-300 hover:text-white hover:bg-white/10'
-                        }`}
-                        onClick={handleLinkClick}
-                      >
-                        Inductions
-                      </Link>
-                      <Link 
-                        to="/management/contact-submissions" 
-                        className={`block py-2 px-6 transition-colors rounded-md mx-2 ${
-                          isActiveRoute('/management/contact-submissions')
-                            ? 'text-blue-400 bg-blue-900/30'
-                            : 'text-gray-300 hover:text-white hover:bg-white/10'
-                        }`}
-                        onClick={handleLinkClick}
-                      >
-                        Contact Submissions
-                      </Link>
-                      <Link 
-                        to="/management/qualifications" 
-                        className={`block py-2 px-6 transition-colors rounded-md mx-2 ${
-                          isActiveRoute('/management/qualifications')
-                            ? 'text-blue-400 bg-blue-900/30'
-                            : 'text-gray-300 hover:text-white hover:bg-white/10'
-                        }`}
-                        onClick={handleLinkClick}
-                      >
-                        Qualifications & Certificates
-                      </Link>
-                      {user.role === 'admin' && (
+          <div className="bg-black h-full overflow-y-auto">
+            {/* Mobile Header with Logo and Close Button */}
+            <div className="flex justify-between items-center px-4 py-3 border-b border-gray-700">
+              <Link to="/" onClick={handleLinkClick} className="flex-shrink-0">
+                <img
+                  src={`${process.env.PUBLIC_URL}/images/AUTEventsInductionPortal.jpg`}
+                  alt="AUT Events Induction Portal"
+                  className="h-12 w-auto"
+                  loading="lazy"
+                />
+              </Link>
+              
+              {/* Close Button */}
+              <button 
+                onClick={() => setMobileMenuOpen(false)} 
+                className="relative w-8 h-8 flex flex-col items-center justify-center"
+              >
+                <div className={`bg-white w-8 h-1 rounded transition-all duration-300 ${isOpen ? "rotate-45 translate-y-2" : ""}`} />
+                <div className={`bg-white w-8 h-1 rounded transition-all duration-300 my-1 ${isOpen ? "opacity-0" : "opacity-100"}`} />
+                <div className={`bg-white w-8 h-1 rounded transition-all duration-300 ${isOpen ? "-rotate-45 -translate-y-2" : ""}`} />
+              </button>
+            </div>
+
+            {/* Navigation Content */}
+            <div className="px-2 py-4 space-y-1">
+              <Link to="/" className={mobileNavLinkClass('/')} onClick={handleLinkClick}>
+                Home
+              </Link>
+              <Link to="/contact" className={mobileNavLinkClass('/contact')} onClick={handleLinkClick}>
+                Contact
+              </Link>
+              
+              {user ? (
+                <>
+                  <Link 
+                    to="/inductions/my-inductions" 
+                    className={mobileNavLinkClass('/inductions/my-inductions')} 
+                    onClick={handleLinkClick}
+                  >
+                    My Inductions
+                  </Link>
+                  
+                  {/* Management Links (expanded in mobile view) */}
+                  {(user.role === 'admin' || user.role === 'manager') && (
+                    <div className="mt-4 pb-4 border-b border-gray-700">
+                      <p className="text-blue-400 font-semibold mb-3 px-4 text-base">Management</p>
+                      <div className="space-y-1">
                         <Link 
-                          to="/admin/settings" 
-                          className={`block py-2 px-6 transition-colors rounded-md mx-2 ${
-                            isActiveRoute('/admin/settings')
+                          to="/management/dashboard" 
+                          className={`block py-3 px-6 transition-colors rounded-md mx-2 ${
+                            isActiveRoute('/management/dashboard')
                               ? 'text-blue-400 bg-blue-900/30'
                               : 'text-gray-300 hover:text-white hover:bg-white/10'
                           }`}
                           onClick={handleLinkClick}
                         >
-                          Settings
+                          Dashboard
                         </Link>
-                      )}
+                        <Link 
+                          to="/management/users/view" 
+                          className={`block py-3 px-6 transition-colors rounded-md mx-2 ${
+                            isActiveRoute('/management/users')
+                              ? 'text-blue-400 bg-blue-900/30'
+                              : 'text-gray-300 hover:text-white hover:bg-white/10'
+                          }`}
+                          onClick={handleLinkClick}
+                        >
+                          Manage Users
+                        </Link>
+                        <Link 
+                          to="/management/results" 
+                          className={`block py-3 px-6 transition-colors rounded-md mx-2 ${
+                            isActiveRoute('/management/results')
+                              ? 'text-blue-400 bg-blue-900/30'
+                              : 'text-gray-300 hover:text-white hover:bg-white/10'
+                          }`}
+                          onClick={handleLinkClick}
+                        >
+                          Results
+                        </Link>
+                        <Link 
+                          to="/management/inductions/view" 
+                          className={`block py-3 px-6 transition-colors rounded-md mx-2 ${
+                            isActiveRoute('/management/inductions')
+                              ? 'text-blue-400 bg-blue-900/30'
+                              : 'text-gray-300 hover:text-white hover:bg-white/10'
+                          }`}
+                          onClick={handleLinkClick}
+                        >
+                          Inductions
+                        </Link>
+                        <Link 
+                          to="/management/contact-submissions" 
+                          className={`block py-3 px-6 transition-colors rounded-md mx-2 ${
+                            isActiveRoute('/management/contact-submissions')
+                              ? 'text-blue-400 bg-blue-900/30'
+                              : 'text-gray-300 hover:text-white hover:bg-white/10'
+                          }`}
+                          onClick={handleLinkClick}
+                        >
+                          Contact Submissions
+                        </Link>
+                        <Link 
+                          to="/management/qualifications" 
+                          className={`block py-3 px-6 transition-colors rounded-md mx-2 ${
+                            isActiveRoute('/management/qualifications')
+                              ? 'text-blue-400 bg-blue-900/30'
+                              : 'text-gray-300 hover:text-white hover:bg-white/10'
+                          }`}
+                          onClick={handleLinkClick}
+                        >
+                          Qualifications & Certificates
+                        </Link>
+                        {user.role === 'admin' && (
+                          <Link 
+                            to="/admin/settings" 
+                            className={`block py-3 px-6 transition-colors rounded-md mx-2 ${
+                              isActiveRoute('/admin/settings')
+                                ? 'text-blue-400 bg-blue-900/30'
+                                : 'text-gray-300 hover:text-white hover:bg-white/10'
+                            }`}
+                            onClick={handleLinkClick}
+                          >
+                            Settings
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* User Links */}
+                  <div className="mt-4 pt-4 border-t border-gray-700">
+                    <p className="text-blue-400 font-semibold mb-3 px-4 text-base">
+                      <span className="truncate">
+                        Kia ora, {user.displayName ? user.displayName.split(" ")[0] : "User"}
+                      </span>
+                    </p>
+                    <div className="space-y-1">
+                      <Link 
+                        to="/account/manage" 
+                        className={`block py-3 px-6 transition-colors rounded-md mx-2 ${
+                          isActiveRoute('/account/manage')
+                            ? 'text-blue-400 bg-blue-900/30'
+                            : 'text-gray-300 hover:text-white hover:bg-white/10'
+                        }`}
+                        onClick={handleLinkClick}
+                      >
+                        Manage Account
+                      </Link>
+                      <Link 
+                        to="/account/qualifications" 
+                        className={`block py-3 px-6 transition-colors rounded-md mx-2 ${
+                          isActiveRoute('/account/qualifications')
+                            ? 'text-blue-400 bg-blue-900/30'
+                            : 'text-gray-300 hover:text-white hover:bg-white/10'
+                        }`}
+                        onClick={handleLinkClick}
+                      >
+                        Manage Qualifications
+                      </Link>
+                      <button
+                        onClick={handleSignOut}
+                        className="block text-red-400 hover:text-red-300 hover:bg-red-900/20 py-3 px-6 text-left w-full transition-colors rounded-md mx-2"
+                      >
+                        Sign Out
+                      </button>
                     </div>
                   </div>
-                )}
-
-                {/* User Links */}
-                <div className="mt-4 pt-3 border-t border-gray-700">
-                  <p className="text-blue-400 font-semibold mb-3 px-4">
-                    <span className="truncate">
-                      Kia ora, {user.displayName ? user.displayName.split(" ")[0] : "User"}
-                    </span>
-                  </p>
-                  <div className="space-y-1">
-                    <Link 
-                      to="/account/manage" 
-                      className={`block py-2 px-6 transition-colors rounded-md mx-2 ${
-                        isActiveRoute('/account/manage')
-                          ? 'text-blue-400 bg-blue-900/30'
-                          : 'text-gray-300 hover:text-white hover:bg-white/10'
-                      }`}
-                      onClick={handleLinkClick}
-                    >
-                      Manage my Account
-                    </Link>
-                    <Link 
-                      to="/account/qualifications" 
-                      className={`block py-2 px-6 transition-colors rounded-md mx-2 ${
-                        isActiveRoute('/account/qualifications')
-                          ? 'text-blue-400 bg-blue-900/30'
-                          : 'text-gray-300 hover:text-white hover:bg-white/10'
-                      }`}
-                      onClick={handleLinkClick}
-                    >
-                      Manage Qualifications & Certificates
-                    </Link>
-                    <button
-                      onClick={handleSignOut}
-                      className="block text-red-400 hover:text-red-300 hover:bg-red-900/20 py-2 px-6 text-left w-full transition-colors rounded-md mx-2"
-                    >
-                      Sign Out
-                    </button>
-                  </div>
+                  
+                  {/* Bottom padding for scroll */}
+                  <div className="h-20"></div>
+                </>
+              ) : (
+                <div className="mt-8 px-4">
+                  <Link 
+                    to="/auth/signin" 
+                    className="block bg-blue-700 hover:bg-blue-600 text-white px-6 py-4 rounded-lg font-medium transition-colors text-center text-lg" 
+                    onClick={handleLinkClick}
+                  >
+                    Sign In
+                  </Link>
                 </div>
-              </>
-            ) : (
-              <Link 
-                to="/auth/signin" 
-                className="block bg-blue-700 hover:bg-blue-600 text-white px-4 py-3 rounded-lg font-medium transition-colors mt-4 mx-2 text-center" 
-                onClick={handleLinkClick}
-              >
-                Sign In
-              </Link>
-            )}
+              )}
+            </div>
           </div>
-        </div>   
+        </div>
       </nav>
 
       {/* Custom CSS for dropdown styling */}
