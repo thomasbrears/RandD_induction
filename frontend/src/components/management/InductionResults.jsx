@@ -68,7 +68,15 @@ const InductionResults = ({ inductionId, setPageHeader = null }) => {
         }
 
         // Get all users assigned to this induction
-        const assignmentsData = await getUsersByInduction(currentUser, inductionId);
+        const rawAssignmentsData = await getUsersByInduction(currentUser, inductionId);
+
+        // Defense-in-depth: the backend already excludes assignments whose
+        // user record couldn't be resolved (e.g. a deleted user account),
+        // but we filter again here in case this ever receives data from
+        // another source. Without a resolved user, rows would otherwise
+        // show up as "Unknown User".
+        const assignmentsData = rawAssignmentsData.filter(a => a.user);
+
         setAssignments(assignmentsData);
         
         // Separate active and completed assignments
