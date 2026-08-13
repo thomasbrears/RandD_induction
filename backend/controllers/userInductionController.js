@@ -691,7 +691,12 @@ export const getUsersByInduction = async (req, res) => {
       assignments.push(assignment);
     }
     
-    res.json(assignments);
+    // Filter out assignments where we couldn't resolve a user record
+    // (e.g. the user has since been deleted from Firebase Auth). These
+    // would otherwise show up as "Unknown User" in the UI/exports.
+    const validAssignments = assignments.filter(a => a.user);
+    
+    res.json(validAssignments);
   } catch (error) {
     console.error("Error fetching users by induction:", error);
     res.status(500).json({ error: error.message });
@@ -851,6 +856,11 @@ export const getInductionResults = async (req, res) => {
       
       results.assignments.push(assignment);
     }
+    
+    // Filter out assignments where we couldn't resolve a user record
+    // (e.g. deleted user) before computing stats, so ghost rows don't
+    // appear in the UI/exports or skew the counts.
+    results.assignments = results.assignments.filter(a => a.user);
     
     // Calculate statistics
     results.stats = {
@@ -1090,7 +1100,7 @@ export const exportInductionResultsToExcel = async (req, res) => {
       .where("inductionId", "==", inductionId)
       .get();
     
-    const assignments = [];
+    const rawAssignments = [];
     
     // Gather all assignments with user details
     for (const doc of snapshot.docs) {
@@ -1113,8 +1123,12 @@ export const exportInductionResultsToExcel = async (req, res) => {
         console.error(`Error fetching user ${assignment.userId}:`, userError);
       }
       
-      assignments.push(assignment);
+      rawAssignments.push(assignment);
     }
+
+    // Drop assignments where the user couldn't be resolved (e.g. deleted
+    // account) so they don't appear as "Unknown" rows in the report.
+    const assignments = rawAssignments.filter(a => a.user);
 
     // Create a new Excel workbook
     const workbook = new ExcelJS.Workbook();
@@ -1657,7 +1671,7 @@ export const exportInductionResultsToPDF = async (req, res) => {
       .where("inductionId", "==", inductionId)
       .get();
     
-    const assignments = [];
+    const rawAssignments = [];
     
     // Gather all assignments with user details
     for (const doc of snapshot.docs) {
@@ -1680,8 +1694,12 @@ export const exportInductionResultsToPDF = async (req, res) => {
         console.error(`Error fetching user ${assignment.userId}:`, userError);
       }
       
-      assignments.push(assignment);
+      rawAssignments.push(assignment);
     }
+
+    // Drop assignments where the user couldn't be resolved (e.g. deleted
+    // account) so they don't appear as "Unknown" rows in the report.
+    const assignments = rawAssignments.filter(a => a.user);
 
     // Helper functions for formatting and data handling
     const formatDate = (date) => {
@@ -2350,8 +2368,10 @@ export const exportStaffInductionResultsToExcel = async (req, res) => {
       ...inductionDoc.data()
     };
     
-    // Get user details
-    let userData = { displayName: "Unknown User", email: "No email available" };
+    // Get user details. If the user record can no longer be resolved
+    // (e.g. their account has been deleted), refuse to export rather
+    // than producing a report full of "Unknown" placeholders.
+    let userData;
     try {
       const userRecord = await admin.auth().getUser(userInduction.userId);
       userData = {
@@ -2363,6 +2383,9 @@ export const exportStaffInductionResultsToExcel = async (req, res) => {
       };
     } catch (userError) {
       console.error(`Error fetching user ${userInduction.userId}:`, userError);
+      return res.status(404).json({ 
+        message: "This staff member's account could not be found (it may have been deleted), so a report cannot be generated." 
+      });
     }
 
     // Helper function to safely extract question text
@@ -3521,8 +3544,10 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
       ...inductionDoc.data()
     };
     
-    // Get user details
-    let userData = { displayName: "Unknown User", email: "No email available" };
+    // Get user details. If the user record can no longer be resolved
+    // (e.g. their account has been deleted), refuse to export rather
+    // than producing a report full of "Unknown" placeholders.
+    let userData;
     try {
       const userRecord = await admin.auth().getUser(userInduction.userId);
       userData = {
@@ -3534,6 +3559,9 @@ export const exportStaffInductionResultsToPDF = async (req, res) => {
       };
     } catch (userError) {
       console.error(`Error fetching user ${userInduction.userId}:`, userError);
+      return res.status(404).json({ 
+        message: "This staff member's account could not be found (it may have been deleted), so a report cannot be generated." 
+      });
     }
 
     // Helper functions for formatting and data handling
