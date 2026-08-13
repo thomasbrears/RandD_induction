@@ -73,17 +73,25 @@ export const parseTimestamp = (timestamp) => {
 
 /**
  * Calculate duration between two dates
- * @param {Date|string} startDate - The start date
- * @param {Date|string} endDate - The end date
+ * @param {Date|Object|string} startDate - The start date (Date object, Firestore timestamp, or date string)
+ * @param {Date|Object|string} endDate - The end date (Date object, Firestore timestamp, or date string)
  * @returns {string} Duration string
  */
 export const formatDuration = (startDate, endDate) => {
   if (!startDate || !endDate) return '';
   
   try {
-    const start = startDate instanceof Date ? startDate : new Date(startDate);
-    const end = endDate instanceof Date ? endDate : new Date(endDate);
-    
+    // Use parseTimestamp so Firestore Timestamp objects ({ _seconds/seconds, ... }
+    // or instances with .toDate()) are converted correctly. A plain `new Date(...)`
+    // on those shapes produces an Invalid Date, which makes every diff below NaN.
+    const start = parseTimestamp(startDate);
+    const end = parseTimestamp(endDate);
+
+    if (!start || !end) {
+      console.error("Unable to parse timestamps for duration:", { startDate, endDate });
+      return '';
+    }
+
     const minutes = differenceInMinutes(end, start);
     const hours = differenceInHours(end, start);
     const days = differenceInDays(end, start);
